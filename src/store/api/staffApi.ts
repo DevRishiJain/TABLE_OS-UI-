@@ -5,14 +5,35 @@ import {
   ConfirmPaymentRequest,
   ForceCloseSessionRequest,
 } from "@/types/api";
-import { Order, Payment, DiningSession } from "@/types/domain";
+import { Order, Payment, DiningSession, StaffUser } from "@/types/domain";
 import { generateUUID } from "@/lib/idempotency";
+
+export interface PendingOrderEntry {
+  order: Order;
+  table_number: string;
+}
 
 export const staffApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     getStaffTables: builder.query<StaffTableSummary[], void>({
       query: () => "/api/v1/staff/dashboard/tables",
       providesTags: ["Table", "Session"],
+    }),
+
+    getPendingOrders: builder.query<PendingOrderEntry[], void>({
+      query: () => "/api/v1/staff/orders/pending",
+      providesTags: ["Order", "KitchenQueue"],
+    }),
+
+    staffLogin: builder.mutation<
+      { token: string; staff: StaffUser },
+      { identifier: string; password: string; restaurant_id?: string }
+    >({
+      query: (body) => ({
+        url: "/api/v1/staff/login",
+        method: "POST",
+        body,
+      }),
     }),
 
     verifyFirstOrder: builder.mutation<
@@ -94,6 +115,8 @@ export const staffApi = baseApi.injectEndpoints({
 
 export const {
   useGetStaffTablesQuery,
+  useGetPendingOrdersQuery,
+  useStaffLoginMutation,
   useVerifyFirstOrderMutation,
   useAcceptOrderMutation,
   useConfirmPaymentMutation,

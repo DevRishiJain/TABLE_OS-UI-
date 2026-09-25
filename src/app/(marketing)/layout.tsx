@@ -62,19 +62,25 @@ export default function MarketingLayout({
             </Link>
           </nav>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5">
             <Link
-              href="/login"
-              className="px-4 py-2 text-sm font-medium text-gray-300 hover:text-gray-100 bg-surface-subtle hover:bg-surface-hover rounded-xl border border-surface-border transition-colors"
+              href="/signup"
+              className="px-3.5 py-2 text-xs font-bold text-black bg-primary hover:bg-primary-hover rounded-xl shadow-md shadow-primary/20 flex items-center gap-1.5 transition-all font-mono"
             >
-              Sign In
+              <Sparkles className="w-3.5 h-3.5 fill-current" />
+              Onboard Restaurant
             </Link>
             <Link
-              href="/t/table-qr-token-spice-route-01"
-              className="px-4 py-2 text-sm font-semibold text-background bg-primary hover:bg-primary-hover rounded-xl shadow-lg shadow-primary/20 flex items-center gap-1.5 transition-all"
+              href="/staff/login"
+              className="px-3.5 py-2 text-xs font-bold text-amber-400 hover:text-white bg-amber-500/10 hover:bg-amber-500/20 rounded-xl border border-amber-500/30 transition-all font-mono hidden sm:inline-flex"
             >
-              <span>Scan QR Demo</span>
-              <ArrowRight className="w-4 h-4" />
+              Staff Terminal
+            </Link>
+            <Link
+              href="/login"
+              className="px-3 py-2 text-xs font-medium text-gray-300 hover:text-gray-100 bg-surface-subtle hover:bg-surface-hover rounded-xl border border-surface-border transition-colors font-mono"
+            >
+              Sign In
             </Link>
           </div>
         </div>

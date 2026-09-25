@@ -1,9 +1,11 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useAppDispatch } from "@/store";
+import { useAppDispatch, useAppSelector } from "@/store";
 import { setStaffAuth, setGuardAuth } from "@/store/slices/authSlice";
+import { useStaffLoginMutation } from "@/store/api/staffApi";
 import { addToast } from "@/store/slices/uiSlice";
 import { generateClientJWT, DEMO_PROFILES } from "@/lib/jwt";
 import { StaffRole } from "@/types/enums";
@@ -20,376 +22,267 @@ import {
   ArrowRight,
   Sparkles,
   UserCheck,
+  Utensils,
+  Store,
+  Users,
+  Eye,
+  EyeOff,
+  KeyRound,
 } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
   const dispatch = useAppDispatch();
+  const currentRestaurantName = useAppSelector((state) => state.auth.restaurantName) || "The Spice Route";
+  const restaurantId = useAppSelector((state) => state.auth.restaurantId);
 
-  const [activeTab, setActiveTab] = useState<"staff" | "platform">("staff");
-  const [email, setEmail] = useState("admin@spiceroute.com");
-  const [password, setPassword] = useState("••••••••••••");
+  const [activeTab, setActiveTab] = useState<"admin" | "staff">("admin");
+  const [email, setEmail] = useState("owner@spiceroute.com");
+  const [password, setPassword] = useState("Admin@12345");
+  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [staffLogin] = useStaffLoginMutation();
 
-  // One-click demo sign-in
-  const handleDemoSignIn = async (profileKey: string) => {
+  const handleAdminSignIn = async (e: React.FormEvent) => {
+    e.preventDefault();
     setIsLoading(true);
     try {
-      const profile = DEMO_PROFILES[profileKey];
-      const payload = profile.getPayload();
-      const token = await generateClientJWT(payload);
+      const token = await generateClientJWT({
+        staff_id: "s-admin-001",
+        restaurant_id: restaurantId,
+        role: "RESTAURANT_ADMIN",
+        permissions: ["ALL"],
+      });
 
-      if (profileKey === "guard") {
-        dispatch(
-          setGuardAuth({
-            token,
-            userName: profile.name,
-          })
-        );
-        dispatch(
-          addToast({
-            type: "success",
-            title: "Authenticated as Security Guard",
-            message: "Redirecting to Exit Camera Scanner...",
-          })
-        );
-        router.push("/guard/scan");
-      } else if (profileKey === "platform") {
-        dispatch(
-          setStaffAuth({
-            token,
-            role: StaffRole.SUPER_ADMIN,
-            isPlatformAdmin: true,
-            staffId: payload.staff_id as string,
-            userName: profile.name,
-          })
-        );
-        dispatch(
-          addToast({
-            type: "success",
-            title: "Super-Admin Access Granted",
-            message: "Redirecting to Platform Governance Directory...",
-          })
-        );
-        router.push("/admin/restaurants");
-      } else if (profileKey === "kitchen") {
-        dispatch(
-          setStaffAuth({
-            token,
-            role: StaffRole.KITCHEN,
-            isPlatformAdmin: false,
-            staffId: payload.staff_id as string,
-            userName: profile.name,
-          })
-        );
-        dispatch(
-          addToast({
-            type: "success",
-            title: "Authenticated as Head Chef",
-            message: "Launching Kitchen KDS Kanban...",
-          })
-        );
-        router.push("/kitchen/queue");
-      } else if (profileKey === "waiter") {
-        dispatch(
-          setStaffAuth({
-            token,
-            role: StaffRole.WAITER,
-            isPlatformAdmin: false,
-            staffId: payload.staff_id as string,
-            userName: profile.name,
-          })
-        );
-        dispatch(
-          addToast({
-            type: "success",
-            title: "Authenticated as Floor Staff",
-            message: "Opening Live Floor Plan...",
-          })
-        );
-        router.push("/staff/tables");
-      } else {
-        // Admin
-        dispatch(
-          setStaffAuth({
-            token,
-            role: StaffRole.RESTAURANT_ADMIN,
-            isPlatformAdmin: false,
-            staffId: payload.staff_id as string,
-            userName: profile.name,
-          })
-        );
-        dispatch(
-          addToast({
-            type: "success",
-            title: "Authenticated as Restaurant Admin",
-            message: "Opening Executive Dashboard...",
-          })
-        );
-        router.push("/restaurant/dashboard");
-      }
-    } catch (err) {
-      console.error("Sign-in error:", err);
       dispatch(
-        addToast({
-          type: "error",
-          title: "Sign-in Failed",
-          message: "Could not generate authentication credentials.",
+        setStaffAuth({
+          token,
+          role: StaffRole.RESTAURANT_ADMIN,
+          isPlatformAdmin: false,
+          staffId: "s-admin-001",
+          employeeId: "EMP-ADM-001",
+          restaurantId,
+          restaurantName: currentRestaurantName,
+          userName: email.split("@")[0].toUpperCase() || "Admin",
         })
       );
+
+      dispatch(
+        addToast({
+          type: "success",
+          title: "Admin Access Granted",
+          message: `Welcome to ${currentRestaurantName} Executive Suite.`,
+        })
+      );
+
+      router.push("/restaurant/dashboard");
+    } catch (err) {
+      dispatch(addToast({ type: "error", title: "Sign-in Failed", message: "Invalid credentials." }));
     } finally {
       setIsLoading(false);
     }
   };
 
+  const handleStaffQuickLogin = (role: StaffRole, empId: string, name: string, targetPath: string) => {
+    dispatch(
+      setStaffAuth({
+        token: "demo-staff-token",
+        role: role,
+        isPlatformAdmin: false,
+        staffId: "staff-" + empId,
+        employeeId: empId,
+        restaurantId,
+        restaurantName: currentRestaurantName,
+        userName: name,
+      })
+    );
+    dispatch(
+      addToast({
+        type: "success",
+        title: `Signed in as ${name}`,
+        message: `Employee ID: ${empId} • Opening station...`,
+      })
+    );
+    router.push(targetPath);
+  };
+
   return (
-    <div className="w-full max-w-md flex flex-col gap-6">
-      {/* Title */}
-      <div className="flex flex-col items-center text-center gap-1">
-        <h1 className="text-2xl font-extrabold text-gray-100 font-display">
-          Staff & Admin Sign-In
-        </h1>
-        <p className="text-xs text-gray-400">
-          Enter credentials or tap a Demo Quick-Fill profile
-        </p>
-      </div>
-
-      {/* Tabs */}
-      <div className="p-1 rounded-2xl bg-surface border border-surface-border grid grid-cols-2 gap-1">
-        <button
-          onClick={() => {
-            setActiveTab("staff");
-            setEmail("admin@spiceroute.com");
-          }}
-          className={`py-2 text-xs font-bold rounded-xl transition-all ${
-            activeTab === "staff"
-              ? "bg-primary text-background shadow-md shadow-primary/20"
-              : "text-gray-400 hover:text-gray-200"
-          }`}
-        >
-          Restaurant Operations
-        </button>
-        <button
-          onClick={() => {
-            setActiveTab("platform");
-            setEmail("superadmin@tableos.internal");
-          }}
-          className={`py-2 text-xs font-bold rounded-xl transition-all ${
-            activeTab === "platform"
-              ? "bg-amber-400 text-black shadow-md shadow-amber-400/20"
-              : "text-gray-400 hover:text-gray-200"
-          }`}
-        >
-          Platform Super-Admin
-        </button>
-      </div>
-
-      {/* Credentials Card */}
-      <Card className="p-6 flex flex-col gap-4">
-        <Input
-          label="Email Address"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="admin@spiceroute.com"
-          leftIcon={<Mail className="w-4 h-4" />}
-        />
-        <Input
-          label="Password"
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder="admin123"
-          leftIcon={<Lock className="w-4 h-4" />}
-        />
-
-        <Button
-          variant={activeTab === "platform" ? "gold" : "primary"}
-          size="lg"
-          className="w-full font-bold mt-1"
-          isLoading={isLoading}
-          onClick={() => {
-            const lowerEmail = email.toLowerCase();
-            let roleToUse = "admin";
-            if (activeTab === "platform" || lowerEmail.includes("super") || lowerEmail.includes("platform")) {
-              roleToUse = "platform";
-            } else if (lowerEmail.includes("waiter") || lowerEmail.includes("floor") || lowerEmail.includes("rohan")) {
-              roleToUse = "waiter";
-            } else if (lowerEmail.includes("kitchen") || lowerEmail.includes("chef") || lowerEmail.includes("anita")) {
-              roleToUse = "kitchen";
-            } else if (lowerEmail.includes("guard") || lowerEmail.includes("security") || lowerEmail.includes("suresh") || lowerEmail.includes("8888888888")) {
-              roleToUse = "guard";
-            }
-            handleDemoSignIn(roleToUse);
-          }}
-        >
-          Sign In
-        </Button>
-
-        {/* Credentials Cheat Sheet */}
-        <div className="mt-2 p-3 rounded-xl bg-surface-elevated/70 border border-surface-border text-xs text-text-secondary space-y-1.5">
-          <div className="font-semibold text-text-primary text-[11px] uppercase tracking-wider flex items-center justify-between">
-            <span>Verified System Logins</span>
-            <span className="text-[10px] text-accent-amber lowercase font-mono">click below to autofill</span>
+    <div className="min-h-screen bg-background text-gray-100 flex flex-col justify-between">
+      {/* Top Header */}
+      <header className="px-6 py-4 glass-panel border-b border-surface-border flex items-center justify-between">
+        <Link href="/" className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-xl bg-primary/20 border border-primary/40 flex items-center justify-center text-primary shadow-glow">
+            <Utensils className="w-4 h-4" />
           </div>
-          <div className="grid grid-cols-1 gap-1 text-[11px] font-mono">
-            <div 
-              onClick={() => { setEmail('admin@spiceroute.com'); setPassword('admin123'); setActiveTab('staff'); }}
-              className="cursor-pointer hover:text-accent-amber flex justify-between p-1 rounded hover:bg-surface-border transition-colors"
-            >
-              <span>Admin: admin@spiceroute.com</span>
-              <span className="text-text-muted">admin123</span>
+          <div>
+            <span className="text-sm font-bold font-display text-gray-100">
+              {currentRestaurantName}
+            </span>
+            <span className="text-[10px] text-gray-400 block font-mono">
+              Operating System
+            </span>
+          </div>
+        </Link>
+
+        <div className="flex items-center gap-2">
+          <Link
+            href="/staff/login"
+            className="text-xs font-bold px-3 py-1.5 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-400 hover:bg-amber-500/30 transition-all flex items-center gap-1.5 font-mono"
+          >
+            <Users className="w-3.5 h-3.5" /> Staff Shift Login
+          </Link>
+          <Link
+            href="/signup"
+            className="text-xs font-bold px-3 py-1.5 rounded-xl bg-primary/20 border border-primary/40 text-primary hover:bg-primary/30 transition-all font-mono"
+          >
+            + Onboard Restaurant
+          </Link>
+        </div>
+      </header>
+
+      {/* Main Login Card */}
+      <main className="max-w-md w-full mx-auto p-4 sm:p-6 flex-1 flex flex-col justify-center">
+        <div className="p-6 sm:p-8 rounded-3xl bg-surface border border-surface-border shadow-2xl flex flex-col gap-6 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-44 h-44 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
+
+          {/* Heading */}
+          <div className="text-center flex flex-col items-center">
+            <div className="w-12 h-12 rounded-2xl bg-primary/20 text-primary border border-primary/30 flex items-center justify-center shadow-lg shadow-primary/20 mb-3">
+              <Store className="w-6 h-6" />
             </div>
-            <div 
-              onClick={() => { setEmail('waiter@spiceroute.com'); setPassword('waiter123'); setActiveTab('staff'); }}
-              className="cursor-pointer hover:text-sky-400 flex justify-between p-1 rounded hover:bg-surface-border transition-colors"
+            <h2 className="text-xl font-bold font-display text-gray-100">
+              {currentRestaurantName} Portal
+            </h2>
+            <p className="text-xs text-gray-400 mt-1">
+              Select your sign-in portal or enter your credentials below.
+            </p>
+          </div>
+
+          {/* Portals Switcher */}
+          <div className="grid grid-cols-2 gap-1.5 p-1 rounded-2xl bg-surface-subtle border border-surface-border">
+            <button
+              type="button"
+              onClick={() => setActiveTab("admin")}
+              className={`py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                activeTab === "admin"
+                  ? "bg-primary text-black shadow-md shadow-primary/20 font-extrabold"
+                  : "text-gray-400 hover:text-gray-200"
+              }`}
             >
-              <span>Waiter: waiter@spiceroute.com</span>
-              <span className="text-text-muted">waiter123</span>
+              <ShieldCheck className="w-3.5 h-3.5" /> Owner / Admin
+            </button>
+            <button
+              type="button"
+              onClick={() => router.push("/staff/login")}
+              className={`py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 text-gray-400 hover:text-amber-400`}
+            >
+              <Users className="w-3.5 h-3.5" /> Floor Staff Login &rarr;
+            </button>
+          </div>
+
+          {/* Admin Sign In Form */}
+          <form onSubmit={handleAdminSignIn} className="flex flex-col gap-4">
+            <div>
+              <label className="text-xs font-bold text-gray-300 block mb-1.5">
+                Owner Email
+              </label>
+              <div className="relative">
+                <input
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="owner@spiceroute.com"
+                  className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-surface-subtle border border-surface-border text-sm text-gray-100 focus:outline-none focus:border-primary font-mono"
+                />
+                <Mail className="w-4 h-4 text-gray-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              </div>
             </div>
-            <div 
-              onClick={() => { setEmail('kitchen@spiceroute.com'); setPassword('chef123'); setActiveTab('staff'); }}
-              className="cursor-pointer hover:text-amber-400 flex justify-between p-1 rounded hover:bg-surface-border transition-colors"
-            >
-              <span>Kitchen: kitchen@spiceroute.com</span>
-              <span className="text-text-muted">chef123</span>
+
+            <div>
+              <label className="text-xs font-bold text-gray-300 block mb-1.5">
+                Password
+              </label>
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-surface-subtle border border-surface-border text-sm text-gray-100 focus:outline-none focus:border-primary font-mono"
+                />
+                <Lock className="w-4 h-4 text-gray-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-200"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
             </div>
-            <div 
-              onClick={() => { setEmail('guard@spiceroute.com'); setPassword('guard123'); setActiveTab('staff'); }}
-              className="cursor-pointer hover:text-emerald-400 flex justify-between p-1 rounded hover:bg-surface-border transition-colors"
+
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="mt-2 w-full py-3 rounded-xl bg-primary text-black font-extrabold text-sm flex items-center justify-center gap-2 hover:bg-primary/90 transition-all shadow-lg shadow-primary/20"
             >
-              <span>Guard: guard@spiceroute.com</span>
-              <span className="text-text-muted">guard123</span>
-            </div>
-            <div 
-              onClick={() => { setEmail('superadmin@tableos.internal'); setPassword('super123'); setActiveTab('platform'); }}
-              className="cursor-pointer hover:text-amber-300 flex justify-between p-1 rounded hover:bg-surface-border transition-colors"
-            >
-              <span>SuperAdmin: superadmin@tableos.internal</span>
-              <span className="text-text-muted">super123</span>
+              {isLoading ? "Signing in..." : "Enter Restaurant Management Suite"}
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          </form>
+
+          {/* Quick Staff Roles Links */}
+          <div className="pt-4 border-t border-surface-border flex flex-col gap-2">
+            <span className="text-[11px] font-mono text-gray-400">
+              Looking for Floor Staff Terminals?
+            </span>
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <button
+                type="button"
+                onClick={() => handleStaffQuickLogin(StaffRole.WAITER, "EMP-WTR-001", "Floor Waiter", "/staff/orders")}
+                className="p-2.5 rounded-xl bg-surface-subtle border border-surface-border hover:border-amber-400/40 text-left flex items-center gap-2"
+              >
+                <div className="w-6 h-6 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center font-bold text-[10px]">
+                  W
+                </div>
+                <div className="truncate">
+                  <span className="font-bold text-gray-200 block text-[11px]">Waiter Queue</span>
+                  <span className="text-[9px] font-mono text-gray-500">EMP-WTR-001</span>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleStaffQuickLogin(StaffRole.KITCHEN, "EMP-CHF-001", "Head Chef", "/kitchen/queue")}
+                className="p-2.5 rounded-xl bg-surface-subtle border border-surface-border hover:border-amber-400/40 text-left flex items-center gap-2"
+              >
+                <div className="w-6 h-6 rounded-lg bg-primary/20 text-primary flex items-center justify-center font-bold text-[10px]">
+                  K
+                </div>
+                <div className="truncate">
+                  <span className="font-bold text-gray-200 block text-[11px]">Kitchen KDS</span>
+                  <span className="text-[9px] font-mono text-gray-500">EMP-CHF-001</span>
+                </div>
+              </button>
             </div>
           </div>
+
+          {/* Onboarding Callout */}
+          <div className="p-3 rounded-2xl bg-primary/10 border border-primary/30 flex items-center justify-between text-xs">
+            <span className="text-gray-300">Need to register a new restaurant?</span>
+            <Link href="/signup" className="text-primary font-bold hover:underline flex items-center gap-1 font-mono">
+              Onboard &rarr;
+            </Link>
+          </div>
         </div>
-      </Card>
+      </main>
 
-      {/* Instant Demo Quick-Fill Section */}
-      <div className="flex flex-col gap-3">
-        <div className="flex items-center justify-between">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-gray-400 flex items-center gap-1.5">
-            <Sparkles className="w-3.5 h-3.5 text-primary" />
-            1-Click Demo Quick-Fill Profiles
-          </span>
-          <Badge variant="gold" size="sm">
-            Live Verified
-          </Badge>
-        </div>
-
-        <div className="grid grid-cols-1 gap-2">
-          {/* Admin */}
-          <button
-            onClick={() => handleDemoSignIn("admin")}
-            className="p-3 rounded-xl bg-surface hover:bg-surface-hover border border-surface-border text-left flex items-center justify-between transition-all group"
-          >
-            <div className="flex items-center gap-2.5">
-              <div className="w-7 h-7 rounded-lg bg-primary/20 text-primary flex items-center justify-center font-bold text-xs">
-                A
-              </div>
-              <div className="flex flex-col">
-                <span className="text-xs font-bold text-gray-200 group-hover:text-primary transition-colors">
-                  Vikram Mehta (Restaurant Admin)
-                </span>
-                <span className="text-[10px] text-gray-400">
-                  Dashboard, Analytics, Menu OCR, Staff & Ledger
-                </span>
-              </div>
-            </div>
-            <ArrowRight className="w-4 h-4 text-gray-500 group-hover:text-primary transition-colors" />
-          </button>
-
-          {/* Waiter */}
-          <button
-            onClick={() => handleDemoSignIn("waiter")}
-            className="p-3 rounded-xl bg-surface hover:bg-surface-hover border border-surface-border text-left flex items-center justify-between transition-all group"
-          >
-            <div className="flex items-center gap-2.5">
-              <div className="w-7 h-7 rounded-lg bg-sky-500/20 text-sky-400 flex items-center justify-center font-bold text-xs">
-                <Layers className="w-4 h-4" />
-              </div>
-              <div className="flex flex-col">
-                <span className="text-xs font-bold text-gray-200 group-hover:text-sky-400 transition-colors">
-                  Rohan Verma (Floor Waiter)
-                </span>
-                <span className="text-[10px] text-gray-400">
-                  Table Floor Grid, First-Order OTP & Payments
-                </span>
-              </div>
-            </div>
-            <ArrowRight className="w-4 h-4 text-gray-500 group-hover:text-sky-400 transition-colors" />
-          </button>
-
-          {/* Kitchen */}
-          <button
-            onClick={() => handleDemoSignIn("kitchen")}
-            className="p-3 rounded-xl bg-surface hover:bg-surface-hover border border-surface-border text-left flex items-center justify-between transition-all group"
-          >
-            <div className="flex items-center gap-2.5">
-              <div className="w-7 h-7 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center font-bold text-xs">
-                <ChefHat className="w-4 h-4" />
-              </div>
-              <div className="flex flex-col">
-                <span className="text-xs font-bold text-gray-200 group-hover:text-amber-400 transition-colors">
-                  Chef Anita Desai (Head Chef)
-                </span>
-                <span className="text-[10px] text-gray-400">
-                  KDS Kanban: Preparing → Ready → Served
-                </span>
-              </div>
-            </div>
-            <ArrowRight className="w-4 h-4 text-gray-500 group-hover:text-amber-400 transition-colors" />
-          </button>
-
-          {/* Guard */}
-          <button
-            onClick={() => handleDemoSignIn("guard")}
-            className="p-3 rounded-xl bg-surface hover:bg-surface-hover border border-surface-border text-left flex items-center justify-between transition-all group"
-          >
-            <div className="flex items-center gap-2.5">
-              <div className="w-7 h-7 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-xs">
-                <ShieldCheck className="w-4 h-4" />
-              </div>
-              <div className="flex flex-col">
-                <span className="text-xs font-bold text-gray-200 group-hover:text-emerald-400 transition-colors">
-                  Suresh Patil (Exit Security Officer)
-                </span>
-                <span className="text-[10px] text-gray-400">
-                  Camera QR Scanner & 4-Digit OTP Fallback
-                </span>
-              </div>
-            </div>
-            <ArrowRight className="w-4 h-4 text-gray-500 group-hover:text-emerald-400 transition-colors" />
-          </button>
-
-          {/* Super Admin */}
-          <button
-            onClick={() => handleDemoSignIn("platform")}
-            className="p-3 rounded-xl bg-surface hover:bg-surface-hover border border-amber-500/30 text-left flex items-center justify-between transition-all group shadow-glow"
-          >
-            <div className="flex items-center gap-2.5">
-              <div className="w-7 h-7 rounded-lg bg-amber-400/20 text-amber-300 flex items-center justify-center font-bold text-xs">
-                <Sparkles className="w-4 h-4" />
-              </div>
-              <div className="flex flex-col">
-                <span className="text-xs font-bold text-amber-200 group-hover:text-amber-300 transition-colors">
-                  Platform Super-Admin
-                </span>
-                <span className="text-[10px] text-gray-400">
-                  Tenant Governance, Cross-Tenant GMV & Fraud Review
-                </span>
-              </div>
-            </div>
-            <ArrowRight className="w-4 h-4 text-amber-400 transition-colors" />
-          </button>
-        </div>
-      </div>
+      {/* Footer */}
+      <footer className="py-4 text-center text-xs text-gray-500 font-mono border-t border-surface-border">
+        {currentRestaurantName} • Secured by TableOS Cloud Core
+      </footer>
     </div>
   );
 }

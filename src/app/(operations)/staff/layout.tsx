@@ -27,6 +27,7 @@ export default function StaffOperationsLayout({
   const dispatch = useAppDispatch();
   const userName = useAppSelector((state) => state.auth.userName) || "Floor Staff";
   const staffRole = useAppSelector((state) => state.auth.staffRole) || "WAITER";
+  const employeeId = useAppSelector((state) => state.auth.employeeId);
 
   const handleLogout = () => {
     dispatch(logoutStaff());
@@ -75,6 +76,11 @@ export default function StaffOperationsLayout({
           <Badge variant="amber" size="sm">
             {staffRole}
           </Badge>
+          {employeeId && (
+            <span className="hidden sm:inline px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-primary/20 text-primary border border-primary/40">
+              {employeeId}
+            </span>
+          )}
         </div>
 
         {/* Navigation Tabs */}

@@ -67,7 +67,7 @@ export default function CustomerBillPage() {
     (sum, o) =>
       sum +
       o.items.reduce(
-        (iSum, item) => iSum + item.cgst_amount.amount_minor_units,
+        (iSum, item) => iSum + (item.cgst_amount?.amount_minor_units || 0),
         0
       ),
     0
@@ -76,7 +76,7 @@ export default function CustomerBillPage() {
     (sum, o) =>
       sum +
       o.items.reduce(
-        (iSum, item) => iSum + item.sgst_amount.amount_minor_units,
+        (iSum, item) => iSum + (item.sgst_amount?.amount_minor_units || 0),
         0
       ),
     0

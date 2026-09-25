@@ -64,15 +64,20 @@ export default function LandingPage() {
             A single-codebase operating system eliminating wait times, order discrepancies, and walkout fraud. Seamlessly orchestrates diners, servers, head chefs, and door security.
           </p>
 
-          <div className="flex flex-wrap items-center gap-4 pt-2">
-            <Link href="/t/table-qr-token-spice-route-01">
-              <Button size="lg" leftIcon={<QrCode className="w-5 h-5" />}>
-                Try Table T1 Scan Demo
+          <div className="flex flex-wrap items-center gap-3 pt-2">
+            <Link href="/signup">
+              <Button size="lg" variant="gold" leftIcon={<Sparkles className="w-5 h-5" />}>
+                Onboard Restaurant (5 Steps)
               </Button>
             </Link>
-            <Link href="/login">
-              <Button size="lg" variant="secondary" rightIcon={<ArrowRight className="w-5 h-5" />}>
-                Staff & Admin Portal
+            <Link href="/staff/login">
+              <Button size="lg" variant="secondary" leftIcon={<ShieldCheck className="w-5 h-5 text-amber-400" />}>
+                Floor Staff Terminal
+              </Button>
+            </Link>
+            <Link href="/t/table-qr-token-spice-route-01">
+              <Button size="lg" variant="outline" leftIcon={<QrCode className="w-5 h-5" />}>
+                Scan QR Demo
               </Button>
             </Link>
           </div>

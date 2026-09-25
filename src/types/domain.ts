@@ -31,20 +31,20 @@ export interface DiningSession {
 
 export interface OrderItem {
   id: string;
-  order_id: string;
-  menu_item_id: string;
+  order_id?: string;
+  menu_item_id?: string;
   item_name_snapshot: string;
   quantity: number;
   unit_price_snapshot: Money;
   line_total: Money;
-  hsn_sac_code_snapshot: string;
-  cgst_rate_bps_snapshot: number;
-  sgst_rate_bps_snapshot: number;
-  cgst_amount: Money;
-  sgst_amount: Money;
+  hsn_sac_code_snapshot?: string;
+  cgst_rate_bps_snapshot?: number;
+  sgst_rate_bps_snapshot?: number;
+  cgst_amount?: Money;
+  sgst_amount?: Money;
   special_instructions?: string;
   specialInstructions?: string;
-  created_at: string;
+  created_at?: string;
 }
 
 export interface Order {
@@ -52,6 +52,7 @@ export interface Order {
   session_id: string;
   restaurant_id: string;
   sequence_number: number;
+  table_number?: string;
   status: OrderState;
   placed_at: string;
   accepted_at?: string;
@@ -61,9 +62,9 @@ export interface Order {
   total: Money;
   cancellation_fee_applicable?: boolean;
   items: OrderItem[];
-  version: number;
-  created_at: string;
-  updated_at: string;
+  version?: number;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface Payment {
@@ -133,6 +134,7 @@ export interface Table {
 export interface StaffUser {
   id: string;
   restaurant_id: string;
+  employee_id?: string;
   name: string;
   phone: string;
   email: string;

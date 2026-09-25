@@ -116,6 +116,24 @@ export const restaurantApi = baseApi.injectEndpoints({
       providesTags: ["Staff"],
     }),
 
+    createStaffMember: builder.mutation<
+      StaffUser,
+      {
+        name: string;
+        phone: string;
+        email: string;
+        password: string;
+        role: string;
+      }
+    >({
+      query: (body) => ({
+        url: "/api/v1/restaurant/staff",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Staff"],
+    }),
+
     getRestaurantSettings: builder.query<RestaurantSettings, void>({
       query: () => "/api/v1/restaurant/settings",
       providesTags: ["Onboarding"],
@@ -173,6 +191,7 @@ export const {
   useCreateMenuItemMutation,
   useUploadAiMenuCatalogMutation,
   useGetStaffRosterQuery,
+  useCreateStaffMemberMutation,
   useGetRestaurantSettingsQuery,
   useUpdateRestaurantSettingsMutation,
   useGetPlatformFeeLedgerQuery,

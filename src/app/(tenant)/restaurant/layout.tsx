@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useAppDispatch } from "@/store";
+import { useAppDispatch, useAppSelector } from "@/store";
 import { logoutStaff } from "@/store/slices/authSlice";
 import {
   LayoutDashboard,
@@ -24,6 +24,7 @@ import {
   PieChart,
   ShieldCheck,
   CheckCircle2,
+  QrCode,
 } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 
@@ -33,6 +34,7 @@ export default function RestaurantAdminLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const restaurantName = useAppSelector((state) => state.auth.restaurantName) || "{restaurantName}";
   const router = useRouter();
   const dispatch = useAppDispatch();
   const [isAnalyticsExpanded, setIsAnalyticsExpanded] = useState(true);
@@ -89,7 +91,7 @@ export default function RestaurantAdminLayout({
               </div>
               <div className="flex flex-col">
                 <span className="font-extrabold text-sm font-display text-gray-100">
-                  The Spice Route
+                  {restaurantName}
                 </span>
                 <span className="text-[10px] text-gray-400 font-mono tracking-widest uppercase">
                   Tenant Portal
@@ -167,6 +169,19 @@ export default function RestaurantAdminLayout({
             >
               <Sparkles className="w-4 h-4 text-amber-400" />
               <span>Menu & AI OCR Studio</span>
+            </Link>
+
+            {/* Tables & QR Standees */}
+            <Link
+              href="/restaurant/tables"
+              className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-colors ${
+                pathname.includes("/restaurant/tables")
+                  ? "bg-primary text-background font-bold shadow-md shadow-primary/20"
+                  : "text-gray-300 hover:text-white hover:bg-surface-hover"
+              }`}
+            >
+              <QrCode className="w-4 h-4 text-primary" />
+              <span>Tables & QR Standees</span>
             </Link>
 
             {/* Staff */}
