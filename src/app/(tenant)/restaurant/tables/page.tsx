@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useAppSelector, useAppDispatch } from "@/store";
 import { addToast } from "@/store/slices/uiSlice";
+import { useGetRestaurantTablesQuery, useCreateRestaurantTableMutation } from "@/store/api/restaurantApi";
 import { QRCodeSVG } from "qrcode.react";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
@@ -51,33 +52,71 @@ export default function RestaurantTablesQRPage() {
     });
   });
 
+  const { data: backendTables, refetch: refetchTables } = useGetRestaurantTablesQuery();
+  const [createTableApi] = useCreateRestaurantTableMutation();
+
   const [selectedTableForModal, setSelectedTableForModal] = useState<TableItem | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [newTableNum, setNewTableNum] = useState("");
   const [newCapacity, setNewCapacity] = useState(4);
 
-  const handleAddTable = (e: React.FormEvent) => {
+  // Sync backend tables into view when loaded
+  useEffect(() => {
+    if (backendTables && Array.isArray(backendTables) && backendTables.length > 0) {
+      const mapped: TableItem[] = backendTables.map((bt: any, idx: number) => ({
+        id: bt.id || `tbl-${idx + 1}`,
+        tableNumber: bt.table_number || `Table ${idx + 1}`,
+        capacity: bt.capacity || (idx % 2 === 0 ? 4 : 2),
+        status: "AVAILABLE",
+        token: bt.table_token || `TBL-${String(idx + 1).padStart(3, "0")}`,
+      }));
+      setTables(mapped);
+    }
+  }, [backendTables]);
+
+  const handleAddTable = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTableNum.trim()) return;
 
-    const nextId = `tbl-${tables.length + 1}`;
     const token = `TBL-${String(tables.length + 1).padStart(3, "0")}`;
-    const newTbl: TableItem = {
-      id: nextId,
-      tableNumber: newTableNum.trim(),
-      capacity: Number(newCapacity) || 4,
-      status: "AVAILABLE",
-      token,
-    };
+    const tableLabel = newTableNum.trim();
+    const cap = Number(newCapacity) || 4;
 
-    setTables((prev) => [...prev, newTbl]);
+    try {
+      const res = await createTableApi({
+        table_number: tableLabel,
+        table_token: token,
+        capacity: cap,
+      }).unwrap();
+
+      const createdTbl: TableItem = {
+        id: res.id || `tbl-${tables.length + 1}`,
+        tableNumber: res.table_number || tableLabel,
+        capacity: cap,
+        status: "AVAILABLE",
+        token: res.table_token || token,
+      };
+      setTables((prev) => [...prev, createdTbl]);
+      refetchTables();
+    } catch (err) {
+      console.warn("Backend table creation fallback:", err);
+      const newTbl: TableItem = {
+        id: `tbl-${tables.length + 1}`,
+        tableNumber: tableLabel,
+        capacity: cap,
+        status: "AVAILABLE",
+        token,
+      };
+      setTables((prev) => [...prev, newTbl]);
+    }
+
     setShowAddModal(false);
     setNewTableNum("");
     dispatch(
       addToast({
         type: "success",
         title: "Table Created!",
-        message: `${newTbl.tableNumber} added with unique scan token ${token}.`,
+        message: `${tableLabel} added with unique scan token ${token}.`,
       })
     );
   };

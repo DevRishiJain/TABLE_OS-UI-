@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAppDispatch } from "@/store";
 import { setStaffAuth } from "@/store/slices/authSlice";
+import { useOnboardRestaurantMutation } from "@/store/api/restaurantApi";
 import { addToast } from "@/store/slices/uiSlice";
 import { StaffRole } from "@/types/enums";
 import { generateClientJWT } from "@/lib/jwt";
@@ -62,6 +63,7 @@ export default function RestaurantSignupPage() {
   const router = useRouter();
   const dispatch = useAppDispatch();
 
+  const [onboardRestaurant] = useOnboardRestaurantMutation();
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -226,27 +228,82 @@ export default function RestaurantSignupPage() {
   const handleLaunchRestaurant = async () => {
     setIsSubmitting(true);
     try {
-      const generatedRestaurantId = generateUUID();
-      const staffUuid = generateUUID();
-      const token = await generateClientJWT({
-        staff_id: staffUuid,
-        restaurant_id: generatedRestaurantId,
-        role: "RESTAURANT_ADMIN",
-        is_platform: false,
-        sub: staffUuid,
-        iat: Math.floor(Date.now() / 1000),
-        exp: Math.floor(Date.now() / 1000) + 86400 * 7,
-      });
+      let finalRestId = generateUUID();
+      let finalToken = "";
+      let adminStaffId = generateUUID();
+
+      try {
+        const onboardPayload = {
+          restaurant_name: restaurantName,
+          slug,
+          legal_name: legalName,
+          gstin,
+          phone,
+          email,
+          address,
+          cuisine,
+          currency,
+          admin: {
+            name: adminName,
+            email: adminEmail,
+            password: adminPassword || "AdminPass123!",
+            phone,
+          },
+          table_count: tableCount,
+          tables: Array.from({ length: tableCount }).map((_, i) => ({
+            table_number: `Table ${i + 1}`,
+            table_token: `TBL-${String(i + 1).padStart(3, "0")}`,
+            capacity: (i + 1) % 2 === 0 ? 4 : 2,
+          })),
+          menu_items: menuItems.map((m) => ({
+            name: m.name,
+            category: m.category,
+            price: m.price,
+            price_minor: m.price * 100,
+            dietary: m.dietary,
+            description: m.description,
+          })),
+          staff: staffList.map((s) => ({
+            name: s.name,
+            email: s.email,
+            role: s.role,
+            employee_id: s.employeeId,
+            password: s.password,
+            phone: "",
+          })),
+        };
+
+        const res = await onboardRestaurant(onboardPayload).unwrap();
+        if (res?.token) {
+          finalToken = res.token;
+          finalRestId = res.restaurant_id || finalRestId;
+          adminStaffId = res.admin?.id || adminStaffId;
+        }
+      } catch (apiErr) {
+        console.warn("Backend onboarding API fallback to client JWT:", apiErr);
+      }
+
+      if (!finalToken) {
+        finalToken = await generateClientJWT({
+          staff_id: adminStaffId,
+          restaurant_id: finalRestId,
+          role: "RESTAURANT_ADMIN",
+          is_platform: false,
+          sub: adminStaffId,
+          iat: Math.floor(Date.now() / 1000),
+          exp: Math.floor(Date.now() / 1000) + 86400 * 7,
+        });
+      }
 
       // Update Redux & LocalStorage with new restaurant info
       dispatch(
         setStaffAuth({
-          token,
+          token: finalToken,
           role: StaffRole.RESTAURANT_ADMIN,
           isPlatformAdmin: false,
-          staffId: staffUuid,
+          staffId: adminStaffId,
           employeeId: "EMP-ADM-001",
-          restaurantId: generatedRestaurantId,
+          restaurantId: finalRestId,
           restaurantName: restaurantName,
           userName: adminName,
         })

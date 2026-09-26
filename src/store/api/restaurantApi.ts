@@ -89,7 +89,8 @@ export const restaurantApi = baseApi.injectEndpoints({
         category_id: string;
         name: string;
         description?: string;
-        price: number; // minor units (e.g. 35000)
+        price?: number;
+        price_minor?: number;
         cgst_rate_bps?: number;
         sgst_rate_bps?: number;
       }
@@ -97,7 +98,11 @@ export const restaurantApi = baseApi.injectEndpoints({
       query: (body) => ({
         url: "/api/v1/restaurant/menu/items",
         method: "POST",
-        body,
+        body: {
+          ...body,
+          price_minor: body.price_minor || body.price || 0,
+          price: body.price || body.price_minor || 0,
+        },
       }),
       invalidatesTags: ["MenuItem"],
     }),
@@ -173,6 +178,32 @@ export const restaurantApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ["Onboarding", "Tenant"],
     }),
+
+    getRestaurantTables: builder.query<any[], void>({
+      query: () => "/api/v1/restaurant/tables",
+      providesTags: ["Table"],
+    }),
+
+    createRestaurantTable: builder.mutation<
+      any,
+      { table_number: string; table_token?: string; capacity?: number }
+    >({
+      query: (body) => ({
+        url: "/api/v1/restaurant/tables",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Table"],
+    }),
+
+    onboardRestaurant: builder.mutation<any, any>({
+      query: (body) => ({
+        url: "/api/v1/public/onboard",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Onboarding", "Tenant", "Table", "MenuItem", "MenuCategory", "Staff"],
+    }),
   }),
 });
 
@@ -198,4 +229,7 @@ export const {
   useGetSettlementsQuery,
   useGetOnboardingQuery,
   useGoLiveOnboardingMutation,
+  useGetRestaurantTablesQuery,
+  useCreateRestaurantTableMutation,
+  useOnboardRestaurantMutation,
 } = restaurantApi;

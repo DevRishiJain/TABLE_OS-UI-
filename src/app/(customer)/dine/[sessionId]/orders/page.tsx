@@ -255,9 +255,9 @@ export default function CustomerOrdersPage() {
                       <span className="text-gray-200 font-medium">
                         {item.item_name_snapshot}
                       </span>
-                      {item.specialInstructions && (
+                      {(item.special_instructions || item.specialInstructions) && (
                         <span className="text-[10px] text-gray-400 italic">
-                          ({item.specialInstructions})
+                          ({item.special_instructions || item.specialInstructions})
                         </span>
                       )}
                     </div>

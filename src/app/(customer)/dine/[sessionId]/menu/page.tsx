@@ -46,9 +46,9 @@ export default function CustomerMenuPage() {
     "";
 
   const { data: categories, isLoading: isCategoriesLoading } =
-    useGetPublicMenuCategoriesQuery({ restaurantId });
+    useGetPublicMenuCategoriesQuery({ restaurantId }, { skip: !restaurantId });
   const { data: items, isLoading: isItemsLoading } =
-    useGetPublicMenuItemsQuery({ restaurantId });
+    useGetPublicMenuItemsQuery({ restaurantId }, { skip: !restaurantId });
 
   const cartItems = useAppSelector(selectCartItemsList);
   const isAiDrawerOpen = useAppSelector((state) => state.ui.isAiDrawerOpen);
