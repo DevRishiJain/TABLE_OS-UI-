@@ -19,7 +19,7 @@ interface AuthState {
 }
 
 const DEFAULT_RESTAURANT_ID =
-  process.env.NEXT_PUBLIC_DEFAULT_RESTAURANT_ID || "b1000000-0000-0000-0000-000000000001";
+  process.env.NEXT_PUBLIC_DEFAULT_RESTAURANT_ID || "";
 
 // Safely load from localStorage if available in browser
 function getInitialState(): AuthState {
@@ -32,7 +32,7 @@ function getInitialState(): AuthState {
       staffId: null,
       employeeId: null,
       restaurantId: DEFAULT_RESTAURANT_ID,
-      restaurantName: "The Spice Route",
+      restaurantName: process.env.NEXT_PUBLIC_DEFAULT_RESTAURANT_NAME || null,
       userName: null,
       sessionToken: null,
       activeSessionId: null,
@@ -49,7 +49,7 @@ function getInitialState(): AuthState {
     staffId: localStorage.getItem("tableos_staff_id"),
     employeeId: localStorage.getItem("tableos_employee_id"),
     restaurantId: localStorage.getItem("tableos_restaurant_id") || DEFAULT_RESTAURANT_ID,
-    restaurantName: localStorage.getItem("tableos_restaurant_name") || "The Spice Route",
+    restaurantName: localStorage.getItem("tableos_restaurant_name") || process.env.NEXT_PUBLIC_DEFAULT_RESTAURANT_NAME || null,
     userName: localStorage.getItem("tableos_user_name"),
     sessionToken: localStorage.getItem("tableos_session_token"),
     activeSessionId: localStorage.getItem("tableos_session_id"),

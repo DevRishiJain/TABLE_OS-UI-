@@ -6,6 +6,13 @@ export const metadata: Metadata = {
   title: "TableOS | Next-Gen Restaurant Dining & Operations Operating System",
   description:
     "An AI-native, fraud-resistant restaurant dining platform connecting table QR scan, real-time KDS, automated exit passes, and transparent 1% platform fee ledger.",
+  icons: {
+    icon: [
+      { url: "/icon.svg", type: "image/svg+xml" },
+    ],
+    shortcut: "/icon.svg",
+    apple: "/icon.svg",
+  },
 };
 
 export const viewport: Viewport = {

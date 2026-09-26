@@ -29,8 +29,7 @@ const SAMPLE_QUERIES = [
 export const AIMenuSearchDrawer: React.FC<AIMenuSearchDrawerProps> = ({
   isOpen,
   onClose,
-  restaurantId = process.env.NEXT_PUBLIC_DEFAULT_RESTAURANT_ID ||
-    "b1000000-0000-0000-0000-000000000001",
+  restaurantId = process.env.NEXT_PUBLIC_DEFAULT_RESTAURANT_ID || "",
   onSelectHighlightItem,
 }) => {
   const dispatch = useAppDispatch();

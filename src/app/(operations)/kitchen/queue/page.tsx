@@ -7,7 +7,7 @@ import {
 } from "@/store/api/kitchenApi";
 import { OrderState } from "@/types/enums";
 import { addToast } from "@/store/slices/uiSlice";
-import { useAppDispatch } from "@/store";
+import { useAppDispatch, useAppSelector } from "@/store";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -24,8 +24,9 @@ import {
 
 export default function KitchenQueuePage() {
   const dispatch = useAppDispatch();
+  const restaurantId = useAppSelector((state) => state.auth.restaurantId);
   const { data: queueOrders, isLoading, refetch } = useGetKitchenQueueQuery(
-    undefined,
+    restaurantId || undefined,
     { pollingInterval: 4000 }
   );
 

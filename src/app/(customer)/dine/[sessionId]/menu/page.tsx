@@ -6,6 +6,7 @@ import {
   useGetPublicMenuCategoriesQuery,
   useGetPublicMenuItemsQuery,
 } from "@/store/api/publicApi";
+import { useGetSessionQuery } from "@/store/api/customerApi";
 import { useAppDispatch, useAppSelector } from "@/store";
 import {
   addItem,
@@ -36,9 +37,13 @@ export default function CustomerMenuPage() {
   const sessionId = params.sessionId as string;
   const dispatch = useAppDispatch();
 
+  const { data: sessionDetail } = useGetSessionQuery(sessionId, { skip: !sessionId });
+  const storedRestaurantId = useAppSelector((state) => state.auth.restaurantId);
   const restaurantId =
+    sessionDetail?.session?.restaurant_id ||
+    storedRestaurantId ||
     process.env.NEXT_PUBLIC_DEFAULT_RESTAURANT_ID ||
-    "b1000000-0000-0000-0000-000000000001";
+    "";
 
   const { data: categories, isLoading: isCategoriesLoading } =
     useGetPublicMenuCategoriesQuery({ restaurantId });

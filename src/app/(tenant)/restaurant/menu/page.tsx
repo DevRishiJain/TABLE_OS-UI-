@@ -10,7 +10,7 @@ import {
 } from "@/store/api/restaurantApi";
 import { formatMoney } from "@/lib/money";
 import { addToast } from "@/store/slices/uiSlice";
-import { useAppDispatch } from "@/store";
+import { useAppDispatch, useAppSelector } from "@/store";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -29,9 +29,9 @@ import {
 
 export default function RestaurantMenuStudioPage() {
   const dispatch = useAppDispatch();
+  const storedRestaurantId = useAppSelector((state) => state.auth.restaurantId);
   const restaurantId =
-    process.env.NEXT_PUBLIC_DEFAULT_RESTAURANT_ID ||
-    "b1000000-0000-0000-0000-000000000001";
+    storedRestaurantId || process.env.NEXT_PUBLIC_DEFAULT_RESTAURANT_ID || "";
 
   const { data: categories, refetch: refetchCategories } =
     useGetMenuCategoriesQuery();

@@ -4,8 +4,11 @@ import { Order } from "@/types/domain";
 
 export const kitchenApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
-    getKitchenQueue: builder.query<KitchenOrderQueueItem[], void>({
-      query: () => "/api/v1/kitchen/orders/queue",
+    getKitchenQueue: builder.query<KitchenOrderQueueItem[], string | void>({
+      query: (restaurantId) =>
+        restaurantId
+          ? `/api/v1/kitchen/orders/queue?restaurant_id=${restaurantId}`
+          : "/api/v1/kitchen/orders/queue",
       providesTags: ["KitchenQueue"],
     }),
 

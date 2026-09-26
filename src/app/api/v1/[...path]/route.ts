@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 const BACKEND_BASE =
-  process.env.BACKEND_INTERNAL_URL || "http://54.146.192.20:8088";
+  process.env.BACKEND_INTERNAL_URL || "http://127.0.0.1:8088";
 
 function getCorsHeaders(origin: string | null = "*"): HeadersInit {
   return {
@@ -31,8 +31,8 @@ async function proxyRequest(request: NextRequest, { params }: { params: { path: 
   const headers = new Headers();
   request.headers.forEach((value, key) => {
     const lower = key.toLowerCase();
-    // Exclude host header so target backend receives its own host
-    if (lower !== "host" && lower !== "connection") {
+    // Exclude host and content-length headers so fetch automatically computes correct headers
+    if (lower !== "host" && lower !== "connection" && lower !== "content-length") {
       headers.set(key, value);
     }
   });
@@ -44,9 +44,10 @@ async function proxyRequest(request: NextRequest, { params }: { params: { path: 
     };
 
     if (request.method !== "GET" && request.method !== "HEAD") {
-      const bodyBlob = await request.blob();
-      if (bodyBlob.size > 0) {
-        fetchOptions.body = bodyBlob;
+      const bodyText = await request.text();
+      if (bodyText && bodyText.length > 0) {
+        fetchOptions.body = bodyText;
+        (fetchOptions as any).duplex = "half";
       }
     }
 

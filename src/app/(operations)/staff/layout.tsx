@@ -25,6 +25,12 @@ export default function StaffOperationsLayout({
   const pathname = usePathname();
   const router = useRouter();
   const dispatch = useAppDispatch();
+  const [mounted, setMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const userName = useAppSelector((state) => state.auth.userName) || "Floor Staff";
   const staffRole = useAppSelector((state) => state.auth.staffRole) || "WAITER";
   const employeeId = useAppSelector((state) => state.auth.employeeId);
@@ -73,12 +79,15 @@ export default function StaffOperationsLayout({
               </span>
             </div>
           </Link>
-          <Badge variant="amber" size="sm">
-            {staffRole}
+          <Badge variant="amber" size="sm" suppressHydrationWarning>
+            {mounted ? staffRole : "WAITER"}
           </Badge>
           {employeeId && (
-            <span className="hidden sm:inline px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-primary/20 text-primary border border-primary/40">
-              {employeeId}
+            <span
+              suppressHydrationWarning
+              className="hidden sm:inline px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-primary/20 text-primary border border-primary/40"
+            >
+              {mounted ? employeeId : ""}
             </span>
           )}
         </div>

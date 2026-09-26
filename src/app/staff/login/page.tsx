@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAppDispatch, useAppSelector } from "@/store";
@@ -8,6 +8,7 @@ import { setStaffAuth, setGuardAuth } from "@/store/slices/authSlice";
 import { useStaffLoginMutation } from "@/store/api/staffApi";
 import { addToast } from "@/store/slices/uiSlice";
 import { generateClientJWT, DEMO_PROFILES } from "@/lib/jwt";
+import { generateUUID } from "@/lib/idempotency";
 import { StaffRole } from "@/types/enums";
 import {
   Utensils,
@@ -31,8 +32,13 @@ export default function DedicatedStaffLoginPage() {
   const currentRestaurantName = useAppSelector((state) => state.auth.restaurantName) || "The Spice Route";
   const restaurantId = useAppSelector((state) => state.auth.restaurantId);
 
-  const [identifier, setIdentifier] = useState("EMP-WTR-001");
-  const [password, setPassword] = useState("pass1234");
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const [identifier, setIdentifier] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -111,9 +117,14 @@ export default function DedicatedStaffLoginPage() {
         targetPath = "/staff/payments";
         staffName = "Cash Desk Operator";
       } else if (upperId.includes("GRD") || upperId.includes("GUARD")) {
+        const guardPayload = DEMO_PROFILES.guard.getPayload();
+        const guardToken = await generateClientJWT({
+          ...guardPayload,
+          restaurant_id: restaurantId,
+        });
         dispatch(
           setGuardAuth({
-            token: "guard-jwt-token",
+            token: guardToken,
             userName: "Security Guard",
             restaurantId: restaurantId,
           })
@@ -126,11 +137,17 @@ export default function DedicatedStaffLoginPage() {
         staffName = "Floor Manager";
       }
 
+      let profileKey = "waiter";
+      if (detectedRole === StaffRole.KITCHEN) profileKey = "kitchen";
+      else if (detectedRole === StaffRole.RESTAURANT_ADMIN) profileKey = "admin";
+
+      const demoProfile = DEMO_PROFILES[profileKey];
+      const payload = demoProfile ? demoProfile.getPayload() : DEMO_PROFILES.waiter.getPayload();
+      const staffUuid = (payload.staff_id as string) || generateUUID();
+
       const clientToken = await generateClientJWT({
-        staff_id: "staff-" + identifier,
+        ...payload,
         restaurant_id: restaurantId,
-        role: detectedRole,
-        permissions: ["ALL"],
       });
 
       dispatch(
@@ -138,7 +155,7 @@ export default function DedicatedStaffLoginPage() {
           token: clientToken,
           role: detectedRole,
           isPlatformAdmin: false,
-          staffId: "staff-" + identifier,
+          staffId: staffUuid,
           employeeId: identifier.toUpperCase().startsWith("EMP-") ? identifier.toUpperCase() : "EMP-WTR-001",
           restaurantId: restaurantId,
           restaurantName: currentRestaurantName,
@@ -162,12 +179,11 @@ export default function DedicatedStaffLoginPage() {
 
   const handleQuickChipSelect = (empId: string, role: string) => {
     setIdentifier(empId);
-    setPassword("pass1234");
     dispatch(
       addToast({
         type: "info",
-        title: "Selected Profile",
-        message: `Loaded credentials for ${role} (${empId}).`,
+        title: "Selected Role",
+        message: `Selected ${role} (${empId}). Enter password to continue.`,
       })
     );
   };
@@ -181,8 +197,11 @@ export default function DedicatedStaffLoginPage() {
             <Utensils className="w-4 h-4" />
           </div>
           <div>
-            <span className="text-sm font-bold font-display text-gray-100">
-              {currentRestaurantName}
+            <span
+              suppressHydrationWarning
+              className="text-sm font-bold font-display text-gray-100"
+            >
+              {mounted ? currentRestaurantName : "TableOS"}
             </span>
             <span className="text-[10px] text-amber-400 block font-mono font-bold tracking-wider uppercase">
               Staff Operations Terminal
@@ -220,7 +239,10 @@ export default function DedicatedStaffLoginPage() {
               Staff Shift Sign-In
             </h2>
             <p className="text-xs text-gray-400 mt-1">
-              Enter your assigned Employee ID and shift passcode for <strong className="text-gray-200">{currentRestaurantName}</strong>.
+              Enter your assigned Employee ID and shift passcode for{" "}
+              <strong suppressHydrationWarning className="text-gray-200">
+                {mounted ? currentRestaurantName : "TableOS"}
+              </strong>.
             </p>
           </div>
 

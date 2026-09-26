@@ -8,6 +8,7 @@ import { setStaffAuth } from "@/store/slices/authSlice";
 import { addToast } from "@/store/slices/uiSlice";
 import { StaffRole } from "@/types/enums";
 import { generateClientJWT } from "@/lib/jwt";
+import { generateUUID } from "@/lib/idempotency";
 import { QRCodeSVG } from "qrcode.react";
 import {
   Utensils,
@@ -79,7 +80,7 @@ export default function RestaurantSignupPage() {
   // Admin User
   const [adminName, setAdminName] = useState("Vikram Malhotra");
   const [adminEmail, setAdminEmail] = useState("owner@goldenspoon.com");
-  const [adminPassword, setAdminPassword] = useState("Admin@12345");
+  const [adminPassword, setAdminPassword] = useState("");
 
   // STEP 2: Menu Items
   const [menuFile, setMenuFile] = useState<File | null>(null);
@@ -148,6 +149,9 @@ export default function RestaurantSignupPage() {
   const [selectedTableForPreview, setSelectedTableForPreview] = useState<number>(1);
 
   // STEP 4: Staff Team Roster
+  const generateTemporaryPassword = () =>
+    "Temp@" + Math.random().toString(36).substring(2, 8).toUpperCase();
+
   const [staffList, setStaffList] = useState<StaffDraft[]>([
     {
       id: "s1",
@@ -155,7 +159,7 @@ export default function RestaurantSignupPage() {
       email: "aman.waiter@goldenspoon.com",
       role: "WAITER",
       employeeId: "EMP-WTR-001",
-      password: "pass1234",
+      password: generateTemporaryPassword(),
     },
     {
       id: "s2",
@@ -163,7 +167,7 @@ export default function RestaurantSignupPage() {
       email: "rajesh.chef@goldenspoon.com",
       role: "KITCHEN",
       employeeId: "EMP-CHF-001",
-      password: "pass1234",
+      password: generateTemporaryPassword(),
     },
     {
       id: "s3",
@@ -171,14 +175,14 @@ export default function RestaurantSignupPage() {
       email: "sunil.cashier@goldenspoon.com",
       role: "CASHIER",
       employeeId: "EMP-CSH-001",
-      password: "pass1234",
+      password: generateTemporaryPassword(),
     },
   ]);
 
   const [newStaffName, setNewStaffName] = useState("");
   const [newStaffEmail, setNewStaffEmail] = useState("");
   const [newStaffRole, setNewStaffRole] = useState<StaffDraft["role"]>("WAITER");
-  const [newStaffPassword, setNewStaffPassword] = useState("pass1234");
+  const [newStaffPassword, setNewStaffPassword] = useState("");
 
   const getNextEmployeeId = (role: StaffDraft["role"]) => {
     const rolePrefix: Record<StaffDraft["role"], string> = {
@@ -206,7 +210,7 @@ export default function RestaurantSignupPage() {
       email: newStaffEmail.trim(),
       role: newStaffRole,
       employeeId: autoEmpId,
-      password: newStaffPassword || "pass1234",
+      password: newStaffPassword.trim() || generateTemporaryPassword(),
     };
     setStaffList((prev) => [...prev, newMember]);
     setNewStaffName("");
@@ -222,12 +226,16 @@ export default function RestaurantSignupPage() {
   const handleLaunchRestaurant = async () => {
     setIsSubmitting(true);
     try {
-      const generatedRestaurantId = "b" + Math.random().toString(16).substring(2, 10) + "-0000-0000-0000-000000000001";
+      const generatedRestaurantId = generateUUID();
+      const staffUuid = generateUUID();
       const token = await generateClientJWT({
-        staff_id: "s-admin-001",
+        staff_id: staffUuid,
         restaurant_id: generatedRestaurantId,
         role: "RESTAURANT_ADMIN",
-        permissions: ["ALL"],
+        is_platform: false,
+        sub: staffUuid,
+        iat: Math.floor(Date.now() / 1000),
+        exp: Math.floor(Date.now() / 1000) + 86400 * 7,
       });
 
       // Update Redux & LocalStorage with new restaurant info
@@ -236,7 +244,7 @@ export default function RestaurantSignupPage() {
           token,
           role: StaffRole.RESTAURANT_ADMIN,
           isPlatformAdmin: false,
-          staffId: "s-admin-001",
+          staffId: staffUuid,
           employeeId: "EMP-ADM-001",
           restaurantId: generatedRestaurantId,
           restaurantName: restaurantName,
@@ -491,6 +499,7 @@ export default function RestaurantSignupPage() {
                     type="text"
                     value={adminName}
                     onChange={(e) => setAdminName(e.target.value)}
+                    placeholder="e.g. Vikram Malhotra"
                     className="w-full px-3.5 py-2.5 rounded-xl bg-surface-subtle border border-surface-border text-sm text-gray-100 focus:outline-none focus:border-primary"
                   />
                 </div>
@@ -502,6 +511,7 @@ export default function RestaurantSignupPage() {
                     type="email"
                     value={adminEmail}
                     onChange={(e) => setAdminEmail(e.target.value)}
+                    placeholder="admin@yourrestaurant.com"
                     className="w-full px-3.5 py-2.5 rounded-xl bg-surface-subtle border border-surface-border text-sm text-gray-100 focus:outline-none focus:border-primary font-mono"
                   />
                 </div>
@@ -514,6 +524,7 @@ export default function RestaurantSignupPage() {
                       type={showPassword ? "text" : "password"}
                       value={adminPassword}
                       onChange={(e) => setAdminPassword(e.target.value)}
+                      placeholder="Enter secure password"
                       className="w-full px-3.5 py-2.5 rounded-xl bg-surface-subtle border border-surface-border text-sm text-gray-100 focus:outline-none focus:border-primary font-mono pr-10"
                     />
                     <button

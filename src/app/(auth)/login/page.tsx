@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAppDispatch, useAppSelector } from "@/store";
@@ -8,6 +8,7 @@ import { setStaffAuth, setGuardAuth } from "@/store/slices/authSlice";
 import { useStaffLoginMutation } from "@/store/api/staffApi";
 import { addToast } from "@/store/slices/uiSlice";
 import { generateClientJWT, DEMO_PROFILES } from "@/lib/jwt";
+import { generateUUID } from "@/lib/idempotency";
 import { StaffRole } from "@/types/enums";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -36,9 +37,14 @@ export default function LoginPage() {
   const currentRestaurantName = useAppSelector((state) => state.auth.restaurantName) || "The Spice Route";
   const restaurantId = useAppSelector((state) => state.auth.restaurantId);
 
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const [activeTab, setActiveTab] = useState<"admin" | "staff">("admin");
-  const [email, setEmail] = useState("owner@spiceroute.com");
-  const [password, setPassword] = useState("Admin@12345");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [staffLogin] = useStaffLoginMutation();
@@ -47,11 +53,49 @@ export default function LoginPage() {
     e.preventDefault();
     setIsLoading(true);
     try {
+      // 1. Attempt real backend authentication first if available
+      try {
+        const res = await staffLogin({
+          identifier: email,
+          password: password,
+          restaurant_id: restaurantId,
+        }).unwrap();
+
+        if (res && res.token) {
+          dispatch(
+            setStaffAuth({
+              token: res.token,
+              role: (res.staff.role as StaffRole) || StaffRole.RESTAURANT_ADMIN,
+              isPlatformAdmin: res.staff.role === "SUPER_ADMIN",
+              staffId: res.staff.id,
+              employeeId: res.staff.employee_id || "EMP-ADM-001",
+              restaurantId: res.staff.restaurant_id || restaurantId,
+              restaurantName: currentRestaurantName,
+              userName: res.staff.name || email.split("@")[0].toUpperCase(),
+            })
+          );
+
+          dispatch(
+            addToast({
+              type: "success",
+              title: "Admin Access Granted",
+              message: `Welcome to ${currentRestaurantName} Executive Suite.`,
+            })
+          );
+
+          router.push("/restaurant/dashboard");
+          return;
+        }
+      } catch (backendErr) {
+        // Fallback to demo admin profile if server credentials aren't seeded yet
+        console.warn("Backend authentication unavailable, using demo credentials:", backendErr);
+      }
+
+      // 2. Demo sign-in using RFC4122 compliant UUID and valid claims
+      const adminPayload = DEMO_PROFILES.admin.getPayload();
       const token = await generateClientJWT({
-        staff_id: "s-admin-001",
+        ...adminPayload,
         restaurant_id: restaurantId,
-        role: "RESTAURANT_ADMIN",
-        permissions: ["ALL"],
       });
 
       dispatch(
@@ -59,7 +103,7 @@ export default function LoginPage() {
           token,
           role: StaffRole.RESTAURANT_ADMIN,
           isPlatformAdmin: false,
-          staffId: "s-admin-001",
+          staffId: adminPayload.staff_id as string,
           employeeId: "EMP-ADM-001",
           restaurantId,
           restaurantName: currentRestaurantName,
@@ -83,13 +127,24 @@ export default function LoginPage() {
     }
   };
 
-  const handleStaffQuickLogin = (role: StaffRole, empId: string, name: string, targetPath: string) => {
+  const handleStaffQuickLogin = async (role: StaffRole, empId: string, name: string, targetPath: string) => {
+    let profileKey = "waiter";
+    if (role === StaffRole.KITCHEN) profileKey = "kitchen";
+    else if (role === StaffRole.RESTAURANT_ADMIN || role === StaffRole.MANAGER) profileKey = "admin";
+
+    const profile = DEMO_PROFILES[profileKey];
+    const payload = profile ? profile.getPayload() : DEMO_PROFILES.waiter.getPayload();
+    const token = await generateClientJWT({
+      ...payload,
+      restaurant_id: restaurantId,
+    });
+
     dispatch(
       setStaffAuth({
-        token: "demo-staff-token",
+        token,
         role: role,
         isPlatformAdmin: false,
-        staffId: "staff-" + empId,
+        staffId: (payload.staff_id as string) || generateUUID(),
         employeeId: empId,
         restaurantId,
         restaurantName: currentRestaurantName,
@@ -115,8 +170,11 @@ export default function LoginPage() {
             <Utensils className="w-4 h-4" />
           </div>
           <div>
-            <span className="text-sm font-bold font-display text-gray-100">
-              {currentRestaurantName}
+            <span
+              suppressHydrationWarning
+              className="text-sm font-bold font-display text-gray-100"
+            >
+              {mounted ? currentRestaurantName : "TableOS"}
             </span>
             <span className="text-[10px] text-gray-400 block font-mono">
               Operating System
@@ -150,8 +208,11 @@ export default function LoginPage() {
             <div className="w-12 h-12 rounded-2xl bg-primary/20 text-primary border border-primary/30 flex items-center justify-center shadow-lg shadow-primary/20 mb-3">
               <Store className="w-6 h-6" />
             </div>
-            <h2 className="text-xl font-bold font-display text-gray-100">
-              {currentRestaurantName} Portal
+            <h2
+              suppressHydrationWarning
+              className="text-xl font-bold font-display text-gray-100"
+            >
+              {mounted ? currentRestaurantName : "TableOS"} Portal
             </h2>
             <p className="text-xs text-gray-400 mt-1">
               Select your sign-in portal or enter your credentials below.

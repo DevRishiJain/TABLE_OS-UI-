@@ -63,7 +63,7 @@ export default function WaiterOrderScreenPage() {
 
   // Kitchen queue to track status of accepted tickets
   const { data: kitchenQueue, refetch: refetchKitchen } =
-    useGetKitchenQueueQuery(undefined, { pollingInterval: 5000 });
+    useGetKitchenQueueQuery(auth.restaurantId || undefined, { pollingInterval: 5000 });
 
   const [acceptOrder] = useAcceptOrderMutation();
 
@@ -81,8 +81,7 @@ export default function WaiterOrderScreenPage() {
           message: `Table ${tableNumber} order accepted by ${auth.userName || "Waiter"} (${auth.employeeId || "Floor Staff"}) and sent to kitchen.`,
         })
       );
-      refetchPending();
-      refetchKitchen();
+      await Promise.all([refetchPending(), refetchKitchen()]);
     } catch (err: any) {
       console.error("Failed to accept order:", err);
       dispatch(
@@ -107,10 +106,16 @@ export default function WaiterOrderScreenPage() {
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-sm font-extrabold text-gray-100 font-display">
+              <h2
+                suppressHydrationWarning
+                className="text-sm font-extrabold text-gray-100 font-display"
+              >
                 {auth.userName || "Floor Waiter"}
               </h2>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-primary/20 text-primary border border-primary/40">
+              <span
+                suppressHydrationWarning
+                className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-primary/20 text-primary border border-primary/40"
+              >
                 {auth.employeeId || "EMP-WTR-001"}
               </span>
             </div>

@@ -30,49 +30,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 
-// Standard floor layout tables for The Spice Route
-const DEFAULT_TABLES = [
-  {
-    table_id: "c1000000-0000-0000-0000-000000000001",
-    table_number: "T1",
-    token: "table-qr-token-spice-route-01",
-  },
-  {
-    table_id: "c2000000-0000-0000-0000-000000000002",
-    table_number: "T2",
-    token: "table-qr-token-spice-route-02",
-  },
-  {
-    table_id: "c3000000-0000-0000-0000-000000000003",
-    table_number: "T3",
-    token: "table-qr-token-spice-route-03",
-  },
-  {
-    table_id: "c4000000-0000-0000-0000-000000000004",
-    table_number: "T4",
-    token: "table-qr-token-spice-route-04",
-  },
-  {
-    table_id: "c5000000-0000-0000-0000-000000000005",
-    table_number: "T5",
-    token: "table-qr-token-spice-route-05",
-  },
-  {
-    table_id: "c6000000-0000-0000-0000-000000000006",
-    table_number: "T6",
-    token: "table-qr-token-spice-route-06",
-  },
-  {
-    table_id: "c7000000-0000-0000-0000-000000000007",
-    table_number: "T7",
-    token: "table-qr-token-spice-route-07",
-  },
-  {
-    table_id: "c8000000-0000-0000-0000-000000000008",
-    table_number: "T8",
-    token: "table-qr-token-spice-route-08",
-  },
-];
+
 
 export default function StaffTablesFloorPage() {
   const dispatch = useAppDispatch();
@@ -164,19 +122,15 @@ export default function StaffTablesFloorPage() {
     }
   };
 
-  // Merge default table layout with live tables returned by backend
-  const tablesToRender = DEFAULT_TABLES.map((def) => {
-    const liveMatch = liveTables?.find(
-      (t) => t.table_id === def.table_id || t.table_number === def.table_number
-    );
-    return {
-      ...def,
-      isOccupied: liveMatch?.is_occupied ?? false,
-      status: liveMatch?.session_status ?? "FREE",
-      sessionId: liveMatch?.active_session_id,
-      runningTotalMinor: liveMatch?.running_total_minor ?? 0,
-    };
-  });
+  // Live tables returned by backend
+  const tablesToRender = (liveTables || []).map((t) => ({
+    table_id: t.table_id,
+    table_number: t.table_number,
+    isOccupied: t.is_occupied ?? false,
+    status: t.session_status ?? "FREE",
+    sessionId: t.active_session_id,
+    runningTotalMinor: t.running_total_minor ?? 0,
+  }));
 
   return (
     <div className="flex flex-col gap-6">
@@ -225,8 +179,17 @@ export default function StaffTablesFloorPage() {
       </div>
 
       {/* Visual Table Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-        {tablesToRender.map((table) => {
+      {tablesToRender.length === 0 && !isLoading ? (
+        <div className="p-12 text-center rounded-2xl bg-surface border border-surface-border">
+          <Layers className="w-12 h-12 text-gray-500 mx-auto mb-3" />
+          <h3 className="text-lg font-semibold text-gray-200">No Live Tables Found</h3>
+          <p className="text-xs text-gray-400 mt-1 max-w-sm mx-auto">
+            No dining tables are currently provisioned for this restaurant in the backend. Tables provisioned during onboarding will appear here.
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+          {tablesToRender.map((table) => {
           const isUnverified = table.status === "OPEN";
           const isVerified = table.status === "OPEN_VERIFIED";
           const isAwaitingPayment = table.status === "AWAITING_PAYMENT";
@@ -288,7 +251,8 @@ export default function StaffTablesFloorPage() {
             </Card>
           );
         })}
-      </div>
+        </div>
+      )}
 
       {/* Table Detail & Verification Drawer */}
       <Drawer

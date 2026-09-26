@@ -32,16 +32,17 @@ export default function CustomerExitPassPage() {
   const isSessionPaid =
     session?.status === "PAID" || session?.status === "COMPLETED";
 
-  // Fallback demo exit code if hash is returned
-  const exitCode = exitPass?.otp || "8821";
+  // Dynamic OTP from exitPass
+  const exitCode = exitPass?.otp || "";
 
   // QR Payload
   const qrPayload = JSON.stringify({
     session_id: sessionId,
     otp: exitCode,
     restaurant_id:
+      session?.restaurant_id ||
       process.env.NEXT_PUBLIC_DEFAULT_RESTAURANT_ID ||
-      "b1000000-0000-0000-0000-000000000001",
+      "",
     timestamp: new Date().toISOString(),
   });
 
