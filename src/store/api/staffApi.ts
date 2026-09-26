@@ -5,7 +5,7 @@ import {
   ConfirmPaymentRequest,
   ForceCloseSessionRequest,
 } from "@/types/api";
-import { Order, Payment, DiningSession, StaffUser } from "@/types/domain";
+import { CartItem, Order, Payment, DiningSession, StaffUser } from "@/types/domain";
 import { generateUUID } from "@/lib/idempotency";
 
 export interface PendingOrderEntry {
@@ -19,14 +19,34 @@ export interface PendingOrderEntry {
 
 export const staffApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
-    getStaffTables: builder.query<StaffTableSummary[], void>({
-      query: () => "/api/v1/staff/dashboard/tables",
+    getStaffTables: builder.query<StaffTableSummary[], string | void>({
+      query: (restaurantId) =>
+        restaurantId
+          ? `/api/v1/staff/dashboard/tables?restaurant_id=${restaurantId}`
+          : "/api/v1/staff/dashboard/tables",
       providesTags: ["Table", "Session"],
     }),
 
     getPendingOrders: builder.query<PendingOrderEntry[], void>({
       query: () => "/api/v1/staff/orders/pending",
       providesTags: ["Order", "KitchenQueue"],
+    }),
+
+    placeStaffOrder: builder.mutation<
+      { order: Order; first_order_verification_otp?: string },
+      { sessionId: string; items: CartItem[] }
+    >({
+      query: ({ sessionId, items }) => ({
+        url: `/api/v1/staff/sessions/${sessionId}/orders`,
+        method: "POST",
+        body: { items },
+      }),
+      invalidatesTags: (result, error, { sessionId }) => [
+        { type: "Session", id: sessionId },
+        { type: "Order", id: sessionId },
+        "KitchenQueue",
+        "Table",
+      ],
     }),
 
     staffLogin: builder.mutation<
@@ -114,15 +134,48 @@ export const staffApi = baseApi.injectEndpoints({
         "FraudRisk",
       ],
     }),
+
+    staffVerifyExit: builder.mutation<
+      { result: string; reason?: string },
+      { sessionId: string; otpCode: string }
+    >({
+      query: ({ sessionId, otpCode }) => ({
+        url: `/api/v1/staff/sessions/${sessionId}/verify-exit`,
+        method: "POST",
+        body: { otp_code: otpCode },
+      }),
+      invalidatesTags: (result, error, { sessionId }) => [
+        { type: "Session", id: sessionId },
+        { type: "ExitPass", id: sessionId },
+        "Table",
+      ],
+    }),
+
+    staffDismissAssistance: builder.mutation<
+      { status: string },
+      { sessionId: string }
+    >({
+      query: ({ sessionId }) => ({
+        url: `/api/v1/staff/sessions/${sessionId}/assistance/dismiss`,
+        method: "POST",
+      }),
+      invalidatesTags: (result, error, { sessionId }) => [
+        { type: "Session", id: sessionId },
+        "Table",
+      ],
+    }),
   }),
 });
 
 export const {
   useGetStaffTablesQuery,
   useGetPendingOrdersQuery,
+  usePlaceStaffOrderMutation,
   useStaffLoginMutation,
   useVerifyFirstOrderMutation,
   useAcceptOrderMutation,
   useConfirmPaymentMutation,
   useForceCloseSessionMutation,
+  useStaffVerifyExitMutation,
+  useStaffDismissAssistanceMutation,
 } = staffApi;

@@ -80,7 +80,7 @@ export default function KitchenQueuePage() {
       title: "Accepted / New",
       badge: "amber" as const,
       icon: Clock,
-      statusFilter: [OrderState.ACCEPTED],
+      statusFilter: [OrderState.ACCEPTED, OrderState.PLACED_VERIFIED],
       nextStatus: OrderState.PREPARING,
       nextLabel: "Start Cooking 🔥",
       nextVariant: "gold" as const,
@@ -216,6 +216,11 @@ export default function KitchenQueuePage() {
                                 <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-surface-subtle border border-surface-border text-gray-300 font-mono">
                                   Order #{order.sequence_number || 1}
                                 </span>
+                                {(order.sequence_number || 1) > 1 && (
+                                  <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-amber-500/20 text-amber-300 font-bold border border-amber-500/40">
+                                    Reorder 🔁
+                                  </span>
+                                )}
                               </div>
                               <div className="flex items-center gap-1.5 text-xs text-gray-300 font-medium mt-0.5">
                                 <span className="text-amber-400 font-bold truncate max-w-[120px]">

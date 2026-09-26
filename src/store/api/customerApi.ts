@@ -6,7 +6,7 @@ import {
   CreateOrderResponse,
   CustomerPayRequest,
 } from "@/types/api";
-import { DiningSession, ExitPass, Payment } from "@/types/domain";
+import { DiningSession, ExitPass, Payment, Order } from "@/types/domain";
 import { generateUUID } from "@/lib/idempotency";
 
 export const customerApi = baseApi.injectEndpoints({
@@ -72,6 +72,50 @@ export const customerApi = baseApi.injectEndpoints({
       query: (sessionId) => `/api/v1/session/${sessionId}/exit-pass`,
       providesTags: (result, error, id) => [{ type: "ExitPass", id }],
     }),
+
+    requestAssistance: builder.mutation<
+      { status: string; assistance_reason?: string },
+      { sessionId: string; reason: string }
+    >({
+      query: ({ sessionId, reason }) => ({
+        url: `/api/v1/session/${sessionId}/assistance`,
+        method: "POST",
+        body: { reason },
+      }),
+      invalidatesTags: (result, error, { sessionId }) => [
+        { type: "Session", id: sessionId },
+        "Table",
+      ],
+    }),
+
+    dismissAssistance: builder.mutation<
+      { status: string },
+      { sessionId: string }
+    >({
+      query: ({ sessionId }) => ({
+        url: `/api/v1/session/${sessionId}/assistance/dismiss`,
+        method: "POST",
+      }),
+      invalidatesTags: (result, error, { sessionId }) => [
+        { type: "Session", id: sessionId },
+        "Table",
+      ],
+    }),
+
+    cancelOrder: builder.mutation<
+      Order,
+      { sessionId: string; orderId: string; reason?: string }
+    >({
+      query: ({ sessionId, orderId, reason }) => ({
+        url: `/api/v1/session/${sessionId}/orders/${orderId}/cancel`,
+        method: "POST",
+        body: { reason },
+      }),
+      invalidatesTags: (result, error, { sessionId }) => [
+        { type: "Session", id: sessionId },
+        "Table",
+      ],
+    }),
   }),
 });
 
@@ -81,4 +125,7 @@ export const {
   usePlaceOrderMutation,
   useCustomerPayMutation,
   useGetExitPassQuery,
+  useRequestAssistanceMutation,
+  useDismissAssistanceMutation,
+  useCancelOrderMutation,
 } = customerApi;

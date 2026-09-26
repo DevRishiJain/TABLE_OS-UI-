@@ -1,11 +1,14 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { useGetSessionQuery } from "@/store/api/customerApi";
+import { useGetSessionQuery, useCustomerPayMutation } from "@/store/api/customerApi";
 import { formatMoney } from "@/lib/money";
-import { OrderState, SessionState } from "@/types/enums";
+import { OrderState, SessionState, PaymentMethod } from "@/types/enums";
+import { generateUUID } from "@/lib/idempotency";
+import { addToast } from "@/store/slices/uiSlice";
+import { useAppDispatch } from "@/store";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -20,24 +23,68 @@ import {
   ArrowRight,
   ShieldCheck,
   Receipt,
+  Banknote,
+  Bell,
 } from "lucide-react";
 
 export default function CustomerOrdersPage() {
   const params = useParams();
+  const dispatch = useAppDispatch();
   const sessionId = params.sessionId as string;
 
-  const { data: sessionData, isLoading, refetch } = useGetSessionQuery(
+  const { data: sessionData, isLoading, refetch, error: sessionError } = useGetSessionQuery(
     sessionId,
     { pollingInterval: 4000 }
   );
 
+  const [customerPay, { isLoading: isRequestingBill }] = useCustomerPayMutation();
+  const [showBillModal, setShowBillModal] = useState(false);
+
+  const isSessionGone =
+    (sessionError as any)?.status === 410 ||
+    JSON.stringify(sessionError || {}).includes("session has closed");
+
   const session = sessionData?.session;
   const orders = sessionData?.orders || [];
-  const sessionStatus = session?.status;
+  const sessionStatus = isSessionGone
+    ? SessionState.COMPLETED
+    : session?.status;
+
+  const handleRequestBill = async (method: PaymentMethod) => {
+    try {
+      await customerPay({
+        sessionId,
+        data: { method },
+        idempotencyKey: generateUUID(),
+      }).unwrap();
+
+      dispatch(
+        addToast({
+          type: "success",
+          title: "Waiter Alerted! 🔔",
+          message: "Your server has been notified to bring your bill and collect payment.",
+          durationMs: 4000,
+        })
+      );
+      setShowBillModal(false);
+      refetch();
+    } catch (err) {
+      console.error("Failed to request bill:", err);
+      dispatch(
+        addToast({
+          type: "error",
+          title: "Request Failed",
+          message: "Could not ping waiter. Please try again or wave to your server.",
+        })
+      );
+    }
+  };
 
   const isFirstOrderUnverified =
     sessionStatus === SessionState.OPEN &&
     orders.some((o) => o.status === OrderState.PLACED_UNVERIFIED);
+
+  const isAwaitingPayment = sessionStatus === SessionState.AWAITING_PAYMENT;
 
   // Helper for Order stage badge and progress indicator
   const getStageInfo = (status: OrderState) => {
@@ -51,14 +98,15 @@ export default function CustomerOrdersPage() {
           icon: KeyRound,
           description: "Waiting for your server to verify table code",
         };
+      case OrderState.PLACED_VERIFIED:
       case OrderState.ACCEPTED:
         return {
-          label: "Order Accepted",
+          label: "Order Sent to Kitchen",
           step: 2,
           color: "text-sky-400",
           badge: "blue" as const,
           icon: CheckCircle2,
-          description: "Staff accepted your order. Sent to kitchen.",
+          description: "Order verified and sent directly to the kitchen queue.",
         };
       case OrderState.PREPARING:
         return {
@@ -137,6 +185,33 @@ export default function CustomerOrdersPage() {
         </button>
       </div>
 
+      {/* Session Has Closed Banner */}
+      {sessionStatus === SessionState.COMPLETED && (
+        <div className="p-4 rounded-2xl bg-emerald-500/15 border-2 border-emerald-500/60 shadow-glow flex items-center justify-between gap-3 animate-fadeIn">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-500/30">
+              <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+            </div>
+            <div>
+              <span className="inline-block px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-mono text-[10px] font-bold uppercase tracking-wider mb-0.5 border border-emerald-500/30">
+                SESSION HAS CLOSED 🚪✨
+              </span>
+              <h4 className="text-xs font-bold text-emerald-300">
+                Exit Approved with Gate Pass
+              </h4>
+              <p className="text-[11px] text-gray-300">
+                Your dining session has concluded and exit pass was verified.
+              </p>
+            </div>
+          </div>
+          <Link href={`/dine/${sessionId}/exit`}>
+            <Button size="sm" variant="primary" className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shrink-0">
+              Exit Pass 🎟️
+            </Button>
+          </Link>
+        </div>
+      )}
+
       {/* Prominent First-Order OTP Banner */}
       {isFirstOrderUnverified ? (
         <div className="p-5 rounded-3xl bg-gradient-to-br from-amber-500/20 via-surface to-surface border-2 border-amber-500/60 shadow-glow flex flex-col gap-3">
@@ -167,19 +242,58 @@ export default function CustomerOrdersPage() {
             </p>
           </div>
         </div>
+      ) : isAwaitingPayment ? (
+        <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-500/20 via-surface to-surface border-2 border-amber-500/50 shadow-glow flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0 border border-amber-500/30">
+              <Bell className="w-5 h-5 animate-bounce" />
+            </div>
+            <div>
+              <h4 className="text-xs font-bold text-amber-300 uppercase tracking-wider">
+                Server Alerted to Collect Payment
+              </h4>
+              <p className="text-[11px] text-gray-300">
+                Your waiter is on the way with the bill & card machine. You can also pay online or keep ordering.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <Link href={`/dine/${sessionId}/menu`}>
+              <Button size="sm" variant="secondary" className="text-xs">
+                + Order More
+              </Button>
+            </Link>
+            <Link href={`/dine/${sessionId}/bill`}>
+              <Button size="sm" variant="gold" className="font-bold text-xs">
+                Pay Online →
+              </Button>
+            </Link>
+          </div>
+        </div>
       ) : sessionStatus === SessionState.OPEN_VERIFIED ? (
-        <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center gap-3">
-          <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
-            <ShieldCheck className="w-5 h-5" />
+        <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
+              <ShieldCheck className="w-5 h-5" />
+            </div>
+            <div>
+              <h4 className="text-xs font-bold text-emerald-300">
+                Table Verified Active
+              </h4>
+              <p className="text-[11px] text-gray-300 leading-tight">
+                Your table is unlocked. Orders are sent immediately to the chef.
+              </p>
+            </div>
           </div>
-          <div className="flex-1">
-            <h4 className="text-xs font-bold text-emerald-300">
-              Table Verified Active
-            </h4>
-            <p className="text-[11px] text-gray-300 leading-tight">
-              Your table is unlocked. Orders are sent immediately to the chef.
-            </p>
-          </div>
+          <Button
+            size="sm"
+            variant="subtle"
+            onClick={() => setShowBillModal(true)}
+            leftIcon={<Bell className="w-3.5 h-3.5 text-amber-400" />}
+            className="shrink-0 text-amber-300 border-amber-500/30 hover:border-amber-500/60"
+          >
+            Request Bill
+          </Button>
         </div>
       ) : null}
 
@@ -296,22 +410,98 @@ export default function CustomerOrdersPage() {
 
       {/* Action to add more or settle bill */}
       {orders.length > 0 && (
-        <div className="flex items-center gap-3 pt-2 pb-6">
-          <Link href={`/dine/${sessionId}/menu`} className="flex-1">
-            <Button variant="secondary" size="md" className="w-full">
-              Order More Dishes
-            </Button>
-          </Link>
-          <Link href={`/dine/${sessionId}/bill`} className="flex-1">
+        <div className="flex flex-col gap-2 pt-2 pb-6">
+          <div className="flex items-center gap-3">
+            <Link href={`/dine/${sessionId}/menu`} className="flex-1">
+              <Button variant="secondary" size="md" className="w-full">
+                Order More Dishes
+              </Button>
+            </Link>
+            <Link href={`/dine/${sessionId}/bill`} className="flex-1">
+              <Button
+                variant="gold"
+                size="md"
+                className="w-full font-bold"
+                rightIcon={<Receipt className="w-4 h-4" />}
+              >
+                View Full Bill
+              </Button>
+            </Link>
+          </div>
+
+          {!isAwaitingPayment && sessionStatus === SessionState.OPEN_VERIFIED && (
             <Button
-              variant="gold"
+              variant="subtle"
               size="md"
-              className="w-full font-bold"
-              rightIcon={<Receipt className="w-4 h-4" />}
+              onClick={() => setShowBillModal(true)}
+              leftIcon={<Bell className="w-4 h-4 text-amber-400" />}
+              className="w-full border-amber-500/40 text-amber-300 hover:bg-amber-500/10 font-bold"
             >
-              View Full Bill
+              Request Waiter to Bring Bill & Settle
             </Button>
-          </Link>
+          )}
+        </div>
+      )}
+
+      {/* Request Bill Modal */}
+      {showBillModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
+          <Card className="w-full max-w-md p-6 flex flex-col gap-4 border-amber-500/50 bg-[#161922] shadow-2xl">
+            <div className="flex items-center justify-between border-b border-surface-border pb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center">
+                  <Bell className="w-5 h-5" />
+                </div>
+                <h3 className="text-base font-bold text-gray-100 font-display">
+                  Request Bill / Call Waiter
+                </h3>
+              </div>
+              <button
+                onClick={() => setShowBillModal(false)}
+                className="text-gray-400 hover:text-gray-200 text-sm font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            <p className="text-xs text-gray-300 leading-relaxed">
+              How would you like to settle your bill with the waiter?
+            </p>
+
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                onClick={() => handleRequestBill(PaymentMethod.CASH)}
+                disabled={isRequestingBill}
+                className="p-4 rounded-xl border border-emerald-500/40 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 flex flex-col items-center gap-2 transition-all font-bold text-xs"
+              >
+                <Banknote className="w-6 h-6" />
+                <span>Pay with Cash</span>
+              </button>
+              <button
+                onClick={() => handleRequestBill(PaymentMethod.RESTAURANT_POS)}
+                disabled={isRequestingBill}
+                className="p-4 rounded-xl border border-sky-500/40 bg-sky-500/10 hover:bg-sky-500/20 text-sky-300 flex flex-col items-center gap-2 transition-all font-bold text-xs"
+              >
+                <Receipt className="w-6 h-6" />
+                <span>Card / POS Swipe</span>
+              </button>
+            </div>
+
+            <div className="flex items-center justify-between pt-2 border-t border-surface-border">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowBillModal(false)}
+              >
+                Cancel
+              </Button>
+              <Link href={`/dine/${sessionId}/bill`}>
+                <Button variant="gold" size="sm">
+                  Pay Online (UPI / Card) →
+                </Button>
+              </Link>
+            </div>
+          </Card>
         </div>
       )}
     </div>

@@ -104,10 +104,17 @@ export interface ExitPass {
   used_by_guard_id?: string;
 }
 
+export interface CartItem {
+  menu_item_id: string;
+  quantity: number;
+  special_instructions?: string;
+}
+
 export interface MenuItem {
   id: string;
   restaurant_id: string;
   category_id: string;
+  category_name?: string;
   name: string;
   description: string;
   price: Money;

@@ -23,28 +23,58 @@ export default function CustomerExitPassPage() {
   const params = useParams();
   const sessionId = params.sessionId as string;
 
-  const { data: sessionData } = useGetSessionQuery(sessionId);
-  const { data: exitPass, isLoading, error } = useGetExitPassQuery(sessionId, {
-    pollingInterval: 5000,
+  const { data: sessionData, error: sessionError } = useGetSessionQuery(sessionId, {
+    pollingInterval: 2500,
   });
+  const { data: exitPass, isLoading, error: exitPassError } = useGetExitPassQuery(sessionId, {
+    pollingInterval: 2500,
+  });
+
+  const isSessionGone =
+    (sessionError as any)?.status === 410 ||
+    (exitPassError as any)?.status === 410 ||
+    JSON.stringify(sessionError || {}).includes("session has closed") ||
+    JSON.stringify(exitPassError || {}).includes("session has closed");
 
   const session = sessionData?.session;
-  const isSessionPaid =
-    session?.status === "PAID" || session?.status === "COMPLETED";
+  const isCompleted =
+    isSessionGone ||
+    session?.status === "COMPLETED" ||
+    exitPass?.status === "VERIFIED";
 
-  // Dynamic OTP from exitPass
-  const exitCode = exitPass?.otp || "";
+  // Dynamic OTP from exitPass or session details
+  const backendOtp =
+    exitPass?.otp ||
+    (sessionData as any)?.exit_otp ||
+    (sessionData as any)?.exit_pass?.otp ||
+    (session as any)?.exit_otp ||
+    "";
 
-  // QR Payload
-  const qrPayload = JSON.stringify({
-    session_id: sessionId,
-    otp: exitCode,
-    restaurant_id:
-      session?.restaurant_id ||
-      process.env.NEXT_PUBLIC_DEFAULT_RESTAURANT_ID ||
-      "",
-    timestamp: new Date().toISOString(),
-  });
+  const [exitCode, setExitCode] = React.useState<string>("");
+
+  React.useEffect(() => {
+    if (backendOtp) {
+      setExitCode(backendOtp);
+      if (typeof window !== "undefined") {
+        localStorage.setItem(`table_os_exit_code_${sessionId}`, backendOtp);
+      }
+    } else if (typeof window !== "undefined") {
+      const cached = localStorage.getItem(`table_os_exit_code_${sessionId}`);
+      if (cached) setExitCode(cached);
+    }
+  }, [backendOtp, sessionId]);
+
+  // QR Payload (stabilized without unstable timestamps)
+  const qrPayload = React.useMemo(() => {
+    return JSON.stringify({
+      session_id: sessionId,
+      otp: exitCode,
+      restaurant_id:
+        session?.restaurant_id ||
+        process.env.NEXT_PUBLIC_DEFAULT_RESTAURANT_ID ||
+        "",
+    });
+  }, [sessionId, exitCode, session?.restaurant_id]);
 
   if (isLoading) {
     return (
@@ -64,19 +94,19 @@ export default function CustomerExitPassPage() {
           <ArrowLeft className="w-4 h-4" />
           <span>Back to Bill</span>
         </Link>
-        <Badge variant="gold" size="sm">
-          Cryptographically Verified
+        <Badge variant={isCompleted ? "success" : "gold"} size="sm">
+          {isCompleted ? "Session Has Closed ✅" : "Cryptographically Verified"}
         </Badge>
       </div>
 
       {/* Boarding Pass Container */}
-      <div className="w-full rounded-3xl bg-surface border-2 border-primary/50 shadow-glow overflow-hidden flex flex-col">
+      <div className={`w-full rounded-3xl bg-surface border-2 ${isCompleted ? "border-emerald-500 shadow-glow" : "border-primary/50 shadow-glow"} overflow-hidden flex flex-col`}>
         {/* Top Header Ticket Band */}
-        <div className="bg-primary px-6 py-4 flex items-center justify-between text-background">
+        <div className={`${isCompleted ? "bg-emerald-600 text-white" : "bg-primary text-background"} px-6 py-4 flex items-center justify-between`}>
           <div className="flex items-center gap-2">
             <ShieldCheck className="w-6 h-6" />
             <span className="font-extrabold text-base tracking-tight font-display">
-              OFFICIAL EXIT PASS
+              {isCompleted ? "SESSION HAS CLOSED • EXIT APPROVED" : "OFFICIAL EXIT PASS"}
             </span>
           </div>
           <span className="font-mono text-xs font-black uppercase tracking-widest px-2 py-0.5 rounded bg-background/20">
@@ -95,28 +125,77 @@ export default function CustomerExitPassPage() {
             </p>
           </div>
 
-          {/* QR Code Container */}
-          <div className="p-4 rounded-2xl bg-white shadow-2xl flex items-center justify-center border-4 border-primary">
-            <QRCodeSVG
-              value={qrPayload}
-              size={180}
-              level="H"
-              includeMargin={false}
-            />
-          </div>
+          {isCompleted ? (
+            /* Session Closed & 1-Click Approved Exit Clearance Stamp */
+            <div className="w-full p-6 rounded-2xl bg-emerald-500/15 border-2 border-emerald-500/60 flex flex-col items-center text-center gap-4 text-emerald-400 animate-fadeIn">
+              <div className="w-16 h-16 rounded-full bg-emerald-500/20 border-2 border-emerald-500/50 flex items-center justify-center">
+                <CheckCircle2 className="w-10 h-10 text-emerald-400" />
+              </div>
+              <div>
+                <span className="inline-block px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 font-mono text-[11px] font-bold uppercase tracking-wider mb-2 border border-emerald-500/40">
+                  SESSION HAS CLOSED 🚪✨
+                </span>
+                <h3 className="text-xl font-black font-display tracking-tight text-emerald-300">
+                  EXIT APPROVED WITH GATE PASS 🎉
+                </h3>
+                <p className="text-xs text-gray-300 mt-2 max-w-xs leading-relaxed mx-auto">
+                  Your dining session has officially closed. Your exit pass was verified and approved by the floor team. You may depart freely.
+                </p>
+              </div>
 
-          {/* 4-Digit OTP Display for Manual Guard Fallback */}
-          <div className="flex flex-col items-center gap-1 w-full">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">
-              Manual Guard Verification Code
-            </span>
-            <div className="px-8 py-2.5 rounded-2xl bg-surface-subtle border border-primary/40 text-3xl sm:text-4xl font-black font-mono tracking-widest text-primary shadow-inner">
-              {exitCode}
+              <div className="w-full p-3.5 rounded-xl bg-black/40 border border-emerald-500/30 flex flex-col gap-2 text-xs text-left">
+                <div className="flex justify-between items-center text-gray-400">
+                  <span>Session Status:</span>
+                  <span className="text-emerald-300 font-bold font-mono">CLOSED & FINALIZED</span>
+                </div>
+                <div className="flex justify-between items-center text-gray-400">
+                  <span>Floor Clearance:</span>
+                  <span className="text-emerald-300 font-bold flex items-center gap-1">
+                    <CheckCircle2 className="w-3.5 h-3.5" /> Approved by Waiter
+                  </span>
+                </div>
+                {exitCode && (
+                  <div className="flex justify-between items-center text-gray-400">
+                    <span>Gate Pass Code:</span>
+                    <span className="font-mono text-gray-200 font-bold tracking-widest">{exitCode}</span>
+                  </div>
+                )}
+              </div>
+
+              <span className="px-4 py-1.5 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-bold font-mono border border-emerald-500/40">
+                GOOD TO GO AHEAD! 🚪✅
+              </span>
             </div>
-            <span className="text-[10px] text-gray-500 mt-1">
-              Single-Use Only • Valid for 120 Minutes
-            </span>
-          </div>
+          ) : (
+            <>
+              {/* QR Code Container */}
+              <div className="p-4 rounded-2xl bg-white shadow-2xl flex items-center justify-center border-4 border-primary">
+                <QRCodeSVG
+                  value={qrPayload}
+                  size={180}
+                  level="H"
+                  includeMargin={false}
+                />
+              </div>
+
+              {/* 4-Digit OTP Display for Manual Guard Fallback */}
+              <div className="flex flex-col items-center gap-1 w-full">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">
+                  Manual Verification Code
+                </span>
+                <div className="px-8 py-2.5 rounded-2xl bg-surface-subtle border border-primary/40 text-3xl sm:text-4xl font-black font-mono tracking-widest text-primary shadow-inner flex items-center justify-center min-w-[150px] min-h-[52px]">
+                  {exitCode || (
+                    <span className="text-xs font-mono font-medium text-primary/80 animate-pulse">
+                      GENERATING...
+                    </span>
+                  )}
+                </div>
+                <span className="text-[10px] text-gray-500 mt-1">
+                  Valid for 15+ Minutes • Single-Use Only
+                </span>
+              </div>
+            </>
+          )}
 
           {/* Perforated Divider Line */}
           <div className="w-full border-t-2 border-dashed border-surface-border my-1 relative">
@@ -128,7 +207,9 @@ export default function CustomerExitPassPage() {
           <div className="flex items-start gap-2.5 text-left p-3 rounded-xl bg-surface-subtle text-xs text-gray-300">
             <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
             <span>
-              Present this QR code or 4-digit OTP to the security officer stationed at the restaurant exit.
+              {isCompleted
+                ? "You may exit the restaurant freely. Have a wonderful day!"
+                : "Present this QR code or 4-digit code to the waiter or exit guard."}
             </span>
           </div>
         </div>
@@ -136,7 +217,9 @@ export default function CustomerExitPassPage() {
         {/* Ticket Footer */}
         <div className="bg-surface-subtle px-6 py-3 border-t border-surface-border flex items-center justify-between text-[11px] text-gray-400 font-mono">
           <span>Session: {sessionId.substring(0, 8)}...</span>
-          <span className="text-emerald-400 font-bold">STATUS: ISSUED</span>
+          <span className={`font-bold ${session?.status === "COMPLETED" ? "text-emerald-400" : "text-amber-400"}`}>
+            STATUS: {session?.status === "COMPLETED" ? "SESSION CLOSED ✅" : "ISSUED 🎟️"}
+          </span>
         </div>
       </div>
 

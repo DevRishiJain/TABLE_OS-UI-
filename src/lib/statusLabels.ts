@@ -1,6 +1,6 @@
 export const ORDER_STATUS_LABELS: Record<string, string> = {
   PLACED_UNVERIFIED: "Pending Verification",
-  PLACED_VERIFIED: "Verified — Awaiting Acceptance",
+  PLACED_VERIFIED: "In Kitchen Queue",
   ACCEPTED: "Accepted",
   PREPARING: "Being Prepared",
   READY: "Ready for Pickup",

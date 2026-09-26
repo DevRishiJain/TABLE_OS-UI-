@@ -72,6 +72,8 @@ export interface StaffTableSummary {
   customer_name?: string;
   customer_phone?: string;
   guest_count?: number;
+  assistance_reason?: string;
+  assistance_requested_at?: string;
 }
 
 export interface VerifyFirstOrderRequest {
