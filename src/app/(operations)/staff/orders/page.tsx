@@ -50,6 +50,11 @@ function getOrderTotalMinor(total: any): number {
 export default function WaiterOrderScreenPage() {
   const dispatch = useAppDispatch();
   const auth = useAppSelector((state) => state.auth);
+  const [mounted, setMounted] = useState(false);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const [activeTab, setActiveTab] = useState<"pending" | "kitchen_status">("pending");
   const [processingOrderId, setProcessingOrderId] = useState<string | null>(null);
@@ -110,14 +115,15 @@ export default function WaiterOrderScreenPage() {
                 suppressHydrationWarning
                 className="text-sm font-extrabold text-gray-100 font-display"
               >
-                {auth.userName || "Floor Waiter"}
+                {mounted ? (auth.userName || "Floor Waiter") : "Floor Waiter"}
               </h2>
-              <span
-                suppressHydrationWarning
-                className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-primary/20 text-primary border border-primary/40"
-              >
-                {auth.employeeId || "EMP-WTR-001"}
-              </span>
+              {mounted && auth.employeeId && (
+                <span
+                  className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-primary/20 text-primary border border-primary/40"
+                >
+                  {auth.employeeId}
+                </span>
+              )}
             </div>
             <p className="text-[11px] text-gray-400 mt-0.5 flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
@@ -152,7 +158,7 @@ export default function WaiterOrderScreenPage() {
           >
             <Bell className="w-3.5 h-3.5" />
             Pending Waiter Acceptance
-            {pendingList.length > 0 && (
+            {mounted && pendingList.length > 0 && (
               <span className="px-1.5 py-0.2 rounded-full bg-black/30 text-black text-[10px] font-mono font-extrabold">
                 {pendingList.length}
               </span>
@@ -169,7 +175,7 @@ export default function WaiterOrderScreenPage() {
           >
             <ChefHat className="w-3.5 h-3.5" />
             In-Prep Kitchen Queue
-            {inKitchenList.length > 0 && (
+            {mounted && inKitchenList.length > 0 && (
               <span className="px-1.5 py-0.2 rounded-full bg-black/30 text-black text-[10px] font-mono font-extrabold">
                 {inKitchenList.length}
               </span>

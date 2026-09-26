@@ -82,12 +82,11 @@ export default function StaffOperationsLayout({
           <Badge variant="amber" size="sm" suppressHydrationWarning>
             {mounted ? staffRole : "WAITER"}
           </Badge>
-          {employeeId && (
+          {mounted && employeeId && (
             <span
-              suppressHydrationWarning
               className="hidden sm:inline px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-primary/20 text-primary border border-primary/40"
             >
-              {mounted ? employeeId : ""}
+              {employeeId}
             </span>
           )}
         </div>
