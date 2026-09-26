@@ -30,14 +30,14 @@ export const Badge: React.FC<BadgeProps> = ({
   };
 
   const variantStyles = {
-    default: "bg-surface-border text-gray-300 border border-surface-border",
-    neutral: "bg-gray-800/60 text-gray-300 border border-gray-700/50",
-    success: "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30",
-    warning: "bg-yellow-500/10 text-yellow-400 border border-yellow-500/30",
-    amber: "bg-amber-500/10 text-amber-400 border border-amber-500/30",
-    error: "bg-red-500/10 text-red-400 border border-red-500/30",
-    gold: "bg-amber-500/15 text-amber-300 border border-amber-500/40 font-semibold",
-    blue: "bg-sky-500/10 text-sky-400 border border-sky-500/30",
+    default: "glass-pill text-gray-200 border-white/10",
+    neutral: "bg-white/5 backdrop-blur-md text-gray-300 border border-white/10",
+    success: "bg-emerald-500/15 backdrop-blur-md text-emerald-300 border border-emerald-500/40 shadow-sm shadow-emerald-500/10",
+    warning: "bg-yellow-500/15 backdrop-blur-md text-yellow-300 border border-yellow-500/40 shadow-sm shadow-yellow-500/10",
+    amber: "bg-amber-500/15 backdrop-blur-md text-amber-300 border border-amber-500/40 shadow-sm shadow-amber-500/10",
+    error: "bg-red-500/15 backdrop-blur-md text-red-300 border border-red-500/40 shadow-sm shadow-red-500/10",
+    gold: "bg-amber-500/20 backdrop-blur-md text-amber-300 border border-amber-500/50 font-semibold shadow-sm shadow-amber-500/15",
+    blue: "bg-sky-500/15 backdrop-blur-md text-sky-300 border border-sky-500/40 shadow-sm shadow-sky-500/10",
   };
 
   const dotColors = {

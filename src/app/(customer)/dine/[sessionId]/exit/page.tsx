@@ -89,7 +89,7 @@ export default function CustomerExitPassPage() {
       <div className="flex items-center justify-between">
         <Link
           href={`/dine/${sessionId}/bill`}
-          className="p-2 rounded-xl bg-surface hover:bg-surface-hover border border-surface-border text-gray-300 flex items-center gap-1 text-xs"
+          className="p-2 rounded-xl glass-pill hover:bg-white/10 text-gray-200 flex items-center gap-1.5 text-xs shadow-sm transition-all"
         >
           <ArrowLeft className="w-4 h-4" />
           <span>Back to Bill</span>
@@ -99,17 +99,17 @@ export default function CustomerExitPassPage() {
         </Badge>
       </div>
 
-      {/* Boarding Pass Container */}
-      <div className={`w-full rounded-3xl bg-surface border-2 ${isCompleted ? "border-emerald-500 shadow-glow" : "border-primary/50 shadow-glow"} overflow-hidden flex flex-col`}>
+      {/* Spatial Boarding Pass Container */}
+      <div className={`w-full rounded-3xl glass-spatial specular-rim border ${isCompleted ? "border-emerald-500/50 shadow-2xl shadow-emerald-500/10" : "border-white/15 shadow-2xl"} overflow-hidden flex flex-col relative`}>
         {/* Top Header Ticket Band */}
-        <div className={`${isCompleted ? "bg-emerald-600 text-white" : "bg-primary text-background"} px-6 py-4 flex items-center justify-between`}>
+        <div className={`${isCompleted ? "bg-gradient-to-r from-emerald-600/90 to-emerald-500/90 text-white border-b border-emerald-400/30" : "bg-gradient-to-r from-primary to-amber-500 text-background border-b border-amber-400/30"} px-6 py-4 flex items-center justify-between backdrop-blur-xl`}>
           <div className="flex items-center gap-2">
-            <ShieldCheck className="w-6 h-6" />
-            <span className="font-extrabold text-base tracking-tight font-display">
+            <ShieldCheck className="w-6 h-6 drop-shadow-sm" />
+            <span className="font-extrabold text-base tracking-tight font-display drop-shadow-sm">
               {isCompleted ? "SESSION HAS CLOSED • EXIT APPROVED" : "OFFICIAL EXIT PASS"}
             </span>
           </div>
-          <span className="font-mono text-xs font-black uppercase tracking-widest px-2 py-0.5 rounded bg-background/20">
+          <span className="font-mono text-xs font-black uppercase tracking-widest px-2.5 py-0.5 rounded-full bg-black/20 backdrop-blur-md border border-white/10">
             Table T1
           </span>
         </div>
@@ -117,59 +117,59 @@ export default function CustomerExitPassPage() {
         {/* Ticket Body */}
         <div className="p-6 flex flex-col items-center text-center gap-5">
           <div>
-            <h2 className="text-xl font-black text-gray-100 font-display">
+            <h2 className="text-xl font-black text-gray-100 font-display tracking-tight">
               The Spice Route
             </h2>
-            <p className="text-xs text-gray-400 mt-0.5">
+            <p className="text-xs text-gray-300 mt-0.5">
               Verified Dining Clearance • Bill Settled
             </p>
           </div>
 
           {isCompleted ? (
             /* Session Closed & 1-Click Approved Exit Clearance Stamp */
-            <div className="w-full p-6 rounded-2xl bg-emerald-500/15 border-2 border-emerald-500/60 flex flex-col items-center text-center gap-4 text-emerald-400 animate-fadeIn">
-              <div className="w-16 h-16 rounded-full bg-emerald-500/20 border-2 border-emerald-500/50 flex items-center justify-center">
+            <div className="w-full p-6 rounded-2xl glass-emerald flex flex-col items-center text-center gap-4 text-emerald-300 animate-fadeIn specular-rim">
+              <div className="w-16 h-16 rounded-full bg-emerald-500/20 border-2 border-emerald-400/50 flex items-center justify-center shadow-lg shadow-emerald-500/20">
                 <CheckCircle2 className="w-10 h-10 text-emerald-400" />
               </div>
               <div>
-                <span className="inline-block px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 font-mono text-[11px] font-bold uppercase tracking-wider mb-2 border border-emerald-500/40">
+                <span className="inline-block px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 font-mono text-[11px] font-bold uppercase tracking-wider mb-2 border border-emerald-500/40 backdrop-blur-md">
                   SESSION HAS CLOSED 🚪✨
                 </span>
-                <h3 className="text-xl font-black font-display tracking-tight text-emerald-300">
+                <h3 className="text-xl font-black font-display tracking-tight text-emerald-200">
                   EXIT APPROVED WITH GATE PASS 🎉
                 </h3>
-                <p className="text-xs text-gray-300 mt-2 max-w-xs leading-relaxed mx-auto">
+                <p className="text-xs text-emerald-100/90 mt-2 max-w-xs leading-relaxed mx-auto">
                   Your dining session has officially closed. Your exit pass was verified and approved by the floor team. You may depart freely.
                 </p>
               </div>
 
-              <div className="w-full p-3.5 rounded-xl bg-black/40 border border-emerald-500/30 flex flex-col gap-2 text-xs text-left">
-                <div className="flex justify-between items-center text-gray-400">
+              <div className="w-full p-3.5 rounded-xl bg-black/40 backdrop-blur-md border border-emerald-500/30 flex flex-col gap-2 text-xs text-left">
+                <div className="flex justify-between items-center text-gray-300">
                   <span>Session Status:</span>
                   <span className="text-emerald-300 font-bold font-mono">CLOSED & FINALIZED</span>
                 </div>
-                <div className="flex justify-between items-center text-gray-400">
+                <div className="flex justify-between items-center text-gray-300">
                   <span>Floor Clearance:</span>
                   <span className="text-emerald-300 font-bold flex items-center gap-1">
                     <CheckCircle2 className="w-3.5 h-3.5" /> Approved by Waiter
                   </span>
                 </div>
                 {exitCode && (
-                  <div className="flex justify-between items-center text-gray-400">
+                  <div className="flex justify-between items-center text-gray-300">
                     <span>Gate Pass Code:</span>
-                    <span className="font-mono text-gray-200 font-bold tracking-widest">{exitCode}</span>
+                    <span className="font-mono text-white font-bold tracking-widest">{exitCode}</span>
                   </div>
                 )}
               </div>
 
-              <span className="px-4 py-1.5 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-bold font-mono border border-emerald-500/40">
+              <span className="px-4 py-1.5 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-bold font-mono border border-emerald-500/40 backdrop-blur-md shadow-sm">
                 GOOD TO GO AHEAD! 🚪✅
               </span>
             </div>
           ) : (
             <>
-              {/* QR Code Container */}
-              <div className="p-4 rounded-2xl bg-white shadow-2xl flex items-center justify-center border-4 border-primary">
+              {/* QR Code Container on Floating Glass Pedestal */}
+              <div className="p-4 rounded-3xl bg-white shadow-2xl flex items-center justify-center border-4 border-amber-400/80 shadow-primary/20">
                 <QRCodeSVG
                   value={qrPayload}
                   size={180}
@@ -178,19 +178,19 @@ export default function CustomerExitPassPage() {
                 />
               </div>
 
-              {/* 4-Digit OTP Display for Manual Guard Fallback */}
-              <div className="flex flex-col items-center gap-1 w-full">
+              {/* 4-Digit OTP Display in Spatial Glass Capsule */}
+              <div className="flex flex-col items-center gap-1.5 w-full">
                 <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">
                   Manual Verification Code
                 </span>
-                <div className="px-8 py-2.5 rounded-2xl bg-surface-subtle border border-primary/40 text-3xl sm:text-4xl font-black font-mono tracking-widest text-primary shadow-inner flex items-center justify-center min-w-[150px] min-h-[52px]">
+                <div className="px-8 py-3 rounded-2xl glass-pill border-2 border-primary/50 text-3xl sm:text-4xl font-black font-mono tracking-widest text-primary shadow-glow flex items-center justify-center min-w-[160px] min-h-[56px]">
                   {exitCode || (
                     <span className="text-xs font-mono font-medium text-primary/80 animate-pulse">
                       GENERATING...
                     </span>
                   )}
                 </div>
-                <span className="text-[10px] text-gray-500 mt-1">
+                <span className="text-[10px] text-gray-400 mt-1">
                   Valid for 15+ Minutes • Single-Use Only
                 </span>
               </div>
@@ -198,13 +198,13 @@ export default function CustomerExitPassPage() {
           )}
 
           {/* Perforated Divider Line */}
-          <div className="w-full border-t-2 border-dashed border-surface-border my-1 relative">
+          <div className="w-full border-t-2 border-dashed border-white/10 my-1 relative">
             <div className="absolute -left-9 -top-3 w-6 h-6 rounded-full bg-background" />
             <div className="absolute -right-9 -top-3 w-6 h-6 rounded-full bg-background" />
           </div>
 
           {/* Departure Instructions */}
-          <div className="flex items-start gap-2.5 text-left p-3 rounded-xl bg-surface-subtle text-xs text-gray-300">
+          <div className="flex items-start gap-2.5 text-left p-3.5 rounded-2xl glass-pill text-xs text-gray-200 w-full border border-white/10">
             <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
             <span>
               {isCompleted
@@ -215,7 +215,7 @@ export default function CustomerExitPassPage() {
         </div>
 
         {/* Ticket Footer */}
-        <div className="bg-surface-subtle px-6 py-3 border-t border-surface-border flex items-center justify-between text-[11px] text-gray-400 font-mono">
+        <div className="glass-panel px-6 py-3.5 border-t border-white/10 flex items-center justify-between text-[11px] text-gray-300 font-mono">
           <span>Session: {sessionId.substring(0, 8)}...</span>
           <span className={`font-bold ${session?.status === "COMPLETED" ? "text-emerald-400" : "text-amber-400"}`}>
             STATUS: {session?.status === "COMPLETED" ? "SESSION CLOSED ✅" : "ISSUED 🎟️"}

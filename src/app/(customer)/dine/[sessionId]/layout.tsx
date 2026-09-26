@@ -168,11 +168,15 @@ export default function CustomerDineLayout({
   ];
 
   return (
-    <div className="min-h-screen bg-background text-gray-100 flex flex-col justify-between w-full max-w-md mx-auto border-x border-surface-border/40 relative shadow-2xl overflow-x-hidden">
-      {/* Top Header */}
-      <header className="sticky top-0 z-30 glass-panel border-b border-surface-border px-4 py-3 flex items-center justify-between">
+    <div className="min-h-screen bg-background text-gray-100 flex flex-col justify-between w-full max-w-md mx-auto border-x border-white/5 relative shadow-2xl overflow-x-hidden">
+      {/* Spatial Ambient Lighting Flares */}
+      <div className="fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-md h-72 bg-gradient-to-b from-primary/10 via-amber-500/5 to-transparent pointer-events-none blur-3xl -z-10" />
+      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md h-60 bg-gradient-to-t from-sky-500/10 via-emerald-500/5 to-transparent pointer-events-none blur-3xl -z-10" />
+
+      {/* Top Header Floating Glass Capsule */}
+      <header className="sticky top-2 z-30 mx-3 my-2 rounded-2xl glass-panel px-4 py-2.5 flex items-center justify-between shadow-xl border border-white/10 specular-rim">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-primary/20 border border-primary/40 flex items-center justify-center text-primary font-bold text-xs shadow-glow">
+          <div className="w-8 h-8 rounded-xl bg-primary/20 border border-primary/40 flex items-center justify-center text-primary font-black text-xs shadow-glow">
             T{tableNumber}
           </div>
           <div className="flex flex-col">
@@ -292,24 +296,24 @@ export default function CustomerDineLayout({
         </div>
       )}
 
-      {/* Bottom Sticky Tab Bar */}
-      <nav className="fixed bottom-0 left-0 right-0 max-w-md mx-auto glass-panel border-t border-surface-border h-16 z-30 px-6 flex items-center justify-around">
+      {/* Bottom Floating Spatial Glass Dock */}
+      <nav className="fixed bottom-3 left-3 right-3 max-w-[calc(28rem-1.5rem)] mx-auto glass-spatial rounded-3xl h-16 z-30 px-6 flex items-center justify-around shadow-2xl border border-white/15 specular-rim">
         {navItems.map((item) => {
           const Icon = item.icon;
           return (
             <Link
               key={item.href}
               href={item.href}
-              className={`flex flex-col items-center gap-1 relative py-1 px-3 rounded-xl transition-all ${
+              className={`flex flex-col items-center gap-1 relative py-1.5 px-3.5 rounded-2xl transition-all ${
                 item.active
-                  ? "text-primary font-bold"
-                  : "text-gray-400 hover:text-gray-200"
+                  ? "text-primary font-bold bg-white/5 shadow-inner"
+                  : "text-gray-400 hover:text-gray-200 hover:bg-white/5"
               }`}
             >
               <div className="relative">
-                <Icon className={`w-5 h-5 ${item.active ? "text-primary scale-110" : ""}`} />
+                <Icon className={`w-5 h-5 transition-transform ${item.active ? "text-primary scale-110" : ""}`} />
                 {item.badge && item.badge > 0 ? (
-                  <span className="absolute -top-1.5 -right-2 w-4 h-4 rounded-full bg-primary text-background font-black text-[9px] flex items-center justify-center">
+                  <span className="absolute -top-1.5 -right-2.5 w-4 h-4 rounded-full bg-primary text-background font-black text-[9px] flex items-center justify-center shadow-glow">
                     {item.badge}
                   </span>
                 ) : null}
@@ -318,7 +322,7 @@ export default function CustomerDineLayout({
                 {item.label}
               </span>
               {item.active && (
-                <span className="w-4 h-0.5 rounded-full bg-primary -bottom-1 absolute" />
+                <span className="w-5 h-0.5 rounded-full bg-primary -bottom-0.5 absolute shadow-glow" />
               )}
             </Link>
           );
@@ -327,8 +331,8 @@ export default function CustomerDineLayout({
 
       {/* Modal: Call Waiter / Service Assistance */}
       {showCallModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
-          <Card className="w-full max-w-sm p-5 flex flex-col gap-4 border-amber-500/50 bg-[#151922] shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-fadeIn">
+          <Card className="w-full max-w-sm p-5 flex flex-col gap-4 glass-spatial border border-white/15 shadow-2xl specular-rim">
             <div className="flex items-center justify-between border-b border-surface-border pb-3">
               <div className="flex items-center gap-2.5">
                 <div className="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center">

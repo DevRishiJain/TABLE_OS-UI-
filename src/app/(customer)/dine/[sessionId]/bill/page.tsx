@@ -240,12 +240,12 @@ export default function CustomerBillPage() {
   if (isCompleted) {
     return (
       <div className="flex flex-col gap-5 px-4 pt-4 pb-12 animate-fadeIn">
-        <div className="p-6 rounded-3xl bg-gradient-to-br from-emerald-500/20 via-surface to-surface border-2 border-emerald-500/70 shadow-glow flex flex-col items-center text-center gap-4">
-          <div className="w-16 h-16 rounded-2xl bg-emerald-500/20 border-2 border-emerald-500/50 text-emerald-400 flex items-center justify-center shadow-lg">
+        <div className="p-6 rounded-3xl glass-spatial specular-rim border border-emerald-500/40 shadow-2xl flex flex-col items-center text-center gap-4">
+          <div className="w-16 h-16 rounded-2xl bg-emerald-500/20 border-2 border-emerald-500/50 text-emerald-400 flex items-center justify-center shadow-lg shadow-emerald-500/20">
             <CheckCircle2 className="w-9 h-9" />
           </div>
           <div>
-            <span className="inline-block px-3.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 font-bold uppercase tracking-wider text-[11px] font-mono border border-emerald-500/40 mb-2">
+            <span className="inline-block px-3.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 font-bold uppercase tracking-wider text-[11px] font-mono border border-emerald-500/40 mb-2 backdrop-blur-md">
               SESSION HAS CLOSED 🚪✨
             </span>
             <h2 className="text-2xl font-black text-gray-100 font-display mt-0.5">
@@ -343,8 +343,8 @@ export default function CustomerBillPage() {
 
       {/* Bill Paid / Gate Pass Banner */}
       {isPaid ? (
-        <div className="p-5 rounded-3xl bg-gradient-to-br from-emerald-500/20 via-surface to-surface border-2 border-emerald-500/60 shadow-glow flex flex-col items-center text-center gap-4 animate-fadeIn">
-          <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 flex items-center justify-center">
+        <div className="p-5 rounded-3xl glass-spatial specular-rim border border-emerald-500/40 shadow-2xl flex flex-col items-center text-center gap-4 animate-fadeIn">
+          <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 border border-emerald-400/40 text-emerald-400 flex items-center justify-center shadow-lg shadow-emerald-500/20">
             <CheckCircle2 className="w-6 h-6" />
           </div>
           <div>
@@ -358,12 +358,12 @@ export default function CustomerBillPage() {
 
           {/* Quick Exit Pass Box OR Exit Approved Banner */}
           {isCompleted || exitPassData?.status === "VERIFIED" ? (
-            <div className="w-full p-5 rounded-2xl bg-emerald-500/20 border-2 border-emerald-500/70 flex flex-col items-center gap-2 animate-fadeIn">
+            <div className="w-full p-5 rounded-2xl glass-emerald flex flex-col items-center gap-2 animate-fadeIn specular-rim">
               <span className="text-3xl">🎉</span>
-              <span className="inline-block px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 font-bold uppercase tracking-wider text-[11px] font-mono border border-emerald-500/40">
+              <span className="inline-block px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 font-bold uppercase tracking-wider text-[11px] font-mono border border-emerald-500/40 backdrop-blur-md">
                 SESSION HAS CLOSED 🚪✨
               </span>
-              <span className="text-base font-black text-emerald-300 font-display">
+              <span className="text-base font-black text-emerald-200 font-display">
                 Exit Approved with Gate Pass! 🚪✅
               </span>
               <p className="text-xs text-emerald-100/90 text-center max-w-xs">
@@ -371,11 +371,11 @@ export default function CustomerBillPage() {
               </p>
             </div>
           ) : (
-            <div className="w-full p-4 rounded-2xl bg-surface-subtle border border-emerald-500/40 flex flex-col items-center gap-2">
-              <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">
+            <div className="w-full p-4 rounded-2xl glass-pill border border-emerald-500/40 flex flex-col items-center gap-2">
+              <span className="text-[11px] font-bold text-gray-300 uppercase tracking-wider">
                 Your Exit Pass Verification Code
               </span>
-              <div className="px-6 py-2.5 rounded-xl bg-black/60 border border-emerald-500/50 text-3xl font-black font-mono tracking-widest text-emerald-400 shadow-inner flex items-center justify-center min-w-[150px] min-h-[50px]">
+              <div className="px-6 py-2.5 rounded-xl glass-pill border border-emerald-400/50 text-3xl font-black font-mono tracking-widest text-emerald-300 shadow-glow flex items-center justify-center min-w-[150px] min-h-[50px]">
                 {exitCode ? (
                   exitCode
                 ) : (
@@ -487,14 +487,14 @@ export default function CustomerBillPage() {
             {/* Cash Handover */}
             <button
               onClick={() => setSelectedMethod(PaymentMethod.CASH)}
-              className={`p-3.5 rounded-xl border flex items-center justify-between transition-all text-left ${
+              className={`p-3.5 rounded-2xl border flex items-center justify-between transition-all text-left ${
                 selectedMethod === PaymentMethod.CASH
-                  ? "border-emerald-500 bg-emerald-500/10 shadow-glow text-gray-100"
-                  : "border-surface-border bg-surface-subtle text-gray-400 hover:border-gray-600"
+                  ? "border-emerald-500/60 bg-emerald-500/15 shadow-glow text-gray-100 backdrop-blur-md"
+                  : "border-white/10 glass-pill text-gray-300 hover:border-white/20 hover:bg-white/10"
               }`}
             >
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
+                <div className="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center border border-emerald-500/30">
                   <Banknote className="w-5 h-5" />
                 </div>
                 <div>
@@ -516,14 +516,14 @@ export default function CustomerBillPage() {
             {/* Restaurant Static UPI / POS */}
             <button
               onClick={() => setSelectedMethod(PaymentMethod.RESTAURANT_POS)}
-              className={`p-3.5 rounded-xl border flex items-center justify-between transition-all text-left ${
+              className={`p-3.5 rounded-2xl border flex items-center justify-between transition-all text-left ${
                 selectedMethod === PaymentMethod.RESTAURANT_POS
-                  ? "border-sky-500 bg-sky-500/10 shadow-glow text-gray-100"
-                  : "border-surface-border bg-surface-subtle text-gray-400 hover:border-gray-600"
+                  ? "border-sky-500/60 bg-sky-500/15 shadow-glow text-gray-100 backdrop-blur-md"
+                  : "border-white/10 glass-pill text-gray-300 hover:border-white/20 hover:bg-white/10"
               }`}
             >
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-sky-500/20 text-sky-400 flex items-center justify-center">
+                <div className="w-9 h-9 rounded-xl bg-sky-500/20 text-sky-400 flex items-center justify-center border border-sky-500/30">
                   <QrCode className="w-5 h-5" />
                 </div>
                 <div>

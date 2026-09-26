@@ -2,7 +2,7 @@ import React from "react";
 
 export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
   children: React.ReactNode;
-  variant?: "default" | "subtle" | "glass" | "glow" | "goldBorder";
+  variant?: "default" | "subtle" | "glass" | "spatial" | "glow" | "goldBorder";
   hoverable?: boolean;
 }
 
@@ -14,11 +14,12 @@ export const Card: React.FC<CardProps> = ({
   ...props
 }) => {
   const variantStyles = {
-    default: "bg-surface border border-surface-border",
-    subtle: "bg-surface-subtle border border-surface-border/50",
+    default: "glass-card",
+    subtle: "bg-surface-subtle/70 backdrop-blur-md border border-white/5",
     glass: "glass-card",
-    glow: "bg-surface border border-primary/40 shadow-glow",
-    goldBorder: "bg-surface border-2 border-primary/60",
+    spatial: "glass-spatial",
+    glow: "glass-card border-primary/40 shadow-glow",
+    goldBorder: "glass-card border-2 border-primary/60",
   };
 
   const hoverStyles = hoverable
