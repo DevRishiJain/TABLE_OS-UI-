@@ -75,6 +75,26 @@ export default function CustomerMenuPage() {
     });
   }, [items, activeCategoryId, searchQuery]);
 
+  // Group items by category when ALL is selected and no active search
+  const categorizedGroups = useMemo(() => {
+    if (activeCategoryId !== "ALL" || searchQuery.trim() || !categories || categories.length === 0) {
+      return null;
+    }
+    const groups: { categoryName: string; categoryId: string; items: MenuItem[] }[] = [];
+    categories.forEach((cat) => {
+      const catItems = filteredItems.filter((dish) => dish.category_id === cat.id);
+      if (catItems.length > 0) {
+        groups.push({ categoryName: cat.name, categoryId: cat.id, items: catItems });
+      }
+    });
+    const knownCatIds = new Set(categories.map((c) => c.id));
+    const others = filteredItems.filter((dish) => !dish.category_id || !knownCatIds.has(dish.category_id));
+    if (others.length > 0) {
+      groups.push({ categoryName: "Chef Specials & Recommendations", categoryId: "others", items: others });
+    }
+    return groups.length > 0 ? groups : null;
+  }, [categories, filteredItems, activeCategoryId, searchQuery]);
+
   // Map of cart quantities
   const cartQuantityMap = useMemo(() => {
     const map: Record<string, number> = {};
@@ -120,8 +140,121 @@ export default function CustomerMenuPage() {
     }
   };
 
+  const renderDishCard = (dish: MenuItem) => {
+    const qty = cartQuantityMap[dish.id] || 0;
+    const isHighlighted = highlightedDishId === dish.id;
+
+    const isVeg =
+      dish.name.toLowerCase().includes("paneer") ||
+      dish.name.toLowerCase().includes("corn") ||
+      dish.name.toLowerCase().includes("dal") ||
+      dish.name.toLowerCase().includes("naan") ||
+      dish.name.toLowerCase().includes("roti") ||
+      dish.name.toLowerCase().includes("jamun");
+
+    const isSpicy =
+      dish.name.toLowerCase().includes("tikka") ||
+      dish.name.toLowerCase().includes("crispy");
+
+    return (
+      <div
+        key={dish.id}
+        className={`p-4 rounded-2xl bg-surface border transition-all duration-300 flex items-start justify-between gap-3 ${
+          isHighlighted
+            ? "border-primary shadow-glow bg-primary/5"
+            : "border-surface-border hover:border-surface-border/80"
+        }`}
+      >
+        <div
+          className="flex-1 flex flex-col cursor-pointer min-w-0"
+          onClick={() => handleOpenDishModal(dish)}
+        >
+          <div className="flex items-center gap-1.5 mb-1">
+            {isVeg ? (
+              <span className="p-0.5 rounded border border-emerald-500/50 text-emerald-400 inline-block">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 block" />
+              </span>
+            ) : (
+              <span className="p-0.5 rounded border border-red-500/50 text-red-400 inline-block">
+                <span className="w-1.5 h-1.5 rounded-full bg-red-400 block" />
+              </span>
+            )}
+
+            {isSpicy && (
+              <Badge variant="amber" size="sm">
+                <Flame className="w-3 h-3 text-amber-400 inline mr-0.5" />
+                Spicy
+              </Badge>
+            )}
+          </div>
+
+          <h3 className="text-sm font-bold text-gray-100 font-display">
+            {dish.name}
+          </h3>
+
+          <span className="text-sm font-extrabold text-primary font-mono mt-1">
+            {formatMoney(dish.price.amount_minor_units)}
+          </span>
+
+          {dish.description && (
+            <p className="text-xs text-gray-400 mt-1 line-clamp-2 leading-relaxed">
+              {dish.description}
+            </p>
+          )}
+        </div>
+
+        {/* Add or Quantity Controls */}
+        <div className="shrink-0 flex items-center">
+          {qty === 0 ? (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => handleAddDish(dish)}
+              className="font-bold border-primary/40 text-primary hover:bg-primary/10"
+              leftIcon={<Plus className="w-3.5 h-3.5" />}
+            >
+              Add
+            </Button>
+          ) : (
+            <div className="flex items-center gap-2 bg-surface-subtle border border-primary/40 rounded-xl px-1.5 py-1">
+              <button
+                onClick={() =>
+                  dispatch(
+                    updateQuantity({
+                      menuItemId: dish.id,
+                      quantity: qty - 1,
+                    })
+                  )
+                }
+                className="w-6 h-6 rounded-lg bg-surface flex items-center justify-center text-gray-300 hover:text-white"
+              >
+                <Minus className="w-3.5 h-3.5" />
+              </button>
+              <span className="text-xs font-bold font-mono px-1">
+                {qty}
+              </span>
+              <button
+                onClick={() =>
+                  dispatch(
+                    updateQuantity({
+                      menuItemId: dish.id,
+                      quantity: qty + 1,
+                    })
+                  )
+                }
+                className="w-6 h-6 rounded-lg bg-primary text-background font-bold flex items-center justify-center"
+              >
+                <Plus className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   return (
-    <div className="flex flex-col gap-4 px-4 pt-4">
+    <div className="flex flex-col gap-4 px-4 pt-4 w-full overflow-x-hidden">
       {/* AI Dining Prompt Hero Card */}
       <div
         onClick={() => dispatch(setAiDrawerOpen(true))}
@@ -170,36 +303,50 @@ export default function CustomerMenuPage() {
         </Button>
       </div>
 
-      {/* Categories Horizontal Chip Bar */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
-        <button
-          onClick={() => setActiveCategoryId("ALL")}
-          className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors ${
-            activeCategoryId === "ALL"
-              ? "bg-primary text-background shadow-md shadow-primary/20 font-bold"
-              : "bg-surface text-gray-300 border border-surface-border hover:border-gray-600"
-          }`}
-        >
-          All Dishes
-        </button>
+      {/* Categories Purely Vertical Wrapping Bar - Zero Horizontal Scroll */}
+      <div className="flex flex-col gap-2 w-full">
+        <div className="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-gray-400 px-0.5">
+          <span>Categories ({categories?.length ? categories.length + 1 : 1})</span>
+          {activeCategoryId !== "ALL" && (
+            <button
+              onClick={() => setActiveCategoryId("ALL")}
+              className="text-primary hover:underline text-[10px] font-bold"
+            >
+              Show All Dishes
+            </button>
+          )}
+        </div>
 
-        {isCategoriesLoading
-          ? Array.from({ length: 4 }).map((_, i) => (
-              <Skeleton key={i} className="w-20 h-7 rounded-full shrink-0" />
-            ))
-          : categories?.map((cat) => (
-              <button
-                key={cat.id}
-                onClick={() => setActiveCategoryId(cat.id)}
-                className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors ${
-                  activeCategoryId === cat.id
-                    ? "bg-primary text-background shadow-md shadow-primary/20 font-bold"
-                    : "bg-surface text-gray-300 border border-surface-border hover:border-gray-600"
-                }`}
-              >
-                {cat.name}
-              </button>
-            ))}
+        <div className="flex flex-wrap items-center gap-1.5 w-full">
+          <button
+            onClick={() => setActiveCategoryId("ALL")}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+              activeCategoryId === "ALL"
+                ? "bg-primary text-background shadow-md shadow-primary/20 scale-[1.02]"
+                : "bg-surface text-gray-300 border border-surface-border hover:border-gray-500"
+            }`}
+          >
+            All Dishes
+          </button>
+
+          {isCategoriesLoading
+            ? Array.from({ length: 4 }).map((_, i) => (
+                <Skeleton key={i} className="w-20 h-7 rounded-xl" />
+              ))
+            : categories?.map((cat) => (
+                <button
+                  key={cat.id}
+                  onClick={() => setActiveCategoryId(cat.id)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                    activeCategoryId === cat.id
+                      ? "bg-primary text-background shadow-md shadow-primary/20 scale-[1.02]"
+                      : "bg-surface text-gray-300 border border-surface-border hover:border-gray-500"
+                  }`}
+                >
+                  {cat.name}
+                </button>
+              ))}
+        </div>
       </div>
 
       {/* Menu Dishes List */}
@@ -226,119 +373,27 @@ export default function CustomerMenuPage() {
               Try adjusting your category filter or search query.
             </p>
           </div>
-        ) : (
-          filteredItems.map((dish) => {
-            const qty = cartQuantityMap[dish.id] || 0;
-            const isHighlighted = highlightedDishId === dish.id;
-
-            const isVeg =
-              dish.name.toLowerCase().includes("paneer") ||
-              dish.name.toLowerCase().includes("corn") ||
-              dish.name.toLowerCase().includes("dal") ||
-              dish.name.toLowerCase().includes("naan") ||
-              dish.name.toLowerCase().includes("roti") ||
-              dish.name.toLowerCase().includes("jamun");
-
-            const isSpicy =
-              dish.name.toLowerCase().includes("tikka") ||
-              dish.name.toLowerCase().includes("crispy");
-
-            return (
-              <div
-                key={dish.id}
-                className={`p-4 rounded-2xl bg-surface border transition-all duration-300 flex items-start justify-between gap-3 ${
-                  isHighlighted
-                    ? "border-primary shadow-glow bg-primary/5"
-                    : "border-surface-border hover:border-surface-border/80"
-                }`}
-              >
-                <div
-                  className="flex-1 flex flex-col cursor-pointer"
-                  onClick={() => handleOpenDishModal(dish)}
-                >
-                  <div className="flex items-center gap-1.5 mb-1">
-                    {isVeg ? (
-                      <span className="p-0.5 rounded border border-emerald-500/50 text-emerald-400 inline-block">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 block" />
-                      </span>
-                    ) : (
-                      <span className="p-0.5 rounded border border-red-500/50 text-red-400 inline-block">
-                        <span className="w-1.5 h-1.5 rounded-full bg-red-400 block" />
-                      </span>
-                    )}
-
-                    {isSpicy && (
-                      <Badge variant="amber" size="sm">
-                        <Flame className="w-3 h-3 text-amber-400 inline mr-0.5" />
-                        Spicy
-                      </Badge>
-                    )}
-                  </div>
-
-                  <h3 className="text-sm font-bold text-gray-100 font-display">
-                    {dish.name}
-                  </h3>
-
-                  <span className="text-sm font-extrabold text-primary font-mono mt-1">
-                    {formatMoney(dish.price.amount_minor_units)}
-                  </span>
-
-                  {dish.description && (
-                    <p className="text-xs text-gray-400 mt-1 line-clamp-2 leading-relaxed">
-                      {dish.description}
-                    </p>
-                  )}
-                </div>
-
-                {/* Add or Quantity Controls */}
-                <div className="shrink-0 flex items-center">
-                  {qty === 0 ? (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleAddDish(dish)}
-                      className="font-bold border-primary/40 text-primary hover:bg-primary/10"
-                      leftIcon={<Plus className="w-3.5 h-3.5" />}
-                    >
-                      Add
-                    </Button>
-                  ) : (
-                    <div className="flex items-center gap-2 bg-surface-subtle border border-primary/40 rounded-xl px-1.5 py-1">
-                      <button
-                        onClick={() =>
-                          dispatch(
-                            updateQuantity({
-                              menuItemId: dish.id,
-                              quantity: qty - 1,
-                            })
-                          )
-                        }
-                        className="w-6 h-6 rounded-lg bg-surface flex items-center justify-center text-gray-300 hover:text-white"
-                      >
-                        <Minus className="w-3.5 h-3.5" />
-                      </button>
-                      <span className="text-xs font-bold font-mono px-1">
-                        {qty}
-                      </span>
-                      <button
-                        onClick={() =>
-                          dispatch(
-                            updateQuantity({
-                              menuItemId: dish.id,
-                              quantity: qty + 1,
-                            })
-                          )
-                        }
-                        className="w-6 h-6 rounded-lg bg-primary text-background font-bold flex items-center justify-center"
-                      >
-                        <Plus className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  )}
-                </div>
+        ) : categorizedGroups && categorizedGroups.length > 0 ? (
+          categorizedGroups.map((group) => (
+            <section key={group.categoryId} className="flex flex-col gap-3">
+              <div className="sticky top-14 z-20 glass-panel py-2 px-3 rounded-xl flex items-center justify-between border border-surface-border/60 shadow-sm">
+                <h3 className="text-xs font-black uppercase tracking-wider text-amber-400 font-display flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-primary" />
+                  {group.categoryName}
+                </h3>
+                <span className="text-[10px] font-mono text-gray-400">
+                  {group.items.length} {group.items.length === 1 ? "dish" : "dishes"}
+                </span>
               </div>
-            );
-          })
+              <div className="flex flex-col gap-3">
+                {group.items.map(renderDishCard)}
+              </div>
+            </section>
+          ))
+        ) : (
+          <div className="flex flex-col gap-3">
+            {filteredItems.map(renderDishCard)}
+          </div>
         )}
       </div>
 

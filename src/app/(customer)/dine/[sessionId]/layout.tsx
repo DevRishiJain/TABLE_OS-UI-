@@ -52,7 +52,7 @@ export default function CustomerDineLayout({
   ];
 
   return (
-    <div className="min-h-screen bg-background text-gray-100 flex flex-col justify-between max-w-md mx-auto border-x border-surface-border/40 relative shadow-2xl">
+    <div className="min-h-screen bg-background text-gray-100 flex flex-col justify-between w-full max-w-md mx-auto border-x border-surface-border/40 relative shadow-2xl overflow-x-hidden">
       {/* Top Header */}
       <header className="sticky top-0 z-30 glass-panel border-b border-surface-border px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2.5">
@@ -96,7 +96,7 @@ export default function CustomerDineLayout({
       </header>
 
       {/* Main Page Content */}
-      <main className="flex-1 pb-32">{children}</main>
+      <main className="flex-1 pb-32 w-full overflow-x-hidden">{children}</main>
 
       {/* Floating Bottom Cart Bar (shows if items in cart and on menu page) */}
       {cartCount > 0 && !pathname.includes("/checkout") && (
