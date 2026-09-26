@@ -247,7 +247,9 @@ export default function AdminRestaurantDetailPage() {
           {Array.from({ length: 4 }).map((_, idx) => {
             const tableNum = `T${idx + 1}`;
             const qrToken = `table-qr-token-spice-route-0${idx + 1}`;
-            const qrUrl = `http://54.146.192.20:8088/t/${qrToken}`;
+            const qrUrl = typeof window !== "undefined"
+              ? `${window.location.origin}/t/${qrToken}`
+              : `http://localhost:3000/t/${qrToken}`;
 
             return (
               <div

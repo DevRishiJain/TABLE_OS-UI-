@@ -56,6 +56,9 @@ export interface Order {
   restaurant_id: string;
   sequence_number: number;
   table_number?: string;
+  customer_name?: string;
+  customer_phone?: string;
+  guest_count?: number;
   status: OrderState;
   placed_at: string;
   accepted_at?: string;

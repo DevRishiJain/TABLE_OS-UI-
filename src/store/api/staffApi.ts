@@ -11,6 +11,9 @@ import { generateUUID } from "@/lib/idempotency";
 export interface PendingOrderEntry {
   order: Order;
   table_number: string;
+  customer_name?: string;
+  customer_phone?: string;
+  guest_count?: number;
 }
 
 export const staffApi = baseApi.injectEndpoints({

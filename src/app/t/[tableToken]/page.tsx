@@ -113,10 +113,17 @@ export default function TableQREntryPage() {
     }
   };
 
-  // Derive readable table label from token
-  const tableLabel = tableToken.includes("TBL-")
-    ? `Table ${tableToken.replace("TBL-", "").replace(/^0+/, "")}`
-    : "Table T1";
+  // Derive readable table label deterministically from scanned table token
+  const getTableLabel = (token: string) => {
+    if (!token) return "Table 1";
+    const match = token.match(/(\d+)$/);
+    if (match) {
+      const num = parseInt(match[1], 10);
+      return `Table ${num}`;
+    }
+    return "Table 1";
+  };
+  const tableLabel = getTableLabel(tableToken);
 
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">

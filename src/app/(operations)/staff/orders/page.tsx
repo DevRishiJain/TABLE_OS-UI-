@@ -23,6 +23,9 @@ import {
   Bell,
   ChefHat,
   BellRing,
+  Users,
+  User,
+  Phone,
 } from "lucide-react";
 
 function getTimeElapsed(placedAtStr?: string): string {
@@ -258,7 +261,12 @@ export default function WaiterOrderScreenPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {pendingList.map((entry: PendingOrderEntry) => {
                 const ord = entry.order;
-                const tableNumber = entry.table_number || "Table";
+                const rawTable = entry.table_number || (ord as any).table_number || "Table 1";
+                const cleanNum = rawTable.replace(/[^0-9]/g, "") || "1";
+                const tableDisplay = `Table ${cleanNum}`;
+                const tableBadge = `T${cleanNum}`;
+                const customerName = (ord as any).customer_name || entry.customer_name || "Guest Diner";
+                const guestCount = (ord as any).guest_count || entry.guest_count || 1;
                 const isAccepting = processingOrderId === ord.id;
                 const totalMinor = getOrderTotalMinor(ord.total);
 
@@ -270,17 +278,26 @@ export default function WaiterOrderScreenPage() {
                     {/* Header */}
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-2.5">
-                        <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-300 font-bold font-display flex items-center justify-center text-sm border border-amber-500/40">
-                          {tableNumber.replace(/[^0-9]/g, "") ? `T${tableNumber.replace(/[^0-9]/g, "")}` : tableNumber}
+                        <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-300 font-bold font-display flex items-center justify-center text-sm border border-amber-500/40 shadow-sm">
+                          {tableBadge}
                         </div>
                         <div>
                           <h3 className="text-sm font-bold text-gray-100 font-display flex items-center gap-1.5">
-                            {tableNumber} • Order #{ord.sequence_number}
+                            {tableDisplay} • Order #{ord.sequence_number}
                           </h3>
-                          <span className="text-[11px] text-amber-400 font-mono flex items-center gap-1 mt-0.5">
-                            <Clock className="w-3 h-3" />
-                            {getTimeElapsed(ord.placed_at)}
-                          </span>
+                          <div className="flex items-center gap-1.5 text-xs text-gray-300 font-medium mt-0.5">
+                            <span className="text-amber-300 font-semibold">{customerName}</span>
+                            <span className="text-gray-600">•</span>
+                            <span className="text-gray-400 font-mono text-[11px] flex items-center gap-1">
+                              <Users className="w-3 h-3 text-amber-400" />
+                              {guestCount} {guestCount === 1 ? "Guest" : "Guests"}
+                            </span>
+                            <span className="text-gray-600">•</span>
+                            <span className="text-[11px] text-amber-400 font-mono flex items-center gap-0.5">
+                              <Clock className="w-3 h-3" />
+                              {getTimeElapsed(ord.placed_at)}
+                            </span>
+                          </div>
                         </div>
                       </div>
 
@@ -337,7 +354,7 @@ export default function WaiterOrderScreenPage() {
                         variant="gold"
                         size="sm"
                         isLoading={isAccepting}
-                        onClick={() => handleAcceptOrder(ord.id, tableNumber)}
+                        onClick={() => handleAcceptOrder(ord.id, tableDisplay)}
                         leftIcon={<CheckCircle2 className="w-4 h-4" />}
                         className="font-bold shadow-md shadow-amber-500/20"
                       >
@@ -369,7 +386,12 @@ export default function WaiterOrderScreenPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {readyForPickupList.map((ord) => {
                 const totalMinor = getOrderTotalMinor(ord.total);
-                const tableNumber = (ord as any).table_number || "Table";
+                const rawTable = (ord as any).table_number || "Table 1";
+                const cleanNum = rawTable.replace(/[^0-9]/g, "") || "1";
+                const tableDisplay = `Table ${cleanNum}`;
+                const tableBadge = `T${cleanNum}`;
+                const customerName = (ord as any).customer_name || "Guest Diner";
+                const guestCount = (ord as any).guest_count || 1;
                 const isProcessing = processingOrderId === ord.id;
 
                 return (
@@ -380,17 +402,21 @@ export default function WaiterOrderScreenPage() {
                     {/* Header */}
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-2.5">
-                        <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-300 font-bold font-display flex items-center justify-center text-sm border border-emerald-500/40">
-                          {tableNumber.replace(/[^0-9]/g, "") ? `T${tableNumber.replace(/[^0-9]/g, "")}` : "T#"}
+                        <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-300 font-bold font-display flex items-center justify-center text-sm border border-emerald-500/40 shadow-sm">
+                          {tableBadge}
                         </div>
                         <div>
                           <h3 className="text-sm font-bold text-gray-100 font-display flex items-center gap-1.5">
-                            {tableNumber} • Order #{ord.sequence_number}
+                            {tableDisplay} • Order #{ord.sequence_number}
                           </h3>
-                          <span className="text-[11px] text-emerald-400 font-mono flex items-center gap-1 mt-0.5">
-                            <BellRing className="w-3 h-3" />
-                            Ready at pass
-                          </span>
+                          <div className="flex items-center gap-1.5 text-xs text-gray-300 font-medium mt-0.5">
+                            <span className="text-emerald-400 font-bold">Deliver to {customerName}</span>
+                            <span className="text-gray-600">•</span>
+                            <span className="text-gray-400 font-mono text-[11px] flex items-center gap-1">
+                              <Users className="w-3 h-3 text-emerald-400" />
+                              {guestCount}p
+                            </span>
+                          </div>
                         </div>
                       </div>
 
@@ -430,7 +456,7 @@ export default function WaiterOrderScreenPage() {
                         variant="primary"
                         size="sm"
                         isLoading={isProcessing}
-                        onClick={() => handleMarkServed(ord.id, tableNumber)}
+                        onClick={() => handleMarkServed(ord.id, tableDisplay)}
                         leftIcon={<Utensils className="w-4 h-4" />}
                         className="font-bold shadow-md shadow-emerald-500/20"
                       >
@@ -456,20 +482,39 @@ export default function WaiterOrderScreenPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {inKitchenList.map((ord) => {
                 const totalMinor = getOrderTotalMinor(ord.total);
-                const tableNumber = (ord as any).table_number || "Table";
+                const rawTable = (ord as any).table_number || "Table 1";
+                const cleanNum = rawTable.replace(/[^0-9]/g, "") || "1";
+                const tableDisplay = `Table ${cleanNum}`;
+                const tableBadge = `T${cleanNum}`;
+                const customerName = (ord as any).customer_name || "Guest Diner";
+                const guestCount = (ord as any).guest_count || 1;
                 return (
                   <Card
                     key={ord.id}
                     className="p-5 flex flex-col justify-between gap-3 border-surface-border bg-surface"
                   >
                     <div className="flex items-start justify-between">
-                      <div>
-                        <h3 className="text-sm font-bold text-gray-100 font-display">
-                          {tableNumber} • Order #{ord.sequence_number}
-                        </h3>
-                        <span className="text-[11px] text-gray-400 font-mono">
-                          Accepted {getTimeElapsed(ord.accepted_at)}
-                        </span>
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-10 h-10 rounded-xl bg-surface-subtle text-primary font-bold font-display flex items-center justify-center text-sm border border-surface-border">
+                          {tableBadge}
+                        </div>
+                        <div>
+                          <h3 className="text-sm font-bold text-gray-100 font-display">
+                            {tableDisplay} • Order #{ord.sequence_number}
+                          </h3>
+                          <div className="flex items-center gap-1.5 text-xs text-gray-300 font-medium mt-0.5">
+                            <span className="text-primary font-semibold">{customerName}</span>
+                            <span className="text-gray-600">•</span>
+                            <span className="text-gray-400 font-mono text-[11px] flex items-center gap-1">
+                              <Users className="w-3 h-3 text-primary" />
+                              {guestCount}p
+                            </span>
+                            <span className="text-gray-600">•</span>
+                            <span className="text-[11px] text-gray-400 font-mono">
+                              Accepted {getTimeElapsed(ord.accepted_at)}
+                            </span>
+                          </div>
+                        </div>
                       </div>
 
                       <Badge

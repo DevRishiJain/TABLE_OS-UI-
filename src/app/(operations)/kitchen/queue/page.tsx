@@ -20,6 +20,9 @@ import {
   Utensils,
   ArrowRight,
   RefreshCw,
+  User,
+  Users,
+  Phone,
 } from "lucide-react";
 
 export default function KitchenQueuePage() {
@@ -172,7 +175,12 @@ export default function KitchenQueuePage() {
                 ) : (
                   colOrders.map((order) => {
                     const isProcessing = activeUpdatingId === order.id;
-                    const tableNum = (order as any).table_number;
+                    const rawTable = (order as any).table_number || "Table 1";
+                    const cleanNum = rawTable.replace(/[^0-9]/g, "") || "1";
+                    const tableDisplay = `Table ${cleanNum}`;
+                    const tableBadge = `T${cleanNum}`;
+                    const customerName = (order as any).customer_name || "Guest Diner";
+                    const guestCount = (order as any).guest_count || 1;
 
                     return (
                       <Card
@@ -180,26 +188,38 @@ export default function KitchenQueuePage() {
                         className="p-4 rounded-xl bg-[#181C23] border border-surface-border flex flex-col justify-between gap-4 shadow-lg hover:border-gray-500 transition-all"
                       >
                         {/* Ticket Header */}
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <span className="w-8 h-8 rounded-lg bg-primary/20 text-primary font-black flex items-center justify-center font-display text-sm border border-primary/40">
-                              {tableNum ? `T${tableNum}` : "T#"}
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-center gap-2.5">
+                            <span className="w-10 h-10 rounded-xl bg-primary/20 text-primary font-black flex items-center justify-center font-display text-base border border-primary/40 shadow-sm shrink-0">
+                              {tableBadge}
                             </span>
                             <div>
-                              <div className="text-xs font-bold text-gray-200">
-                                {tableNum ? `Table ${tableNum}` : "Dine In"}
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm font-black text-gray-100 font-display">
+                                  {tableDisplay}
+                                </span>
+                                <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-surface-subtle border border-surface-border text-gray-300 font-mono">
+                                  Order #{order.sequence_number || 1}
+                                </span>
                               </div>
-                              <span className="text-[10px] text-gray-400 font-mono">
-                                #{order.id.substring(0, 6)}
-                              </span>
+                              <div className="flex items-center gap-1.5 text-xs text-gray-300 font-medium mt-0.5">
+                                <span className="text-amber-400 font-bold truncate max-w-[120px]">
+                                  {customerName}
+                                </span>
+                                <span className="text-gray-600">•</span>
+                                <span className="text-gray-400 font-mono text-[11px] flex items-center gap-1">
+                                  <Users className="w-3 h-3 text-primary" />
+                                  {guestCount}p
+                                </span>
+                              </div>
                             </div>
                           </div>
 
-                          <span className="text-xs font-mono text-gray-400 flex items-center gap-1">
-                            <Clock className="w-3.5 h-3.5" />
+                          <span className="text-[11px] font-mono text-gray-400 flex items-center gap-1 shrink-0 pt-0.5">
+                            <Clock className="w-3 h-3 text-gray-500" />
                             {new Date(order.placed_at).toLocaleTimeString([], {
+                              hour: "2-digit",
                               minute: "2-digit",
-                              second: "2-digit",
                             })}
                           </span>
                         </div>
