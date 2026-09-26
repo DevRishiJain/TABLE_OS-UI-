@@ -6,7 +6,7 @@ import {
   useAcceptOrderMutation,
   PendingOrderEntry,
 } from "@/store/api/staffApi";
-import { useGetKitchenQueueQuery } from "@/store/api/kitchenApi";
+import { useGetKitchenQueueQuery, useUpdateKitchenStatusMutation } from "@/store/api/kitchenApi";
 import { formatMoney } from "@/lib/money";
 import { humanizeStatus } from "@/lib/statusLabels";
 import { addToast } from "@/store/slices/uiSlice";
@@ -22,6 +22,7 @@ import {
   RefreshCw,
   Bell,
   ChefHat,
+  BellRing,
 } from "lucide-react";
 
 function getTimeElapsed(placedAtStr?: string): string {
@@ -47,6 +48,8 @@ function getOrderTotalMinor(total: any): number {
   return total?.amount_minor_units || 0;
 }
 
+type WaiterTab = "pending" | "ready_pickup" | "kitchen_status";
+
 export default function WaiterOrderScreenPage() {
   const dispatch = useAppDispatch();
   const auth = useAppSelector((state) => state.auth);
@@ -56,7 +59,7 @@ export default function WaiterOrderScreenPage() {
     setMounted(true);
   }, []);
 
-  const [activeTab, setActiveTab] = useState<"pending" | "kitchen_status">("pending");
+  const [activeTab, setActiveTab] = useState<WaiterTab>("pending");
   const [processingOrderId, setProcessingOrderId] = useState<string | null>(null);
 
   // Poll pending orders every 3 seconds for instant real-time synchronization across all waiters
@@ -66,14 +69,24 @@ export default function WaiterOrderScreenPage() {
     refetch: refetchPending,
   } = useGetPendingOrdersQuery(undefined, { pollingInterval: 3000 });
 
-  // Kitchen queue to track status of accepted tickets
+  // Kitchen queue to track status of accepted tickets (now includes READY and SERVED)
   const { data: kitchenQueue, refetch: refetchKitchen } =
-    useGetKitchenQueueQuery(auth.restaurantId || undefined, { pollingInterval: 5000 });
+    useGetKitchenQueueQuery(auth.restaurantId || undefined, { pollingInterval: 4000 });
 
   const [acceptOrder] = useAcceptOrderMutation();
+  const [updateKitchenStatus] = useUpdateKitchenStatusMutation();
 
   const pendingList = pendingOrders || [];
-  const inKitchenList = kitchenQueue || [];
+  const allKitchenOrders = kitchenQueue || [];
+
+  // Separate READY orders for the "Ready for Pickup" tab
+  const readyForPickupList = allKitchenOrders.filter(
+    (ord) => ord.status === "READY"
+  );
+  // Kitchen status shows ACCEPTED and PREPARING orders
+  const inKitchenList = allKitchenOrders.filter(
+    (ord) => ord.status === "ACCEPTED" || ord.status === "PREPARING"
+  );
 
   const handleAcceptOrder = async (orderId: string, tableNumber: string) => {
     setProcessingOrderId(orderId);
@@ -101,6 +114,35 @@ export default function WaiterOrderScreenPage() {
     }
   };
 
+  const handleMarkServed = async (orderId: string, tableNumber: string) => {
+    setProcessingOrderId(orderId);
+    try {
+      await updateKitchenStatus({
+        orderId,
+        data: { status: "SERVED" as any },
+      }).unwrap();
+      dispatch(
+        addToast({
+          type: "success",
+          title: "Order Served!",
+          message: `Order delivered to ${tableNumber} by ${auth.userName || "Waiter"} (${auth.employeeId || "Floor Staff"}).`,
+        })
+      );
+      refetchKitchen();
+    } catch (err: any) {
+      console.error("Failed to mark served:", err);
+      dispatch(
+        addToast({
+          type: "error",
+          title: "Failed",
+          message: err?.data?.error || "Could not mark order as served.",
+        })
+      );
+    } finally {
+      setProcessingOrderId(null);
+    }
+  };
+
   return (
     <div className="flex flex-col gap-6">
       {/* Waiter Identity & Shift Bar */}
@@ -110,100 +152,105 @@ export default function WaiterOrderScreenPage() {
             <Utensils className="w-5 h-5" />
           </div>
           <div>
-            <div className="flex items-center gap-2">
-              <h2
-                suppressHydrationWarning
-                className="text-sm font-extrabold text-gray-100 font-display"
-              >
-                {mounted ? (auth.userName || "Floor Waiter") : "Floor Waiter"}
-              </h2>
-              {mounted && auth.employeeId && (
-                <span
-                  className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-primary/20 text-primary border border-primary/40"
-                >
-                  {auth.employeeId}
-                </span>
-              )}
-            </div>
-            <p className="text-[11px] text-gray-400 mt-0.5 flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-              Live Waiter Order Terminal • Gated Kitchen Acceptance
+            <p className="text-sm font-bold text-gray-100 font-display">
+              {auth.userName || "Waiter"}{" "}
+              <span className="text-xs text-gray-400 font-mono ml-1">
+                {auth.employeeId || ""}
+              </span>
+            </p>
+            <p className="text-[11px] text-gray-400">
+              {auth.staffRole || "Floor Staff"} •{" "}
+              {auth.restaurantName || "Restaurant"}
             </p>
           </div>
         </div>
-
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => {
-              refetchPending();
-              refetchKitchen();
-            }}
-            className="px-3 py-1.5 rounded-xl bg-surface border border-surface-border text-xs text-gray-300 hover:text-primary transition-colors flex items-center gap-1.5 font-mono"
-          >
-            <RefreshCw className="w-3.5 h-3.5" /> Refresh
-          </button>
-        </div>
+        <Button
+          variant="subtle"
+          size="sm"
+          onClick={() => {
+            refetchPending();
+            refetchKitchen();
+          }}
+          leftIcon={<RefreshCw className="w-3.5 h-3.5" />}
+        >
+          Refresh
+        </Button>
       </div>
 
-      {/* Screen Mode Tabs */}
-      <div className="flex items-center justify-between border-b border-surface-border pb-3">
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setActiveTab("pending")}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
-              activeTab === "pending"
-                ? "bg-amber-500 text-black shadow-md shadow-amber-500/20"
-                : "bg-surface text-gray-400 hover:text-gray-200 border border-surface-border"
-            }`}
-          >
-            <Bell className="w-3.5 h-3.5" />
-            Pending Waiter Acceptance
-            {mounted && pendingList.length > 0 && (
-              <span className="px-1.5 py-0.2 rounded-full bg-black/30 text-black text-[10px] font-mono font-extrabold">
+      {/* Tab Navigation — 3 tabs */}
+      <div className="flex gap-2">
+        <button
+          className={`px-4 py-2.5 text-xs font-bold rounded-xl transition-all border ${
+            activeTab === "pending"
+              ? "bg-amber-500/20 text-amber-300 border-amber-500/50"
+              : "bg-surface text-gray-400 border-surface-border hover:border-gray-500"
+          }`}
+          onClick={() => setActiveTab("pending")}
+        >
+          <div className="flex items-center gap-1.5">
+            <Bell className="w-4 h-4" />
+            New Orders
+            {pendingList.length > 0 && (
+              <span className="ml-1 px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-amber-500 text-black animate-pulse">
                 {pendingList.length}
               </span>
             )}
-          </button>
+          </div>
+        </button>
 
-          <button
-            onClick={() => setActiveTab("kitchen_status")}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
-              activeTab === "kitchen_status"
-                ? "bg-primary text-black shadow-md shadow-primary/20"
-                : "bg-surface text-gray-400 hover:text-gray-200 border border-surface-border"
-            }`}
-          >
-            <ChefHat className="w-3.5 h-3.5" />
-            In-Prep Kitchen Queue
-            {mounted && inKitchenList.length > 0 && (
-              <span className="px-1.5 py-0.2 rounded-full bg-black/30 text-black text-[10px] font-mono font-extrabold">
+        <button
+          className={`px-4 py-2.5 text-xs font-bold rounded-xl transition-all border ${
+            activeTab === "ready_pickup"
+              ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/50"
+              : "bg-surface text-gray-400 border-surface-border hover:border-gray-500"
+          }`}
+          onClick={() => setActiveTab("ready_pickup")}
+        >
+          <div className="flex items-center gap-1.5">
+            <BellRing className="w-4 h-4" />
+            Ready for Pickup
+            {readyForPickupList.length > 0 && (
+              <span className="ml-1 px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-emerald-500 text-black animate-pulse">
+                {readyForPickupList.length}
+              </span>
+            )}
+          </div>
+        </button>
+
+        <button
+          className={`px-4 py-2.5 text-xs font-bold rounded-xl transition-all border ${
+            activeTab === "kitchen_status"
+              ? "bg-primary/20 text-primary border-primary/50"
+              : "bg-surface text-gray-400 border-surface-border hover:border-gray-500"
+          }`}
+          onClick={() => setActiveTab("kitchen_status")}
+        >
+          <div className="flex items-center gap-1.5">
+            <ChefHat className="w-4 h-4" />
+            In Kitchen
+            {inKitchenList.length > 0 && (
+              <span className="ml-1 px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-primary text-background">
                 {inKitchenList.length}
               </span>
             )}
-          </button>
-        </div>
-
-        <span className="text-[11px] text-gray-400 font-mono hidden sm:inline">
-          Auto-syncing every 3s
-        </span>
+          </div>
+        </button>
       </div>
 
-      {/* TAB 1: PENDING ORDERS NEEDING WAITER ACCEPTANCE */}
+      {/* TAB 1: PENDING ORDERS REQUIRING ACCEPTANCE */}
       {activeTab === "pending" && (
         <div className="flex flex-col gap-4">
           {isPendingLoading ? (
-            <div className="py-20 text-center text-gray-500 text-xs font-mono">
-              Syncing incoming order stream...
+            <div className="py-20 text-center text-gray-500 text-xs font-mono bg-surface rounded-2xl border border-surface-border p-6 animate-pulse">
+              Loading incoming orders...
             </div>
           ) : pendingList.length === 0 ? (
-            <div className="py-20 flex flex-col items-center justify-center text-center p-6 bg-surface rounded-2xl border border-surface-border">
-              <div className="w-14 h-14 rounded-2xl bg-surface-subtle flex items-center justify-center text-gray-500 mb-3">
-                <Utensils className="w-7 h-7" />
-              </div>
-              <h3 className="text-base font-bold text-gray-200">
-                No Pending Customer Orders
+            <div className="py-20 text-center bg-surface rounded-2xl border border-surface-border p-6">
+              <CheckCircle2 className="w-10 h-10 text-emerald-400 mx-auto mb-3" />
+              <h3 className="text-sm font-bold text-gray-200 font-display mb-1">
+                All Clear
               </h3>
-              <p className="text-xs text-gray-400 mt-1 max-w-sm">
+              <p className="text-xs text-gray-500 max-w-sm mx-auto">
                 All customer orders have been accepted into the kitchen. New orders placed by guests will pop up here in real time.
               </p>
             </div>
@@ -305,7 +352,100 @@ export default function WaiterOrderScreenPage() {
         </div>
       )}
 
-      {/* TAB 2: IN-PREP KITCHEN STATUS */}
+      {/* TAB 2: READY FOR PICKUP — Waiter must collect from kitchen pass */}
+      {activeTab === "ready_pickup" && (
+        <div className="flex flex-col gap-4">
+          {readyForPickupList.length === 0 ? (
+            <div className="py-20 text-center bg-surface rounded-2xl border border-surface-border p-6">
+              <ChefHat className="w-10 h-10 text-gray-500 mx-auto mb-3" />
+              <h3 className="text-sm font-bold text-gray-200 font-display mb-1">
+                No Orders Ready
+              </h3>
+              <p className="text-xs text-gray-500 max-w-sm mx-auto">
+                No orders are currently ready for pickup from the kitchen pass. Orders will appear here once chefs mark them done.
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {readyForPickupList.map((ord) => {
+                const totalMinor = getOrderTotalMinor(ord.total);
+                const tableNumber = (ord as any).table_number || "Table";
+                const isProcessing = processingOrderId === ord.id;
+
+                return (
+                  <Card
+                    key={ord.id}
+                    className="p-5 flex flex-col justify-between gap-4 border-emerald-500/50 bg-emerald-500/[0.03] shadow-glow transition-all hover:border-emerald-400 animate-pulse-subtle"
+                  >
+                    {/* Header */}
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-300 font-bold font-display flex items-center justify-center text-sm border border-emerald-500/40">
+                          {tableNumber.replace(/[^0-9]/g, "") ? `T${tableNumber.replace(/[^0-9]/g, "")}` : "T#"}
+                        </div>
+                        <div>
+                          <h3 className="text-sm font-bold text-gray-100 font-display flex items-center gap-1.5">
+                            {tableNumber} • Order #{ord.sequence_number}
+                          </h3>
+                          <span className="text-[11px] text-emerald-400 font-mono flex items-center gap-1 mt-0.5">
+                            <BellRing className="w-3 h-3" />
+                            Ready at pass
+                          </span>
+                        </div>
+                      </div>
+
+                      <Badge variant="success" size="sm">
+                        🔔 READY
+                      </Badge>
+                    </div>
+
+                    {/* Items */}
+                    <div className="flex flex-col gap-2 p-3 rounded-xl bg-surface-subtle border border-emerald-500/20 text-xs">
+                      {ord.items?.map((item: any) => (
+                        <div key={item.id} className="flex items-start justify-between gap-2">
+                          <div className="flex items-start gap-2">
+                            <span className="font-mono font-bold text-emerald-400">
+                              {item.quantity}x
+                            </span>
+                            <span className="text-gray-200 font-medium">
+                              {item.item_name_snapshot}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Action: Mark Served */}
+                    <div className="flex items-center justify-between pt-3 border-t border-surface-border/60">
+                      <div className="flex flex-col">
+                        <span className="text-[10px] text-gray-400 uppercase font-semibold">
+                          Total
+                        </span>
+                        <span className="text-base font-extrabold font-mono text-primary">
+                          {formatMoney(totalMinor)}
+                        </span>
+                      </div>
+
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        isLoading={isProcessing}
+                        onClick={() => handleMarkServed(ord.id, tableNumber)}
+                        leftIcon={<Utensils className="w-4 h-4" />}
+                        className="font-bold shadow-md shadow-emerald-500/20"
+                      >
+                        Mark Served to Table
+                      </Button>
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* TAB 3: IN-KITCHEN STATUS (ACCEPTED + PREPARING) */}
       {activeTab === "kitchen_status" && (
         <div className="flex flex-col gap-4">
           {inKitchenList.length === 0 ? (
@@ -316,6 +456,7 @@ export default function WaiterOrderScreenPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {inKitchenList.map((ord) => {
                 const totalMinor = getOrderTotalMinor(ord.total);
+                const tableNumber = (ord as any).table_number || "Table";
                 return (
                   <Card
                     key={ord.id}
@@ -324,7 +465,7 @@ export default function WaiterOrderScreenPage() {
                     <div className="flex items-start justify-between">
                       <div>
                         <h3 className="text-sm font-bold text-gray-100 font-display">
-                          Order #{ord.sequence_number}
+                          {tableNumber} • Order #{ord.sequence_number}
                         </h3>
                         <span className="text-[11px] text-gray-400 font-mono">
                           Accepted {getTimeElapsed(ord.accepted_at)}
@@ -333,9 +474,7 @@ export default function WaiterOrderScreenPage() {
 
                       <Badge
                         variant={
-                          ord.status === "READY"
-                            ? "success"
-                            : ord.status === "PREPARING"
+                          ord.status === "PREPARING"
                             ? "amber"
                             : "blue"
                         }
@@ -345,7 +484,7 @@ export default function WaiterOrderScreenPage() {
                     </div>
 
                     <div className="p-3 rounded-xl bg-surface-subtle text-xs flex flex-col gap-1.5">
-                      {ord.items?.map((item) => (
+                      {ord.items?.map((item: any) => (
                         <div key={item.id} className="flex justify-between text-gray-300">
                           <span>
                             <strong className="text-primary font-mono">{item.quantity}x</strong>{" "}

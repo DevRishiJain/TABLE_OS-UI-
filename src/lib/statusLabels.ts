@@ -1,10 +1,12 @@
 export const ORDER_STATUS_LABELS: Record<string, string> = {
   PLACED_UNVERIFIED: "Pending Verification",
+  PLACED_VERIFIED: "Verified — Awaiting Acceptance",
   ACCEPTED: "Accepted",
   PREPARING: "Being Prepared",
   READY: "Ready for Pickup",
   SERVED: "Served",
   CANCELLED: "Cancelled",
+  REJECTED: "Rejected",
 };
 
 export const SESSION_STATUS_LABELS: Record<string, string> = {

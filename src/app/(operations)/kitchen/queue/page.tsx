@@ -219,9 +219,9 @@ export default function KitchenQueuePage() {
                                   {item.item_name_snapshot}
                                 </span>
                               </div>
-                              {item.specialInstructions && (
+                              {item.special_instructions && (
                                 <span className="text-[11px] text-amber-300 italic px-1.5 py-0.5 rounded bg-amber-500/10 border border-amber-500/30">
-                                  {item.specialInstructions}
+                                  {item.special_instructions}
                                 </span>
                               )}
                             </div>
