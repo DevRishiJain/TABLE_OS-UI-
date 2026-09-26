@@ -14,6 +14,7 @@ export interface PendingOrderEntry {
   customer_name?: string;
   customer_phone?: string;
   guest_count?: number;
+  vehicle_number?: string;
 }
 
 export const staffApi = baseApi.injectEndpoints({

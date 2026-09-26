@@ -18,6 +18,8 @@ import {
   ArrowRight,
   Plus,
   Minus,
+  Car,
+  Hotel,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -31,8 +33,21 @@ export default function TableQREntryPage() {
   const tableToken = (params.tableToken as string) || "table-qr-token-spice-route-01";
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
+  const [vehicleNumber, setVehicleNumber] = useState("");
+  const [isDriveInMode, setIsDriveInMode] = useState<boolean>(false);
   const [guestCount, setGuestCount] = useState<number>(2);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Determine venue concept and labels from table token
+  const tokenLower = tableToken.toLowerCase();
+  const isTokenDriveIn = tokenLower.includes("drive") || tokenLower.includes("car");
+  const isTokenHotel = tokenLower.includes("room") || tokenLower.includes("hotel");
+
+  useEffect(() => {
+    if (isTokenDriveIn) {
+      setIsDriveInMode(true);
+    }
+  }, [isTokenDriveIn]);
 
   // Pre-fill from localStorage if previously entered
   useEffect(() => {
@@ -40,8 +55,10 @@ export default function TableQREntryPage() {
       const savedName = localStorage.getItem("tableos_customer_name");
       const savedPhone = localStorage.getItem("tableos_customer_phone");
       const savedGuests = localStorage.getItem("tableos_guest_count");
+      const savedVehicle = localStorage.getItem("tableos_vehicle_number");
       if (savedName) setCustomerName(savedName);
       if (savedPhone) setCustomerPhone(savedPhone);
+      if (savedVehicle) setVehicleNumber(savedVehicle);
       if (savedGuests && !isNaN(Number(savedGuests))) {
         setGuestCount(Math.max(1, Number(savedGuests)));
       }
@@ -59,6 +76,42 @@ export default function TableQREntryPage() {
     return fp;
   };
 
+  // Derive readable location label
+  const getLocationDetails = () => {
+    if (isTokenDriveIn) {
+      return {
+        badge: "🚗 Car-O-Bar • Drive-In",
+        title: "Drive-In & Car-O-Bar",
+        subtext: "Scan from parking bay • Food delivered hot directly to your car",
+        icon: Car,
+        accentColor: "text-amber-400 border-amber-500/40 bg-amber-500/10",
+      };
+    }
+    if (isTokenHotel) {
+      const match = tableToken.match(/(\d+)$/);
+      const roomNum = match ? match[1] : "101";
+      return {
+        badge: `🏨 Room ${roomNum} • In-Room Dining`,
+        title: "The Grand Royale Hotel",
+        subtext: `In-room gourmet dining delivered directly to Room ${roomNum}`,
+        icon: Hotel,
+        accentColor: "text-purple-400 border-purple-500/40 bg-purple-500/10",
+      };
+    }
+    const match = tableToken.match(/(\d+)$/);
+    const tableNum = match ? parseInt(match[1], 10) : 1;
+    return {
+      badge: `🍽️ Table ${tableNum} • Dine-In`,
+      title: "The Spice Route",
+      subtext: "Please enter your details below so our kitchen and floor team can prepare your seating and dishes accordingly.",
+      icon: Utensils,
+      accentColor: "text-primary border-primary/40 bg-primary/20",
+    };
+  };
+
+  const loc = getLocationDetails();
+  const HeaderIcon = loc.icon;
+
   const handleStartDining = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     setErrorMessage(null);
@@ -66,6 +119,13 @@ export default function TableQREntryPage() {
     const displayName = customerName.trim() || "Guest Diner";
     const phone = customerPhone.trim();
     const guests = Math.max(1, guestCount || 2);
+    const vehicle = vehicleNumber.trim().toUpperCase();
+
+    // Validation: If in Drive-In mode or isTokenDriveIn, vehicle number is mandatory!
+    if ((isDriveInMode || isTokenDriveIn) && !vehicle) {
+      setErrorMessage("Please enter your Vehicle / Car Plate Number (e.g. DL 01 AB 1234) so our car-hops know which car to deliver your food to!");
+      return;
+    }
 
     try {
       const fingerprint = getDeviceFingerprint();
@@ -74,6 +134,7 @@ export default function TableQREntryPage() {
       if (typeof window !== "undefined") {
         localStorage.setItem("tableos_customer_name", displayName);
         if (phone) localStorage.setItem("tableos_customer_phone", phone);
+        if (vehicle) localStorage.setItem("tableos_vehicle_number", vehicle);
         localStorage.setItem("tableos_guest_count", String(guests));
       }
 
@@ -82,6 +143,8 @@ export default function TableQREntryPage() {
         customer_name: displayName,
         customer_phone: phone,
         guest_count: guests,
+        vehicle_number: vehicle,
+        car_number: vehicle,
         device_fingerprint: fingerprint,
       }).unwrap();
 
@@ -95,11 +158,15 @@ export default function TableQREntryPage() {
         })
       );
 
+      const welcomeMsg = vehicle
+        ? `Delivery to Car ${vehicle} confirmed for ${guests} guests. Explore our handcrafted menu below!`
+        : `Party of ${guests} confirmed. Explore our handcrafted menu below.`;
+
       dispatch(
         addToast({
           type: "success",
-          title: "Welcome to The Spice Route!",
-          message: `Party of ${guests} confirmed. Explore our handcrafted menu below.`,
+          title: `Welcome to ${loc.title}!`,
+          message: welcomeMsg,
           durationMs: 3500,
         })
       );
@@ -113,18 +180,6 @@ export default function TableQREntryPage() {
     }
   };
 
-  // Derive readable table label deterministically from scanned table token
-  const getTableLabel = (token: string) => {
-    if (!token) return "Table 1";
-    const match = token.match(/(\d+)$/);
-    if (match) {
-      const num = parseInt(match[1], 10);
-      return `Table ${num}`;
-    }
-    return "Table 1";
-  };
-  const tableLabel = getTableLabel(tableToken);
-
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-md rounded-3xl glass-card border border-surface-border p-6 sm:p-8 flex flex-col items-center text-center shadow-2xl animate-in zoom-in-95 duration-200 relative overflow-hidden">
@@ -132,26 +187,26 @@ export default function TableQREntryPage() {
         <div className="absolute top-0 right-0 w-36 h-36 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
 
         {/* Brand Icon */}
-        <div className="w-16 h-16 rounded-2xl bg-primary/20 border border-primary/40 flex items-center justify-center text-primary shadow-glow mb-4">
-          <Utensils className="w-8 h-8" />
+        <div className={`w-16 h-16 rounded-2xl flex items-center justify-center border shadow-glow mb-4 ${loc.accentColor}`}>
+          <HeaderIcon className="w-8 h-8" />
         </div>
 
         <h1 className="text-2xl font-black text-gray-100 font-display">
-          The Spice Route
+          {loc.title}
         </h1>
-        <div className="flex items-center gap-2 mt-1">
-          <span className="text-xs px-2.5 py-0.5 rounded-full bg-primary/20 border border-primary/40 text-primary font-bold font-mono tracking-wider uppercase">
-            {tableLabel} • Dine-In
+        <div className="flex items-center gap-2 mt-1.5">
+          <span className={`text-xs px-3 py-1 rounded-full border font-bold font-mono tracking-wider uppercase ${loc.accentColor}`}>
+            {loc.badge}
           </span>
         </div>
 
-        <p className="text-xs text-gray-400 mt-2 max-w-xs leading-relaxed">
-          Please enter your details below so our kitchen and floor team can prepare your seating and dishes accordingly.
+        <p className="text-xs text-gray-400 mt-2.5 max-w-xs leading-relaxed">
+          {loc.subtext}
         </p>
 
         {/* Error Alert */}
         {errorMessage && (
-          <div className="mt-4 p-3.5 rounded-xl bg-red-500/10 border border-red-500/30 flex items-start gap-2.5 text-xs text-red-400 text-left w-full">
+          <div className="mt-4 p-3.5 rounded-xl bg-red-500/10 border border-red-500/30 flex items-start gap-2.5 text-xs text-red-400 text-left w-full animate-shake">
             <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
             <span>{errorMessage}</span>
           </div>
@@ -159,6 +214,62 @@ export default function TableQREntryPage() {
 
         {/* Guest Details Form */}
         <form onSubmit={handleStartDining} className="mt-5 w-full flex flex-col gap-4 text-left">
+          {/* Vehicle Plate Input (Prominent for Drive-In or optional for Dine-In) */}
+          {(isDriveInMode || isTokenDriveIn) ? (
+            <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/40 shadow-inner">
+              <label className="text-xs font-bold text-amber-300 block mb-1.5 flex items-center justify-between">
+                <span className="flex items-center gap-1.5">
+                  <Car className="w-4 h-4 text-amber-400" />
+                  <span>Car / Vehicle Plate Number <span className="text-red-400">*</span></span>
+                </span>
+                <span className="text-[10px] font-mono font-bold text-amber-400 bg-amber-500/20 px-2 py-0.5 rounded-md">
+                  Required for Car Delivery
+                </span>
+              </label>
+              <Input
+                value={vehicleNumber}
+                onChange={(e) => setVehicleNumber(e.target.value.toUpperCase())}
+                placeholder="e.g. DL 01 AB 1234 or HR 26 DQ 5555"
+                className="w-full text-base font-mono tracking-wider font-extrabold uppercase bg-background border-amber-500/50 text-amber-300 placeholder:text-gray-600"
+                autoFocus
+              />
+              <p className="text-[11px] text-amber-400/80 mt-1.5 leading-snug font-medium">
+                🚗 Waiters will locate your vehicle and deliver food straight to your window.
+              </p>
+            </div>
+          ) : (
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-xs font-bold text-gray-300 flex items-center gap-1.5">
+                  <Car className="w-3.5 h-3.5 text-gray-400" />
+                  <span>Car / Drive-In Parking?</span>
+                </label>
+                {!isDriveInMode && (
+                  <button
+                    type="button"
+                    onClick={() => setIsDriveInMode(true)}
+                    className="text-[11px] font-mono text-amber-400 hover:underline flex items-center gap-1"
+                  >
+                    + Add Vehicle Number
+                  </button>
+                )}
+              </div>
+              {isDriveInMode && (
+                <div className="p-3 rounded-xl bg-surface-subtle border border-surface-border mb-2">
+                  <Input
+                    value={vehicleNumber}
+                    onChange={(e) => setVehicleNumber(e.target.value.toUpperCase())}
+                    placeholder="e.g. DL 01 AB 1234 (Vehicle Plate)"
+                    className="w-full text-xs font-mono font-bold uppercase"
+                  />
+                  <span className="text-[10px] text-gray-500 mt-1 block font-mono">
+                    Car hops will deliver directly to this vehicle.
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Customer Name */}
           <div>
             <label className="text-xs font-bold text-gray-300 block mb-1.5 flex items-center gap-1.5">
@@ -196,7 +307,7 @@ export default function TableQREntryPage() {
             <label className="text-xs font-bold text-gray-300 block mb-1.5 flex items-center justify-between">
               <span className="flex items-center gap-1.5">
                 <Users className="w-3.5 h-3.5 text-primary" />
-                <span>Number of Guests</span>
+                <span>Number of Guests in Party</span>
               </span>
               <span className="text-[10px] font-mono text-gray-400">
                 Helps kitchen portioning
@@ -213,7 +324,7 @@ export default function TableQREntryPage() {
                 >
                   <Minus className="w-4 h-4" />
                 </button>
-                <span className="w-12 text-center text-base font-black font-mono text-primary">
+                <span className="w-14 text-center text-base font-black font-mono text-primary">
                   {guestCount} {guestCount === 1 ? "Guest" : "Guests"}
                 </span>
                 <button
@@ -254,7 +365,7 @@ export default function TableQREntryPage() {
             className="w-full mt-2 font-bold shadow-xl shadow-amber-500/20"
             rightIcon={<ArrowRight className="w-4 h-4" />}
           >
-            {isLoading ? "Opening Session..." : "Start Dining & View Menu"}
+            {isLoading ? "Opening Session..." : (isDriveInMode || isTokenDriveIn) ? "Place Car Order & View Menu" : "Start Dining & View Menu"}
           </Button>
         </form>
 

@@ -9,6 +9,8 @@ export interface StartSessionRequest {
   phone_number?: string;
   guest_count?: number;
   no_of_guests?: number;
+  vehicle_number?: string;
+  car_number?: string;
   device_fingerprint?: string;
 }
 

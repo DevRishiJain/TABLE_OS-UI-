@@ -15,6 +15,7 @@ import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { OrderItem } from "@/types/domain";
+import { formatDestination } from "@/lib/location";
 import {
   CheckCircle2,
   Clock,
@@ -261,12 +262,15 @@ export default function WaiterOrderScreenPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {pendingList.map((entry: PendingOrderEntry) => {
                 const ord = entry.order;
-                const rawTable = entry.table_number || (ord as any).table_number || "Table 1";
-                const cleanNum = rawTable.replace(/[^0-9]/g, "") || "1";
-                const tableDisplay = `Table ${cleanNum}`;
-                const tableBadge = `T${cleanNum}`;
                 const customerName = (ord as any).customer_name || entry.customer_name || "Guest Diner";
                 const guestCount = (ord as any).guest_count || entry.guest_count || 1;
+                const vehicleNumber = entry.vehicle_number || (ord as any).vehicle_number;
+                const dest = formatDestination(
+                  entry.table_number || (ord as any).table_number,
+                  vehicleNumber,
+                  customerName,
+                  guestCount
+                );
                 const isAccepting = processingOrderId === ord.id;
                 const totalMinor = getOrderTotalMinor(ord.total);
 
@@ -278,12 +282,21 @@ export default function WaiterOrderScreenPage() {
                     {/* Header */}
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-2.5">
-                        <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-300 font-bold font-display flex items-center justify-center text-sm border border-amber-500/40 shadow-sm">
-                          {tableBadge}
+                        <div className={`w-10 h-10 rounded-xl font-bold font-display flex items-center justify-center text-sm border shadow-sm ${
+                          dest.isVehicle
+                            ? "bg-amber-500/20 text-amber-300 border-amber-500/50"
+                            : dest.isRoom
+                            ? "bg-purple-500/20 text-purple-300 border-purple-500/50"
+                            : "bg-amber-500/20 text-amber-300 border-amber-500/40"
+                        }`}>
+                          {dest.shortBadge}
                         </div>
                         <div>
                           <h3 className="text-sm font-bold text-gray-100 font-display flex items-center gap-1.5">
-                            {tableDisplay} • Order #{ord.sequence_number}
+                            <span className={dest.isVehicle ? "text-amber-300" : dest.isRoom ? "text-purple-300" : "text-gray-100"}>
+                              {dest.display}
+                            </span>
+                            {" "}• Order #{ord.sequence_number}
                           </h3>
                           <div className="flex items-center gap-1.5 text-xs text-gray-300 font-medium mt-0.5">
                             <span className="text-amber-300 font-semibold">{customerName}</span>
@@ -354,7 +367,7 @@ export default function WaiterOrderScreenPage() {
                         variant="gold"
                         size="sm"
                         isLoading={isAccepting}
-                        onClick={() => handleAcceptOrder(ord.id, tableDisplay)}
+                        onClick={() => handleAcceptOrder(ord.id, dest.display)}
                         leftIcon={<CheckCircle2 className="w-4 h-4" />}
                         className="font-bold shadow-md shadow-amber-500/20"
                       >
@@ -386,12 +399,14 @@ export default function WaiterOrderScreenPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {readyForPickupList.map((ord) => {
                 const totalMinor = getOrderTotalMinor(ord.total);
-                const rawTable = (ord as any).table_number || "Table 1";
-                const cleanNum = rawTable.replace(/[^0-9]/g, "") || "1";
-                const tableDisplay = `Table ${cleanNum}`;
-                const tableBadge = `T${cleanNum}`;
                 const customerName = (ord as any).customer_name || "Guest Diner";
                 const guestCount = (ord as any).guest_count || 1;
+                const dest = formatDestination(
+                  (ord as any).table_number,
+                  (ord as any).vehicle_number,
+                  customerName,
+                  guestCount
+                );
                 const isProcessing = processingOrderId === ord.id;
 
                 return (
@@ -402,15 +417,26 @@ export default function WaiterOrderScreenPage() {
                     {/* Header */}
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-2.5">
-                        <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-300 font-bold font-display flex items-center justify-center text-sm border border-emerald-500/40 shadow-sm">
-                          {tableBadge}
+                        <div className={`w-10 h-10 rounded-xl font-bold font-display flex items-center justify-center text-sm border shadow-sm ${
+                          dest.isVehicle
+                            ? "bg-amber-500/20 text-amber-300 border-amber-500/50"
+                            : dest.isRoom
+                            ? "bg-purple-500/20 text-purple-300 border-purple-500/50"
+                            : "bg-emerald-500/20 text-emerald-300 border-emerald-500/40"
+                        }`}>
+                          {dest.shortBadge}
                         </div>
                         <div>
                           <h3 className="text-sm font-bold text-gray-100 font-display flex items-center gap-1.5">
-                            {tableDisplay} • Order #{ord.sequence_number}
+                            <span className={dest.isVehicle ? "text-amber-300" : dest.isRoom ? "text-purple-300" : "text-gray-100"}>
+                              {dest.display}
+                            </span>
+                            {" "}• Order #{ord.sequence_number}
                           </h3>
                           <div className="flex items-center gap-1.5 text-xs text-gray-300 font-medium mt-0.5">
-                            <span className="text-emerald-400 font-bold">Deliver to {customerName}</span>
+                            <span className="text-emerald-400 font-bold">
+                              {dest.isVehicle ? `Deliver to ${customerName} at ${dest.display}` : `Deliver to ${customerName}`}
+                            </span>
                             <span className="text-gray-600">•</span>
                             <span className="text-gray-400 font-mono text-[11px] flex items-center gap-1">
                               <Users className="w-3 h-3 text-emerald-400" />
@@ -456,11 +482,11 @@ export default function WaiterOrderScreenPage() {
                         variant="primary"
                         size="sm"
                         isLoading={isProcessing}
-                        onClick={() => handleMarkServed(ord.id, tableDisplay)}
+                        onClick={() => handleMarkServed(ord.id, dest.display)}
                         leftIcon={<Utensils className="w-4 h-4" />}
                         className="font-bold shadow-md shadow-emerald-500/20"
                       >
-                        Mark Served to Table
+                        {dest.actionLabel}
                       </Button>
                     </div>
                   </Card>
@@ -482,12 +508,14 @@ export default function WaiterOrderScreenPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {inKitchenList.map((ord) => {
                 const totalMinor = getOrderTotalMinor(ord.total);
-                const rawTable = (ord as any).table_number || "Table 1";
-                const cleanNum = rawTable.replace(/[^0-9]/g, "") || "1";
-                const tableDisplay = `Table ${cleanNum}`;
-                const tableBadge = `T${cleanNum}`;
                 const customerName = (ord as any).customer_name || "Guest Diner";
                 const guestCount = (ord as any).guest_count || 1;
+                const dest = formatDestination(
+                  (ord as any).table_number,
+                  (ord as any).vehicle_number,
+                  customerName,
+                  guestCount
+                );
                 return (
                   <Card
                     key={ord.id}
@@ -495,12 +523,21 @@ export default function WaiterOrderScreenPage() {
                   >
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-2.5">
-                        <div className="w-10 h-10 rounded-xl bg-surface-subtle text-primary font-bold font-display flex items-center justify-center text-sm border border-surface-border">
-                          {tableBadge}
+                        <div className={`w-10 h-10 rounded-xl font-bold font-display flex items-center justify-center text-sm border ${
+                          dest.isVehicle
+                            ? "bg-amber-500/20 text-amber-300 border-amber-500/50"
+                            : dest.isRoom
+                            ? "bg-purple-500/20 text-purple-300 border-purple-500/50"
+                            : "bg-surface-subtle text-primary border-surface-border"
+                        }`}>
+                          {dest.shortBadge}
                         </div>
                         <div>
-                          <h3 className="text-sm font-bold text-gray-100 font-display">
-                            {tableDisplay} • Order #{ord.sequence_number}
+                          <h3 className="text-sm font-bold text-gray-100 font-display flex items-center gap-1.5">
+                            <span className={dest.isVehicle ? "text-amber-300" : dest.isRoom ? "text-purple-300" : "text-gray-100"}>
+                              {dest.display}
+                            </span>
+                            {" "}• Order #{ord.sequence_number}
                           </h3>
                           <div className="flex items-center gap-1.5 text-xs text-gray-300 font-medium mt-0.5">
                             <span className="text-primary font-semibold">{customerName}</span>

@@ -9,6 +9,7 @@ export interface DiningSession {
   customer_name?: string;
   customer_phone?: string;
   guest_count?: number;
+  vehicle_number?: string;
   id: string;
   restaurant_id: string;
   table_id: string;
@@ -153,6 +154,7 @@ export interface StaffUser {
 export interface Restaurant {
   id: string;
   name: string;
+  venue_type?: "FINE_DINE" | "CAFE" | "HOTEL" | "DRIVE_IN";
   gstin: string;
   commission_rate_bps: number;
   settlement_bank_details: string;

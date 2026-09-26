@@ -6,6 +6,7 @@ import {
   useUpdateKitchenStatusMutation,
 } from "@/store/api/kitchenApi";
 import { OrderState } from "@/types/enums";
+import { formatDestination } from "@/lib/location";
 import { addToast } from "@/store/slices/uiSlice";
 import { useAppDispatch, useAppSelector } from "@/store";
 import { Card } from "@/components/ui/Card";
@@ -175,12 +176,14 @@ export default function KitchenQueuePage() {
                 ) : (
                   colOrders.map((order) => {
                     const isProcessing = activeUpdatingId === order.id;
-                    const rawTable = (order as any).table_number || "Table 1";
-                    const cleanNum = rawTable.replace(/[^0-9]/g, "") || "1";
-                    const tableDisplay = `Table ${cleanNum}`;
-                    const tableBadge = `T${cleanNum}`;
                     const customerName = (order as any).customer_name || "Guest Diner";
                     const guestCount = (order as any).guest_count || 1;
+                    const dest = formatDestination(
+                      (order as any).table_number,
+                      (order as any).vehicle_number,
+                      customerName,
+                      guestCount
+                    );
 
                     return (
                       <Card
@@ -190,13 +193,25 @@ export default function KitchenQueuePage() {
                         {/* Ticket Header */}
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex items-center gap-2.5">
-                            <span className="w-10 h-10 rounded-xl bg-primary/20 text-primary font-black flex items-center justify-center font-display text-base border border-primary/40 shadow-sm shrink-0">
-                              {tableBadge}
+                            <span className={`w-10 h-10 rounded-xl font-black flex items-center justify-center font-display text-base border shadow-sm shrink-0 ${
+                              dest.isVehicle
+                                ? "bg-amber-500/20 text-amber-300 border-amber-500/50"
+                                : dest.isRoom
+                                ? "bg-purple-500/20 text-purple-300 border-purple-500/50"
+                                : "bg-primary/20 text-primary border-primary/40"
+                            }`}>
+                              {dest.shortBadge}
                             </span>
                             <div>
                               <div className="flex items-center gap-2">
-                                <span className="text-sm font-black text-gray-100 font-display">
-                                  {tableDisplay}
+                                <span className={`text-sm font-black font-display ${
+                                  dest.isVehicle
+                                    ? "text-amber-300"
+                                    : dest.isRoom
+                                    ? "text-purple-300"
+                                    : "text-gray-100"
+                                }`}>
+                                  {dest.display}
                                 </span>
                                 <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-surface-subtle border border-surface-border text-gray-300 font-mono">
                                   Order #{order.sequence_number || 1}
@@ -264,7 +279,7 @@ export default function KitchenQueuePage() {
                             {isProcessing ? (
                               <span>Updating State...</span>
                             ) : (
-                              <span>{col.nextLabel}</span>
+                              <span>{col.id === "READY" ? dest.actionLabel : col.nextLabel}</span>
                             )}
                           </button>
                         )}

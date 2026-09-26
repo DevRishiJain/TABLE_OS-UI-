@@ -38,6 +38,9 @@ import {
   MapPin,
   Clock,
   Rocket,
+  Car,
+  BedDouble,
+  Coffee,
   Check,
 } from "lucide-react";
 
@@ -78,6 +81,10 @@ export default function RestaurantSignupPage() {
   const [address, setAddress] = useState("Connaught Place, New Delhi");
   const [cuisine, setCuisine] = useState("North Indian & Mughlai");
   const [currency, setCurrency] = useState("INR");
+
+  // Venue Concept / Hospitality Model
+  const [venueType, setVenueType] = useState<"FINE_DINE" | "CAFE" | "HOTEL" | "DRIVE_IN">("FINE_DINE");
+  const [startingRoomNumber, setStartingRoomNumber] = useState<number>(101);
 
   // Admin User
   const [adminName, setAdminName] = useState("Vikram Malhotra");
@@ -235,6 +242,7 @@ export default function RestaurantSignupPage() {
       try {
         const onboardPayload = {
           restaurant_name: restaurantName,
+          venue_type: venueType,
           slug,
           legal_name: legalName,
           gstin,
@@ -249,10 +257,20 @@ export default function RestaurantSignupPage() {
             password: adminPassword || "AdminPass123!",
             phone,
           },
-          table_count: tableCount,
-          tables: Array.from({ length: tableCount }).map((_, i) => ({
+          table_count: venueType === "DRIVE_IN" ? 1 : tableCount,
+          tables: venueType === "DRIVE_IN" ? [
+            {
+              table_number: "Drive-In Universal",
+              table_token: `DRIVE-${slug.substring(0, 4) || "CAR01"}`,
+              capacity: 100,
+            }
+          ] : venueType === "HOTEL" ? Array.from({ length: tableCount }).map((_, i) => ({
+            table_number: `Room ${startingRoomNumber + i}`,
+            table_token: `ROOM-${slug.substring(0, 4) || "HTL"}-${String(i + 1).padStart(3, "0")}`,
+            capacity: 4,
+          })) : Array.from({ length: tableCount }).map((_, i) => ({
             table_number: `Table ${i + 1}`,
-            table_token: `TBL-${String(i + 1).padStart(3, "0")}`,
+            table_token: `TBL-${slug.substring(0, 4) || "REST"}-${String(i + 1).padStart(3, "0")}`,
             capacity: (i + 1) % 2 === 0 ? 4 : 2,
           })),
           menu_items: menuItems.map((m) => ({
@@ -441,6 +459,79 @@ export default function RestaurantSignupPage() {
               <p className="text-xs text-gray-400 mt-0.5">
                 These details will be printed on customer invoices, QR standees, and tax reports.
               </p>
+            </div>
+
+            {/* Venue Concept Selection */}
+            <div className="flex flex-col gap-2.5">
+              <label className="text-xs font-bold text-gray-300 block">
+                Hospitality / Service Model *
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                {[
+                  {
+                    type: "FINE_DINE" as const,
+                    icon: Utensils,
+                    title: "Fine Dine / Bistro",
+                    desc: "Numbered tables, sit-down dining & floor waitstaff",
+                  },
+                  {
+                    type: "CAFE" as const,
+                    icon: Coffee,
+                    title: "Cafe / Quick Dining",
+                    desc: "Casual dining tables, coffee bar & quick table ordering",
+                  },
+                  {
+                    type: "HOTEL" as const,
+                    icon: BedDouble,
+                    title: "Hotel Room Service",
+                    desc: "In-room dining ordered by guests from rooms & suites",
+                  },
+                  {
+                    type: "DRIVE_IN" as const,
+                    icon: Car,
+                    title: "Drive-In / Car-O-Bar",
+                    desc: "Guests scan universal static QR & order from their car",
+                  },
+                ].map((item) => {
+                  const Icon = item.icon;
+                  const isSelected = venueType === item.type;
+                  return (
+                    <button
+                      key={item.type}
+                      type="button"
+                      onClick={() => setVenueType(item.type)}
+                      className={`p-3.5 rounded-2xl border text-left flex flex-col justify-between gap-2.5 transition-all ${
+                        isSelected
+                          ? "bg-primary/10 border-primary shadow-glow ring-1 ring-primary/40"
+                          : "bg-surface-subtle border-surface-border hover:border-gray-500"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div
+                          className={`w-9 h-9 rounded-xl flex items-center justify-center ${
+                            isSelected
+                              ? "bg-primary text-black font-bold"
+                              : "bg-surface border border-surface-border text-gray-400"
+                          }`}
+                        >
+                          <Icon className="w-5 h-5" />
+                        </div>
+                        {isSelected && (
+                          <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+                        )}
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-gray-100 font-display">
+                          {item.title}
+                        </div>
+                        <p className="text-[10px] text-gray-400 leading-snug mt-1">
+                          {item.desc}
+                        </p>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -761,124 +852,224 @@ export default function RestaurantSignupPage() {
           </div>
         )}
 
-        {/* STEP 3: Tables & Printable QR Generation */}
+        {/* STEP 3: Tables / Rooms / Universal Static QR Generation */}
         {currentStep === 3 && (
           <div className="bg-surface border border-surface-border p-6 sm:p-8 rounded-3xl shadow-xl flex flex-col gap-6">
             <div>
               <div className="flex items-center gap-2 text-primary font-mono text-xs font-bold uppercase tracking-wider">
                 <QrCode className="w-4 h-4" />
-                Step 3 of 5: Table Provisioning & Live QR Standees
+                Step 3 of 5: {venueType === "HOTEL" ? "Hotel Room Provisioning & QR Tent Cards" : venueType === "DRIVE_IN" ? "Drive-In Universal QR Standee Setup" : "Table Provisioning & Live QR Standees"}
               </div>
               <h2 className="text-xl font-bold font-display text-gray-100 mt-1">
-                Configure Tables & Generate Table QRs
+                {venueType === "HOTEL" ? "Configure Guest Rooms & In-Room QR Codes" : venueType === "DRIVE_IN" ? "Generate Universal Static QR for Car Dining" : "Configure Tables & Generate Table QRs"}
               </h2>
               <p className="text-xs text-gray-400 mt-0.5">
-                Every table gets an instant, high-resolution QR standee printed with your restaurant’s name: <strong className="text-gray-200">{restaurantName}</strong>.
+                {venueType === "HOTEL"
+                  ? `Every room gets an in-room dining tent card encoded with its room number for ${restaurantName}.`
+                  : venueType === "DRIVE_IN"
+                  ? "Drive-In guests scan a single universal static QR standee. TableOS prompts them for their vehicle registration plate number at checkout so car-hops deliver to the right car!"
+                  : `Every dining table gets an instant, high-resolution QR standee printed with your restaurant’s name: ${restaurantName}.`}
               </p>
             </div>
 
-            {/* Number of Tables Selector */}
-            <div className="flex flex-col gap-2">
-              <label className="text-xs font-bold text-gray-300">
-                How many tables does {restaurantName} have?
-              </label>
-              <div className="flex items-center gap-2 flex-wrap">
-                {[4, 8, 12, 16, 24, 32].map((num) => (
+            {/* DRIVE_IN: Special Universal Standee Information */}
+            {venueType === "DRIVE_IN" ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+                <div className="p-5 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex flex-col gap-3">
+                  <div className="flex items-center gap-2 text-amber-400 font-bold text-sm">
+                    <Car className="w-5 h-5" />
+                    <span>How Car-O-Bar / Drive-In Ordering Works</span>
+                  </div>
+                  <ul className="text-xs text-gray-300 space-y-2 leading-relaxed">
+                    <li className="flex items-start gap-2">
+                      <span className="w-4 h-4 rounded-full bg-amber-500/20 text-amber-300 flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">1</span>
+                      <span>Place this <strong>Universal Static QR Standee</strong> across parking bays, light poles, or hand it to guests.</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="w-4 h-4 rounded-full bg-amber-500/20 text-amber-300 flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">2</span>
+                      <span>When guests scan, they are asked for their <strong>Car / Vehicle Plate Number</strong> (e.g. DL 01 AB 1234) along with phone & guest count.</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="w-4 h-4 rounded-full bg-amber-500/20 text-amber-300 flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">3</span>
+                      <span>The kitchen KDS & waitstaff tickets prominently show: <strong className="text-amber-300 font-mono">Car DL 01 AB 1234</strong> for zero confusion delivery!</span>
+                    </li>
+                  </ul>
+                </div>
+
+                {/* Right: Actual Printable Drive-In QR Standee */}
+                <div className="flex flex-col items-center">
+                  <div className="w-64 p-5 rounded-3xl bg-white text-black shadow-2xl flex flex-col items-center text-center border-4 border-amber-400">
+                    <div className="w-9 h-9 rounded-full bg-amber-500/20 text-amber-700 flex items-center justify-center mb-1">
+                      <Car className="w-5 h-5" />
+                    </div>
+                    <h3 className="font-black text-sm font-display tracking-tight text-gray-900 uppercase">
+                      {restaurantName}
+                    </h3>
+                    <span className="text-[10px] text-amber-700 font-bold font-mono tracking-wider">DRIVE-IN • CAR-O-BAR</span>
+
+                    <div className="my-3 p-3 bg-white rounded-2xl border-2 border-gray-200 shadow-inner">
+                      <QRCodeSVG
+                        value={`http://localhost:3000/t/DRIVE-${slug.substring(0, 4) || "CAR01"}`}
+                        size={140}
+                        level="H"
+                        includeMargin={false}
+                      />
+                    </div>
+
+                    <div className="px-3 py-1 rounded-full bg-black text-amber-400 font-mono text-xs font-extrabold mb-1">
+                      UNIVERSAL CAR QR
+                    </div>
+
+                    <p className="text-[10px] text-gray-600 font-medium">
+                      Point camera from your car • Enter vehicle number plate
+                    </p>
+                  </div>
+
                   <button
-                    key={num}
                     type="button"
-                    onClick={() => {
-                      setTableCount(num);
-                      if (selectedTableForPreview > num) setSelectedTableForPreview(1);
-                    }}
-                    className={`px-4 py-2 rounded-xl text-xs font-bold font-mono transition-all ${
-                      tableCount === num
-                        ? "bg-primary text-black shadow-md shadow-primary/20"
-                        : "bg-surface-subtle text-gray-400 hover:text-gray-200 border border-surface-border"
-                    }`}
+                    onClick={() => window.print()}
+                    className="mt-3 px-4 py-1.5 rounded-xl bg-surface border border-surface-border text-xs text-gray-300 hover:text-primary flex items-center gap-1.5 font-mono"
                   >
-                    {num} Tables
+                    <Printer className="w-3.5 h-3.5" /> Print Universal Drive-In Standee
                   </button>
-                ))}
-                <div className="flex items-center gap-1.5 ml-2">
-                  <span className="text-xs text-gray-400">Custom:</span>
-                  <input
-                    type="number"
-                    min={1}
-                    max={100}
-                    value={tableCount}
-                    onChange={(e) => setTableCount(Math.max(1, Number(e.target.value)))}
-                    className="w-16 px-2.5 py-1.5 rounded-lg bg-surface-subtle border border-surface-border text-xs text-gray-100 font-mono text-center"
-                  />
                 </div>
               </div>
-            </div>
-
-            {/* Table Selector & Standee Preview Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
-              {/* Left: Table List */}
-              <div className="flex flex-col gap-2">
-                <span className="text-xs font-bold text-gray-400">Select Table to Preview:</span>
-                <div className="grid grid-cols-4 gap-2 max-h-56 overflow-y-auto pr-1">
-                  {Array.from({ length: tableCount }).map((_, idx) => {
-                    const tableNum = idx + 1;
-                    const isSelected = selectedTableForPreview === tableNum;
-                    return (
+            ) : (
+              <>
+                {/* HOTEL or FINE_DINE / CAFE: Count & Room/Table Grid */}
+                <div className="flex flex-col gap-2">
+                  <label className="text-xs font-bold text-gray-300">
+                    {venueType === "HOTEL" ? `How many rooms / suites does ${restaurantName} have?` : `How many tables does ${restaurantName} have?`}
+                  </label>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {[4, 8, 12, 16, 24, 32].map((num) => (
                       <button
-                        key={tableNum}
+                        key={num}
                         type="button"
-                        onClick={() => setSelectedTableForPreview(tableNum)}
-                        className={`p-2.5 rounded-xl border text-center font-mono text-xs font-bold transition-all ${
-                          isSelected
-                            ? "bg-primary/20 border-primary text-primary"
-                            : "bg-surface-subtle border-surface-border text-gray-400 hover:text-gray-200"
+                        onClick={() => {
+                          setTableCount(num);
+                          if (selectedTableForPreview > num) setSelectedTableForPreview(1);
+                        }}
+                        className={`px-4 py-2 rounded-xl text-xs font-bold font-mono transition-all ${
+                          tableCount === num
+                            ? "bg-primary text-black shadow-md shadow-primary/20"
+                            : "bg-surface-subtle text-gray-400 hover:text-gray-200 border border-surface-border"
                         }`}
                       >
-                        Table {tableNum}
+                        {num} {venueType === "HOTEL" ? "Rooms" : "Tables"}
                       </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Right: Actual Printable QR Standee Card */}
-              <div className="flex flex-col items-center">
-                <div className="w-64 p-5 rounded-3xl bg-white text-black shadow-2xl flex flex-col items-center text-center border-4 border-amber-400">
-                  <div className="w-8 h-8 rounded-full bg-amber-500/20 text-amber-700 flex items-center justify-center mb-1">
-                    <Utensils className="w-4 h-4" />
-                  </div>
-                  <h3 className="font-bold text-sm font-display tracking-tight text-gray-900 uppercase">
-                    {restaurantName}
-                  </h3>
-                  <span className="text-[10px] text-gray-500 font-mono">Contactless Smart Table</span>
-
-                  <div className="my-3 p-3 bg-white rounded-2xl border-2 border-gray-200 shadow-inner">
-                    <QRCodeSVG
-                      value={`http://localhost:3000/t/TBL-${String(selectedTableForPreview).padStart(3, "0")}`}
-                      size={140}
-                      level="H"
-                      includeMargin={false}
-                    />
+                    ))}
+                    <div className="flex items-center gap-1.5 ml-2">
+                      <span className="text-xs text-gray-400">Custom:</span>
+                      <input
+                        type="number"
+                        min={1}
+                        max={100}
+                        value={tableCount}
+                        onChange={(e) => setTableCount(Math.max(1, Number(e.target.value)))}
+                        className="w-16 px-2.5 py-1.5 rounded-lg bg-surface-subtle border border-surface-border text-xs text-gray-100 font-mono text-center"
+                      />
+                    </div>
                   </div>
 
-                  <div className="px-3 py-1 rounded-full bg-black text-amber-400 font-mono text-xs font-extrabold mb-1">
-                    TABLE {String(selectedTableForPreview).padStart(2, "0")}
-                  </div>
-
-                  <p className="text-[10px] text-gray-600 font-medium">
-                    Point camera to open digital menu & order
-                  </p>
+                  {venueType === "HOTEL" && (
+                    <div className="flex items-center gap-3 mt-2 p-3 rounded-xl bg-surface-subtle border border-surface-border text-xs">
+                      <BedDouble className="w-4 h-4 text-sky-400" />
+                      <span className="text-gray-300 font-bold">Starting Room Number:</span>
+                      <input
+                        type="number"
+                        min={1}
+                        value={startingRoomNumber}
+                        onChange={(e) => setStartingRoomNumber(Math.max(1, Number(e.target.value)))}
+                        className="w-20 px-2 py-1 rounded bg-surface border border-surface-border text-gray-100 font-mono text-center font-bold"
+                      />
+                      <span className="text-gray-500 font-mono text-[11px]">
+                        Rooms: {startingRoomNumber} to {startingRoomNumber + tableCount - 1}
+                      </span>
+                    </div>
+                  )}
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => window.print()}
-                  className="mt-3 px-4 py-1.5 rounded-xl bg-surface border border-surface-border text-xs text-gray-300 hover:text-primary flex items-center gap-1.5 font-mono"
-                >
-                  <Printer className="w-3.5 h-3.5" /> Print All {tableCount} Table Cards
-                </button>
-              </div>
-            </div>
+                {/* Table / Room Selector & Standee Preview Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+                  {/* Left: Room / Table List */}
+                  <div className="flex flex-col gap-2">
+                    <span className="text-xs font-bold text-gray-400">
+                      {venueType === "HOTEL" ? "Select Room to Preview Tent Card:" : "Select Table to Preview:"}
+                    </span>
+                    <div className="grid grid-cols-4 gap-2 max-h-56 overflow-y-auto pr-1">
+                      {Array.from({ length: tableCount }).map((_, idx) => {
+                        const itemNum = idx + 1;
+                        const label = venueType === "HOTEL" ? `Room ${startingRoomNumber + idx}` : `Table ${itemNum}`;
+                        const isSelected = selectedTableForPreview === itemNum;
+                        return (
+                          <button
+                            key={itemNum}
+                            type="button"
+                            onClick={() => setSelectedTableForPreview(itemNum)}
+                            className={`p-2.5 rounded-xl border text-center font-mono text-xs font-bold transition-all ${
+                              isSelected
+                                ? "bg-primary/20 border-primary text-primary"
+                                : "bg-surface-subtle border-surface-border text-gray-400 hover:text-gray-200"
+                            }`}
+                          >
+                            {label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Right: Actual Printable QR Standee Card */}
+                  <div className="flex flex-col items-center">
+                    <div className="w-64 p-5 rounded-3xl bg-white text-black shadow-2xl flex flex-col items-center text-center border-4 border-amber-400">
+                      <div className="w-8 h-8 rounded-full bg-amber-500/20 text-amber-700 flex items-center justify-center mb-1">
+                        {venueType === "HOTEL" ? <BedDouble className="w-4 h-4" /> : <Utensils className="w-4 h-4" />}
+                      </div>
+                      <h3 className="font-bold text-sm font-display tracking-tight text-gray-900 uppercase">
+                        {restaurantName}
+                      </h3>
+                      <span className="text-[10px] text-gray-500 font-mono">
+                        {venueType === "HOTEL" ? "In-Room Dining Service" : "Contactless Smart Table"}
+                      </span>
+
+                      <div className="my-3 p-3 bg-white rounded-2xl border-2 border-gray-200 shadow-inner">
+                        <QRCodeSVG
+                          value={
+                            venueType === "HOTEL"
+                              ? `http://localhost:3000/t/ROOM-${slug.substring(0, 4) || "HTL"}-${String(selectedTableForPreview).padStart(3, "0")}`
+                              : `http://localhost:3000/t/TBL-${slug.substring(0, 4) || "REST"}-${String(selectedTableForPreview).padStart(3, "0")}`
+                          }
+                          size={140}
+                          level="H"
+                          includeMargin={false}
+                        />
+                      </div>
+
+                      <div className="px-3 py-1 rounded-full bg-black text-amber-400 font-mono text-xs font-extrabold mb-1">
+                        {venueType === "HOTEL"
+                          ? `ROOM ${startingRoomNumber + selectedTableForPreview - 1}`
+                          : `TABLE ${String(selectedTableForPreview).padStart(2, "0")}`}
+                      </div>
+
+                      <p className="text-[10px] text-gray-600 font-medium">
+                        {venueType === "HOTEL"
+                          ? "Point camera to order dining directly to your room"
+                          : "Point camera to open digital menu & order"}
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => window.print()}
+                      className="mt-3 px-4 py-1.5 rounded-xl bg-surface border border-surface-border text-xs text-gray-300 hover:text-primary flex items-center gap-1.5 font-mono"
+                    >
+                      <Printer className="w-3.5 h-3.5" /> Print All {tableCount} {venueType === "HOTEL" ? "Room Tent Cards" : "Table Cards"}
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
 
             {/* Navigation */}
             <div className="flex justify-between pt-2">
