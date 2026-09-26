@@ -30,6 +30,7 @@ import {
   Leaf,
   Flame,
   Search,
+  ChevronRight,
 } from "lucide-react";
 
 export default function CustomerMenuPage() {
@@ -120,7 +121,33 @@ export default function CustomerMenuPage() {
   };
 
   return (
-    <div className="flex flex-col gap-5 px-4 pt-4">
+    <div className="flex flex-col gap-4 px-4 pt-4">
+      {/* AI Dining Prompt Hero Card */}
+      <div
+        onClick={() => dispatch(setAiDrawerOpen(true))}
+        className="p-3.5 rounded-2xl bg-gradient-to-r from-amber-500/15 via-primary/10 to-amber-500/5 border border-primary/30 hover:border-primary/60 cursor-pointer transition-all flex items-center justify-between gap-3 shadow-sm group active:scale-[0.99]"
+      >
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="w-8 h-8 rounded-xl bg-primary/20 text-primary flex items-center justify-center shrink-0 border border-primary/30 group-hover:scale-105 transition-transform">
+            <Sparkles className="w-4 h-4" />
+          </div>
+          <div className="flex flex-col min-w-0">
+            <span className="text-xs font-bold text-gray-100 flex items-center gap-1.5">
+              <span>Ask AI Dining Concierge</span>
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/20 text-primary font-mono font-semibold">
+                Instant
+              </span>
+            </span>
+            <p className="text-[11px] text-gray-400 truncate mt-0.5">
+              "What's special?", "Diabetic sweets?", "Meal under ₹1000"
+            </p>
+          </div>
+        </div>
+        <span className="text-xs font-bold text-primary flex items-center gap-0.5 shrink-0 group-hover:translate-x-0.5 transition-transform">
+          Ask AI <ChevronRight className="w-3.5 h-3.5" />
+        </span>
+      </div>
+
       {/* Search and AI Action Bar */}
       <div className="flex items-center gap-2">
         <div className="relative flex-1">

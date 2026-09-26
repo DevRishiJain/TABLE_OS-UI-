@@ -97,6 +97,15 @@ export default function DedicatedStaffLoginPage() {
         router.push("/kitchen/queue");
       } else if (userRole === StaffRole.CASHIER) {
         router.push("/staff/payments");
+      } else if (userRole === StaffRole.GUARD || String(userRole) === "GUARD") {
+        dispatch(
+          setGuardAuth({
+            token: res.token,
+            userName: res.staff.name || "Security Guard",
+            restaurantId: res.staff.restaurant_id || restaurantId,
+          })
+        );
+        router.push("/guard/scan");
       } else {
         router.push("/restaurant/dashboard");
       }

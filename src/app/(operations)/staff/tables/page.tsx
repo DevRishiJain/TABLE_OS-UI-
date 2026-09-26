@@ -28,6 +28,7 @@ import {
   RefreshCw,
   Utensils,
   AlertTriangle,
+  Users,
 } from "lucide-react";
 
 
@@ -44,6 +45,9 @@ export default function StaffTablesFloorPage() {
     tableId: string;
     sessionId?: string;
     status?: string;
+    customerName?: string;
+    customerPhone?: string;
+    guestCount?: number;
   } | null>(null);
 
   const [otpInput, setOtpInput] = useState("");
@@ -130,6 +134,9 @@ export default function StaffTablesFloorPage() {
     status: t.session_status ?? "FREE",
     sessionId: t.active_session_id,
     runningTotalMinor: t.running_total_minor ?? 0,
+    customerName: t.customer_name || "",
+    customerPhone: t.customer_phone || "",
+    guestCount: t.guest_count || 0,
   }));
 
   return (
@@ -223,6 +230,9 @@ export default function StaffTablesFloorPage() {
                   tableId: table.table_id,
                   sessionId: table.sessionId,
                   status: table.status,
+                  customerName: table.customerName,
+                  customerPhone: table.customerPhone,
+                  guestCount: table.guestCount,
                 })
               }
               className={`p-5 flex flex-col justify-between min-h-[160px] cursor-pointer transition-all ${borderStyle}`}
@@ -236,15 +246,28 @@ export default function StaffTablesFloorPage() {
                 </Badge>
               </div>
 
-              <div className="flex flex-col gap-1 pt-4 border-t border-surface-border/40 mt-3">
+              <div className="flex flex-col gap-1 pt-3 border-t border-surface-border/40 mt-3">
                 {isFree ? (
                   <span className="text-xs text-gray-500">Ready for diner QR scan</span>
                 ) : (
                   <>
-                    <span className="text-xs text-gray-400">Running Total</span>
-                    <span className="text-base font-extrabold font-mono text-primary">
-                      {formatMoney(table.runningTotalMinor)}
-                    </span>
+                    <div className="flex items-center justify-between text-[11px] text-gray-400">
+                      <span className="flex items-center gap-1 font-mono">
+                        <Users className="w-3 h-3 text-primary" />
+                        {table.guestCount ? `${table.guestCount} Guests` : "Seated"}
+                      </span>
+                      {table.customerName && (
+                        <span className="font-semibold text-gray-300 truncate max-w-[100px]">
+                          {table.customerName}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-baseline justify-between mt-0.5">
+                      <span className="text-xs text-gray-400">Total</span>
+                      <span className="text-base font-extrabold font-mono text-primary">
+                        {formatMoney(table.runningTotalMinor)}
+                      </span>
+                    </div>
                   </>
                 )}
               </div>
@@ -287,6 +310,28 @@ export default function StaffTablesFloorPage() {
                 {humanizeStatus(selectedTable.status || "FREE")}
               </Badge>
             </div>
+
+            {/* Diner & Party Info Section */}
+            {selectedTable.sessionId && (
+              <div className="p-4 rounded-2xl bg-surface-subtle border border-surface-border flex flex-col gap-2">
+                <span className="text-[11px] text-gray-400 uppercase font-semibold flex items-center gap-1.5">
+                  <Users className="w-3.5 h-3.5 text-primary" />
+                  Diner & Party Seating Info
+                </span>
+                <div className="flex items-center justify-between text-xs text-gray-200">
+                  <span className="text-gray-400">Diner Name:</span>
+                  <span className="font-bold">{selectedTable.customerName || (sessionDetail?.session as any)?.customer_name || "Guest Diner"}</span>
+                </div>
+                <div className="flex items-center justify-between text-xs text-gray-200">
+                  <span className="text-gray-400">Phone:</span>
+                  <span className="font-mono">{selectedTable.customerPhone || (sessionDetail?.session as any)?.customer_phone || "Not Provided"}</span>
+                </div>
+                <div className="flex items-center justify-between text-xs text-gray-200">
+                  <span className="text-gray-400">Party Size:</span>
+                  <span className="font-bold text-primary">{selectedTable.guestCount || (sessionDetail?.session as any)?.guest_count || 2} Guests</span>
+                </div>
+              </div>
+            )}
 
             {/* First-Order OTP Verification Section */}
             {selectedTable.sessionId && (

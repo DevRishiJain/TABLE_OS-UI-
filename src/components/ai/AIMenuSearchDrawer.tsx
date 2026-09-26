@@ -19,11 +19,43 @@ export interface AIMenuSearchDrawerProps {
   onSelectHighlightItem?: (item: MenuItem) => void;
 }
 
-const SAMPLE_QUERIES = [
-  "What are your best spicy chicken dishes?",
-  "Show me rich vegetarian curries and breads under ₹400",
-  "Recommend a dessert to finish my meal",
-  "What dishes are best for 2 people sharing?",
+const PRESET_QUERIES = [
+  {
+    title: "What's special here?",
+    query: "What's special here?",
+    badge: "Special",
+    icon: "🔥",
+  },
+  {
+    title: "Diabetic-safe sweets & dishes",
+    query: "What's good for a diabetic patient in sweets at this restaurant?",
+    badge: "Health",
+    icon: "🩺",
+  },
+  {
+    title: "Suggest something best",
+    query: "Can you suggest me something best from the restaurant?",
+    badge: "Chef Pick",
+    icon: "⭐",
+  },
+  {
+    title: "Indian meal under ₹1000",
+    query: "Create a whole Indian meal under 1000 from the menu",
+    badge: "Budget",
+    icon: "💰",
+  },
+  {
+    title: "Rich vegetarian curries & breads",
+    query: "Show me rich vegetarian curries and breads",
+    badge: "Pure Veg",
+    icon: "🌱",
+  },
+  {
+    title: "Dishes for 2 people sharing",
+    query: "What dishes are best for 2 people sharing?",
+    badge: "Sharing",
+    icon: "👥",
+  },
 ];
 
 export const AIMenuSearchDrawer: React.FC<AIMenuSearchDrawerProps> = ({
@@ -128,22 +160,31 @@ export const AIMenuSearchDrawer: React.FC<AIMenuSearchDrawerProps> = ({
         </div>
 
         {/* Quick Suggestion Chips */}
-        {!aiAnswer && !isLoading && (
+        {!isLoading && (
           <div className="flex flex-col gap-2">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">
-              Popular Questions
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-primary" />
+              <span>Preset Dining Inquiries</span>
             </span>
-            <div className="flex flex-wrap gap-2">
-              {SAMPLE_QUERIES.map((sq, i) => (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {PRESET_QUERIES.map((pq, i) => (
                 <button
                   key={i}
                   onClick={() => {
-                    setQuery(sq);
-                    handleAsk(sq);
+                    setQuery(pq.query);
+                    handleAsk(pq.query);
                   }}
-                  className="text-left text-xs bg-surface-subtle hover:bg-surface-hover border border-surface-border text-gray-300 hover:text-gray-100 px-3 py-2 rounded-xl transition-colors"
+                  className="text-left text-xs bg-surface-subtle hover:bg-surface-hover border border-surface-border hover:border-primary/40 text-gray-200 hover:text-white p-2.5 rounded-xl transition-all flex items-start gap-2 group active:scale-[0.98]"
                 >
-                  {sq}
+                  <span className="text-base shrink-0">{pq.icon}</span>
+                  <div className="flex flex-col flex-1 min-w-0">
+                    <span className="font-semibold text-gray-100 group-hover:text-primary transition-colors truncate">
+                      {pq.title}
+                    </span>
+                    <span className="text-[10px] text-gray-400 truncate mt-0.5">
+                      {pq.query}
+                    </span>
+                  </div>
                 </button>
               ))}
             </div>

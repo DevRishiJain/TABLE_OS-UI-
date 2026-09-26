@@ -4,8 +4,12 @@ import { OrderState, PaymentMethod, PaymentStatus } from "./enums";
 // Public & Session
 export interface StartSessionRequest {
   table_token: string;
-  customer_name: string;
-  device_fingerprint: string;
+  customer_name?: string;
+  customer_phone?: string;
+  phone_number?: string;
+  guest_count?: number;
+  no_of_guests?: number;
+  device_fingerprint?: string;
 }
 
 export interface SessionDetailResponse {
@@ -63,6 +67,9 @@ export interface StaffTableSummary {
   opened_at?: string;
   running_total_minor?: number;
   unverified_orders_count?: number;
+  customer_name?: string;
+  customer_phone?: string;
+  guest_count?: number;
 }
 
 export interface VerifyFirstOrderRequest {

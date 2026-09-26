@@ -6,6 +6,9 @@ export interface Money {
 }
 
 export interface DiningSession {
+  customer_name?: string;
+  customer_phone?: string;
+  guest_count?: number;
   id: string;
   restaurant_id: string;
   table_id: string;
