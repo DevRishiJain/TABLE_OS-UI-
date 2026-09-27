@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { QRCodeSVG } from "qrcode.react";
 import { useGetExitPassQuery, useGetSessionQuery } from "@/store/api/customerApi";
+import { useAppSelector } from "@/store";
 import { formatMoney } from "@/lib/money";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -19,9 +20,103 @@ import {
   Download,
 } from "lucide-react";
 
+
+function NamasteMascotAnimation({ isCompleted, customerName }: { isCompleted: boolean; customerName?: string }) {
+  return (
+    <div className="flex flex-col items-center text-center my-3 relative w-full">
+      {/* Ambient Glow */}
+      <div className="absolute top-0 w-36 h-36 bg-amber-500/15 rounded-full blur-2xl pointer-events-none animate-pulse" />
+
+      {/* Animated Cartoon Chef with Folded Hands (Namaste) */}
+      <div className="relative w-28 h-28 flex items-center justify-center animate-bounce-subtle select-none">
+        <svg
+          viewBox="0 0 120 120"
+          className="w-full h-full drop-shadow-[0_10px_20px_rgba(229,169,60,0.25)]"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          {/* Chef Hat Puffs */}
+          <path
+            d="M45 35 C40 18, 55 12, 60 20 C65 12, 80 18, 75 35 Z"
+            fill="#FFFFFF"
+            stroke="#E5A93C"
+            strokeWidth="2.5"
+          />
+          {/* Hat Band */}
+          <path
+            d="M42 35 C42 33, 78 33, 78 35 C78 39, 42 39, 42 35 Z"
+            fill="#E5A93C"
+          />
+          
+          {/* Face */}
+          <circle cx="60" cy="55" r="23" fill="#FFDFBA" stroke="#D49A6A" strokeWidth="2" />
+          
+          {/* Rosy Cheeks */}
+          <circle cx="48" cy="60" r="3.5" fill="#FF8A8A" opacity="0.6" />
+          <circle cx="72" cy="60" r="3.5" fill="#FF8A8A" opacity="0.6" />
+          
+          {/* Happy Eyes */}
+          <path d="M47 51 Q51 46 55 51" stroke="#3D2612" strokeWidth="2.5" strokeLinecap="round" fill="none" />
+          <path d="M65 51 Q69 46 73 51" stroke="#3D2612" strokeWidth="2.5" strokeLinecap="round" fill="none" />
+          
+          {/* Smiling Mouth */}
+          <path d="M53 62 Q60 69 67 62" stroke="#3D2612" strokeWidth="2.5" strokeLinecap="round" fill="#FFF" />
+          
+          {/* Yellow Scarf */}
+          <path d="M54 75 L60 82 L66 75 Z" fill="#E5A93C" />
+          
+          {/* Chef Coat */}
+          <path
+            d="M42 78 C35 88, 32 110, 32 115 L88 115 C88 110, 85 88, 78 78 Z"
+            fill="#FFFFFF"
+            stroke="#CBD5E1"
+            strokeWidth="2"
+          />
+          <circle cx="60" cy="90" r="1.5" fill="#E5A93C" />
+          <circle cx="60" cy="97" r="1.5" fill="#E5A93C" />
+          
+          {/* Left & Right Sleeves reaching center */}
+          <path d="M38 82 Q46 92 56 89" stroke="#E2E8F0" strokeWidth="7" strokeLinecap="round" />
+          <path d="M82 82 Q74 92 64 89" stroke="#E2E8F0" strokeWidth="7" strokeLinecap="round" />
+          
+          {/* Folded Palms Together in Namaste (🙏) */}
+          <path
+            d="M58 80 C57 84, 57 93, 60 96 C63 93, 63 84, 62 80 Z"
+            fill="#FFDFBA"
+            stroke="#D49A6A"
+            strokeWidth="1.5"
+          />
+          <path d="M60 81 L60 92" stroke="#D49A6A" strokeWidth="1" strokeLinecap="round" />
+        </svg>
+
+        {/* Floating animated sparkles & namaste emojis */}
+        <span className="absolute -top-1 -right-1 text-base animate-bounce delay-100">✨</span>
+        <span className="absolute top-3 -left-2 text-sm animate-bounce delay-300">🙏</span>
+        <span className="absolute -bottom-1 -right-2 text-sm text-amber-400 animate-pulse">💛</span>
+      </div>
+
+      {/* Hospitality Heading */}
+      <div className="mt-2.5">
+        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 font-mono text-[11px] font-bold uppercase tracking-wider mb-1.5 shadow-sm">
+          <span>🙏</span>
+          <span>Atithi Devo Bhava</span>
+          <span>🙏</span>
+        </div>
+        <h3 className="text-lg font-black font-display text-gray-100 tracking-tight">
+          Thank You, {customerName || "Guest"}!
+        </h3>
+        <p className="text-xs text-gray-300 mt-1 max-w-xs leading-relaxed mx-auto">
+          We loved hosting you at The Spice Route. Have a safe journey and see you again soon!
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export default function CustomerExitPassPage() {
   const params = useParams();
   const sessionId = params.sessionId as string;
+
 
   const { data: sessionData, error: sessionError } = useGetSessionQuery(sessionId, {
     pollingInterval: 2500,
@@ -37,6 +132,10 @@ export default function CustomerExitPassPage() {
     JSON.stringify(exitPassError || {}).includes("session has closed");
 
   const session = sessionData?.session;
+  const customerName =
+    useAppSelector((state) => state.auth.customerName) ||
+    session?.customer_name ||
+    "Guest Diner";
   const isCompleted =
     isSessionGone ||
     session?.status === "COMPLETED" ||
@@ -115,7 +214,7 @@ export default function CustomerExitPassPage() {
         </div>
 
         {/* Ticket Body */}
-        <div className="p-6 flex flex-col items-center text-center gap-5">
+        <div className="p-6 flex flex-col items-center text-center gap-4">
           <div>
             <h2 className="text-xl font-black text-gray-100 font-display tracking-tight">
               The Spice Route
@@ -124,6 +223,9 @@ export default function CustomerExitPassPage() {
               Verified Dining Clearance • Bill Settled
             </p>
           </div>
+
+          {/* Warm Hand Join (Namaste) Cartoon Animation */}
+          <NamasteMascotAnimation isCompleted={isCompleted} customerName={customerName} />
 
           {isCompleted ? (
             /* Session Closed & 1-Click Approved Exit Clearance Stamp */

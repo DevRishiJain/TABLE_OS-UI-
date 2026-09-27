@@ -666,6 +666,38 @@ export default function WaiterOrderScreenPage() {
         </div>
       </div>
 
+      {/* Live Active Service Calls Notification Alert Banner */}
+      {serviceCallsList.length > 0 && (
+        <div className="p-4 rounded-2xl bg-gradient-to-r from-red-500/20 via-amber-500/15 to-red-500/10 border-2 border-red-500/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-lg shadow-red-500/10 animate-pulse">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-red-500/30 text-red-300 border border-red-500/50 flex items-center justify-center shrink-0">
+              <Bell className="w-5 h-5 animate-bounce" />
+            </div>
+            <div>
+              <h4 className="text-sm font-bold text-red-200 font-display flex items-center gap-2">
+                <span>{serviceCallsList.length} Active Customer Service Call{serviceCallsList.length > 1 ? "s" : ""}</span>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-red-500 text-white font-mono font-bold">
+                  Immediate Action
+                </span>
+              </h4>
+              <p className="text-xs text-gray-300 mt-0.5">
+                {serviceCallsList.map((t: any) => `Table ${t.table_number}: "${t.assistance_reason}"`).join(" • ")}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <Button
+              size="sm"
+              variant="gold"
+              onClick={() => setActiveTab("service_calls")}
+              className="font-bold shadow-md"
+            >
+              Open Service Calls ({serviceCallsList.length})
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Tab Navigation (7 unified tabs) */}
       <div className="flex flex-wrap gap-2">
         {/* Tab 1: Active Tables / Sessions */}

@@ -15,6 +15,8 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
+import { RoleGuard } from "@/components/auth/RoleGuard";
+import { StaffRole } from "@/types/enums";
 
 export default function PlatformAdminLayout({
   children,
@@ -52,7 +54,12 @@ export default function PlatformAdminLayout({
   ];
 
   return (
-    <div className="min-h-screen bg-[#0A0C0E] text-gray-100 flex flex-col">
+    <RoleGuard
+      allowedRoles={[StaffRole.SUPER_ADMIN]}
+      portalName="Platform Super-Admin Governance Suite"
+      fallbackRedirect="/login"
+    >
+      <div className="min-h-screen bg-[#0A0C0E] text-gray-100 flex flex-col">
       {/* Super Admin Gold/Charcoal Header */}
       <header className="sticky top-0 z-40 bg-[#121418] border-b border-[#2A303C] px-6 py-3.5 flex items-center justify-between shadow-xl">
         <div className="flex items-center gap-3">
@@ -116,5 +123,6 @@ export default function PlatformAdminLayout({
       {/* Main Admin Content */}
       <main className="flex-1 p-6 max-w-7xl mx-auto w-full">{children}</main>
     </div>
+    </RoleGuard>
   );
 }

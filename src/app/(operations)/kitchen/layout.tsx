@@ -1,4 +1,8 @@
+"use client";
+
 import React from "react";
+import { RoleGuard } from "@/components/auth/RoleGuard";
+import { StaffRole } from "@/types/enums";
 import Link from "next/link";
 import { ChefHat, ArrowLeft, Layers, Volume2 } from "lucide-react";
 
@@ -8,7 +12,18 @@ export default function KitchenLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-[#0A0C0F] text-gray-100 flex flex-col">
+    <RoleGuard
+      allowedRoles={[
+        StaffRole.KITCHEN,
+        StaffRole.MANAGER,
+        StaffRole.RESTAURANT_ADMIN,
+        StaffRole.RESTAURANT_OWNER,
+        StaffRole.SUPER_ADMIN,
+      ]}
+      portalName="Kitchen Display System (KDS)"
+      fallbackRedirect="/staff/orders"
+    >
+      <div className="min-h-screen bg-[#0A0C0F] text-gray-100 flex flex-col">
       {/* High-Contrast Kitchen Header */}
       <header className="sticky top-0 z-40 bg-[#12151B] border-b border-surface-border px-6 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -45,5 +60,6 @@ export default function KitchenLayout({
 
       <main className="flex-1 p-4 sm:p-6">{children}</main>
     </div>
+    </RoleGuard>
   );
 }

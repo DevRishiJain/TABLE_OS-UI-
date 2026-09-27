@@ -27,6 +27,8 @@ import {
   QrCode,
 } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
+import { RoleGuard } from "@/components/auth/RoleGuard";
+import { StaffRole } from "@/types/enums";
 
 export default function RestaurantAdminLayout({
   children,
@@ -79,7 +81,17 @@ export default function RestaurantAdminLayout({
   ];
 
   return (
-    <div className="min-h-screen bg-background text-gray-100 flex flex-col lg:flex-row">
+    <RoleGuard
+      allowedRoles={[
+        StaffRole.RESTAURANT_ADMIN,
+        StaffRole.RESTAURANT_OWNER,
+        StaffRole.MANAGER,
+        StaffRole.SUPER_ADMIN,
+      ]}
+      portalName="Restaurant Management & Analytics Hub"
+      fallbackRedirect="/staff/orders"
+    >
+      <div className="min-h-screen bg-background text-gray-100 flex flex-col lg:flex-row">
       {/* Sidebar Navigation */}
       <aside className="w-full lg:w-72 bg-[#12151B] border-r border-surface-border flex flex-col justify-between shrink-0">
         <div className="flex flex-col">
@@ -301,5 +313,6 @@ export default function RestaurantAdminLayout({
         <main className="p-6 max-w-7xl w-full mx-auto">{children}</main>
       </div>
     </div>
+    </RoleGuard>
   );
 }

@@ -97,12 +97,12 @@ export default function KitchenQueuePage() {
     },
     {
       id: "READY",
-      title: "Ready for Pickup",
+      title: "Ready for Pickup (Kitchen Pass)",
       badge: "success" as const,
       icon: BellRing,
       statusFilter: [OrderState.READY],
-      nextStatus: OrderState.SERVED,
-      nextLabel: "Mark Served to Table ✅",
+      nextStatus: null,
+      nextLabel: "",
       nextVariant: "primary" as const,
     },
     {
@@ -268,8 +268,8 @@ export default function KitchenQueuePage() {
                           ))}
                         </div>
 
-                        {/* Large 60px+ Touch Target Button */}
-                        {col.nextStatus && (
+                        {/* Stage Progression Action or Waiter Handoff Indicator */}
+                        {col.nextStatus ? (
                           <button
                             disabled={isProcessing}
                             onClick={() =>
@@ -284,10 +284,15 @@ export default function KitchenQueuePage() {
                             {isProcessing ? (
                               <span>Updating State...</span>
                             ) : (
-                              <span>{col.id === "READY" ? dest.actionLabel : col.nextLabel}</span>
+                              <span>{col.nextLabel}</span>
                             )}
                           </button>
-                        )}
+                        ) : order.status === OrderState.READY ? (
+                          <div className="w-full min-h-[52px] rounded-xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 select-none shadow-sm animate-pulse">
+                            <BellRing className="w-4 h-4 text-emerald-400" />
+                            <span>Awaiting Waiter Pickup at Pass 🛎️</span>
+                          </div>
+                        ) : null}
                       </Card>
                     );
                   })
