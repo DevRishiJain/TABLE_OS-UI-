@@ -7,8 +7,6 @@ import { useAppDispatch, useAppSelector } from "@/store";
 import { setStaffAuth, setGuardAuth } from "@/store/slices/authSlice";
 import { useStaffLoginMutation } from "@/store/api/staffApi";
 import { addToast } from "@/store/slices/uiSlice";
-import { generateClientJWT, DEMO_PROFILES } from "@/lib/jwt";
-import { generateUUID } from "@/lib/idempotency";
 import { StaffRole } from "@/types/enums";
 import {
   Utensils,
@@ -110,77 +108,21 @@ export default function DedicatedStaffLoginPage() {
         router.push("/restaurant/dashboard");
       }
     } catch (err: any) {
-      console.warn("Backend auth failed or running in preview mode, falling back to simulated staff session:", err);
-      // Fallback: Smart local dispatch based on role / identifier prefix
-      let detectedRole: StaffRole = StaffRole.WAITER;
-      let targetPath = "/staff/orders";
-      let staffName = "Floor Waiter";
-
-      const upperId = identifier.toUpperCase();
-      if (upperId.includes("CHF") || upperId.includes("CHEF") || upperId.includes("KITCHEN")) {
-        detectedRole = StaffRole.KITCHEN;
-        targetPath = "/kitchen/queue";
-        staffName = "Head Chef";
-      } else if (upperId.includes("CSH") || upperId.includes("CASHIER") || upperId.includes("PAY")) {
-        detectedRole = StaffRole.CASHIER;
-        targetPath = "/staff/payments";
-        staffName = "Cash Desk Operator";
-      } else if (upperId.includes("GRD") || upperId.includes("GUARD")) {
-        const guardPayload = DEMO_PROFILES.guard.getPayload();
-        const guardToken = await generateClientJWT({
-          ...guardPayload,
-          restaurant_id: restaurantId,
-        });
-        dispatch(
-          setGuardAuth({
-            token: guardToken,
-            userName: "Security Guard",
-            restaurantId: restaurantId,
-          })
-        );
-        router.push("/guard/scan");
-        return;
-      } else if (upperId.includes("MGR") || upperId.includes("ADMIN") || upperId.includes("MANAGER")) {
-        detectedRole = StaffRole.RESTAURANT_ADMIN;
-        targetPath = "/restaurant/dashboard";
-        staffName = "Floor Manager";
-      }
-
-      let profileKey = "waiter";
-      if (detectedRole === StaffRole.KITCHEN) profileKey = "kitchen";
-      else if (detectedRole === StaffRole.RESTAURANT_ADMIN) profileKey = "admin";
-
-      const demoProfile = DEMO_PROFILES[profileKey];
-      const payload = demoProfile ? demoProfile.getPayload() : DEMO_PROFILES.waiter.getPayload();
-      const staffUuid = (payload.staff_id as string) || generateUUID();
-
-      const clientToken = await generateClientJWT({
-        ...payload,
-        restaurant_id: restaurantId,
-      });
-
-      dispatch(
-        setStaffAuth({
-          token: clientToken,
-          role: detectedRole,
-          isPlatformAdmin: false,
-          staffId: staffUuid,
-          employeeId: identifier.toUpperCase().startsWith("EMP-") ? identifier.toUpperCase() : "EMP-WTR-001",
-          restaurantId: restaurantId,
-          restaurantName: currentRestaurantName,
-          userName: staffName,
-        })
-      );
+      console.error("Staff authentication failed:", err);
+      const isProxyError =
+        err?.status === 502 ||
+        err?.data?.error === "Backend proxy unreachable" ||
+        err?.data?.details?.includes("fetch failed");
 
       dispatch(
         addToast({
-          type: "success",
-          title: `Welcome, ${staffName}!`,
-          message: `Authenticated as ${identifier} (${detectedRole}).`,
+          type: "error",
+          title: isProxyError ? "Backend Server Unreachable" : "Authentication Failed",
+          message: isProxyError
+            ? "Cannot connect to backend server (port 8088). Please ensure the backend is running."
+            : err?.data?.error || err?.data?.message || "Invalid Employee ID / Username or Password.",
         })
       );
-
-      router.push(targetPath);
     } finally {
       setIsLoading(false);
     }

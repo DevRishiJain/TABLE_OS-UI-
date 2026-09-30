@@ -8,7 +8,6 @@ import { setStaffAuth } from "@/store/slices/authSlice";
 import { useOnboardRestaurantMutation } from "@/store/api/restaurantApi";
 import { addToast } from "@/store/slices/uiSlice";
 import { StaffRole } from "@/types/enums";
-import { generateClientJWT } from "@/lib/jwt";
 import { generateUUID } from "@/lib/idempotency";
 import { QRCodeSVG } from "qrcode.react";
 import {
@@ -239,8 +238,7 @@ export default function RestaurantSignupPage() {
       let finalToken = "";
       let adminStaffId = generateUUID();
 
-      try {
-        const onboardPayload = {
+      const onboardPayload = {
           restaurant_name: restaurantName,
           venue_type: venueType,
           slug,
@@ -292,65 +290,64 @@ export default function RestaurantSignupPage() {
         };
 
         const res = await onboardRestaurant(onboardPayload).unwrap();
-        if (res?.token) {
-          finalToken = res.token;
-          finalRestId = res.restaurant_id || finalRestId;
-          adminStaffId = res.admin?.id || adminStaffId;
+        if (!res?.token) {
+          throw new Error("No authorization token returned by backend.");
         }
-      } catch (apiErr) {
-        console.warn("Backend onboarding API fallback to client JWT:", apiErr);
+        finalToken = res.token;
+        finalRestId = res.restaurant_id || finalRestId;
+        adminStaffId = res.admin?.id || adminStaffId;
+
+        // Update Redux & LocalStorage with new restaurant info
+        dispatch(
+          setStaffAuth({
+            token: finalToken,
+            role: StaffRole.RESTAURANT_ADMIN,
+            isPlatformAdmin: false,
+            staffId: adminStaffId,
+            employeeId: "EMP-ADM-001",
+            restaurantId: finalRestId,
+            restaurantName: restaurantName,
+            userName: adminName,
+          })
+        );
+
+        // Save credentials list for display
+        if (typeof window !== "undefined") {
+          localStorage.setItem("tableos_staff_roster", JSON.stringify(staffList));
+          localStorage.setItem("tableos_restaurant_name", restaurantName);
+          localStorage.setItem("tableos_table_count", String(tableCount));
+        }
+
+        dispatch(
+          addToast({
+            type: "success",
+            title: "🎉 Restaurant Successfully Onboarded!",
+            message: `${restaurantName} is live with ${tableCount} QR tables and ${staffList.length} staff operators.`,
+          })
+        );
+
+        // Redirect directly to the Restaurant Admin Dashboard
+        router.push("/restaurant/dashboard");
+      } catch (err: any) {
+        console.error("Onboarding failed:", err);
+        const isProxyError =
+          err?.status === 502 ||
+          err?.data?.error === "Backend proxy unreachable" ||
+          err?.data?.details?.includes("fetch failed");
+
+        dispatch(
+          addToast({
+            type: "error",
+            title: isProxyError ? "Backend Server Offline" : "Onboarding Error",
+            message: isProxyError
+              ? "Cannot reach backend service (port 8088). Please ensure the backend is running."
+              : err?.data?.error || err?.data?.message || err?.message || "Failed to finalize restaurant launch.",
+          })
+        );
+      } finally {
+        setIsSubmitting(false);
       }
-
-      if (!finalToken) {
-        finalToken = await generateClientJWT({
-          staff_id: adminStaffId,
-          restaurant_id: finalRestId,
-          role: "RESTAURANT_ADMIN",
-          is_platform: false,
-          sub: adminStaffId,
-          iat: Math.floor(Date.now() / 1000),
-          exp: Math.floor(Date.now() / 1000) + 86400 * 7,
-        });
-      }
-
-      // Update Redux & LocalStorage with new restaurant info
-      dispatch(
-        setStaffAuth({
-          token: finalToken,
-          role: StaffRole.RESTAURANT_ADMIN,
-          isPlatformAdmin: false,
-          staffId: adminStaffId,
-          employeeId: "EMP-ADM-001",
-          restaurantId: finalRestId,
-          restaurantName: restaurantName,
-          userName: adminName,
-        })
-      );
-
-      // Save credentials list for display
-      if (typeof window !== "undefined") {
-        localStorage.setItem("tableos_staff_roster", JSON.stringify(staffList));
-        localStorage.setItem("tableos_restaurant_name", restaurantName);
-        localStorage.setItem("tableos_table_count", String(tableCount));
-      }
-
-      dispatch(
-        addToast({
-          type: "success",
-          title: "🎉 Restaurant Successfully Onboarded!",
-          message: `${restaurantName} is live with ${tableCount} QR tables and ${staffList.length} staff operators.`,
-        })
-      );
-
-      // Redirect directly to the Restaurant Admin Dashboard
-      router.push("/restaurant/dashboard");
-    } catch (err: any) {
-      console.error(err);
-      dispatch(addToast({ type: "error", title: "Onboarding Error", message: "Failed to finalize restaurant launch." }));
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+    };
 
   const stepsList = [
     { num: 1, label: "Identity", icon: Store },

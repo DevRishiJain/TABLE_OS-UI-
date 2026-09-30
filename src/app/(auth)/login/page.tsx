@@ -53,75 +53,52 @@ export default function LoginPage() {
     e.preventDefault();
     setIsLoading(true);
     try {
-      // 1. Attempt real backend authentication first if available
-      try {
-        const res = await staffLogin({
-          identifier: email,
-          password: password,
-          restaurant_id: restaurantId,
-        }).unwrap();
-
-        if (res && res.token) {
-          dispatch(
-            setStaffAuth({
-              token: res.token,
-              role: (res.staff.role as StaffRole) || StaffRole.RESTAURANT_ADMIN,
-              isPlatformAdmin: res.staff.role === "SUPER_ADMIN",
-              staffId: res.staff.id,
-              employeeId: res.staff.employee_id || "EMP-ADM-001",
-              restaurantId: res.staff.restaurant_id || restaurantId,
-              restaurantName: currentRestaurantName,
-              userName: res.staff.name || email.split("@")[0].toUpperCase(),
-            })
-          );
-
-          dispatch(
-            addToast({
-              type: "success",
-              title: "Admin Access Granted",
-              message: `Welcome to ${currentRestaurantName} Executive Suite.`,
-            })
-          );
-
-          router.push("/restaurant/dashboard");
-          return;
-        }
-      } catch (backendErr) {
-        // Fallback to demo admin profile if server credentials aren't seeded yet
-        console.warn("Backend authentication unavailable, using demo credentials:", backendErr);
-      }
-
-      // 2. Demo sign-in using RFC4122 compliant UUID and valid claims
-      const adminPayload = DEMO_PROFILES.admin.getPayload();
-      const token = await generateClientJWT({
-        ...adminPayload,
+      const res = await staffLogin({
+        identifier: email,
+        password: password,
         restaurant_id: restaurantId,
-      });
+      }).unwrap();
 
-      dispatch(
-        setStaffAuth({
-          token,
-          role: StaffRole.RESTAURANT_ADMIN,
-          isPlatformAdmin: false,
-          staffId: adminPayload.staff_id as string,
-          employeeId: "EMP-ADM-001",
-          restaurantId,
-          restaurantName: currentRestaurantName,
-          userName: email.split("@")[0].toUpperCase() || "Admin",
-        })
-      );
+      if (res && res.token) {
+        dispatch(
+          setStaffAuth({
+            token: res.token,
+            role: (res.staff.role as StaffRole) || StaffRole.RESTAURANT_ADMIN,
+            isPlatformAdmin: res.staff.role === "SUPER_ADMIN",
+            staffId: res.staff.id,
+            employeeId: res.staff.employee_id || "EMP-ADM-001",
+            restaurantId: res.staff.restaurant_id || restaurantId,
+            restaurantName: currentRestaurantName,
+            userName: res.staff.name || email.split("@")[0].toUpperCase(),
+          })
+        );
+
+        dispatch(
+          addToast({
+            type: "success",
+            title: "Admin Access Granted",
+            message: `Welcome to ${currentRestaurantName} Executive Suite.`,
+          })
+        );
+
+        router.push("/restaurant/dashboard");
+      }
+    } catch (err: any) {
+      console.error("Admin sign-in failed:", err);
+      const isProxyError =
+        err?.status === 502 ||
+        err?.data?.error === "Backend proxy unreachable" ||
+        err?.data?.details?.includes("fetch failed");
 
       dispatch(
         addToast({
-          type: "success",
-          title: "Admin Access Granted",
-          message: `Welcome to ${currentRestaurantName} Executive Suite.`,
+          type: "error",
+          title: isProxyError ? "Backend Server Unreachable" : "Sign-in Failed",
+          message: isProxyError
+            ? "Cannot connect to backend server (port 8088). Please ensure the backend is running."
+            : err?.data?.error || err?.data?.message || "Invalid email or password.",
         })
       );
-
-      router.push("/restaurant/dashboard");
-    } catch (err) {
-      dispatch(addToast({ type: "error", title: "Sign-in Failed", message: "Invalid credentials." }));
     } finally {
       setIsLoading(false);
     }

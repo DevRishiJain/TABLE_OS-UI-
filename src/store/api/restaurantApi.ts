@@ -17,6 +17,7 @@ import {
   RestaurantSettings,
   PlatformFeeLedgerEntry,
   RestaurantSettlement,
+  Order,
 } from "@/types/domain";
 
 export const restaurantApi = baseApi.injectEndpoints({
@@ -196,6 +197,20 @@ export const restaurantApi = baseApi.injectEndpoints({
       invalidatesTags: ["Table"],
     }),
 
+    getRestaurantOrders: builder.query<
+      Order[],
+      { restaurantId?: string; limit?: number } | void
+    >({
+      query: (params) => {
+        const queryParams = new URLSearchParams();
+        if (params?.restaurantId) queryParams.set("restaurant_id", params.restaurantId);
+        if (params?.limit) queryParams.set("limit", String(params.limit));
+        const qs = queryParams.toString();
+        return `/api/v1/restaurant/orders${qs ? `?${qs}` : ""}`;
+      },
+      providesTags: ["Analytics", "Session"],
+    }),
+
     onboardRestaurant: builder.mutation<any, any>({
       query: (body) => ({
         url: "/api/v1/public/onboard",
@@ -231,5 +246,6 @@ export const {
   useGoLiveOnboardingMutation,
   useGetRestaurantTablesQuery,
   useCreateRestaurantTableMutation,
+  useGetRestaurantOrdersQuery,
   useOnboardRestaurantMutation,
 } = restaurantApi;

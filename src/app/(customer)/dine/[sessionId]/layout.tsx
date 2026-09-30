@@ -269,21 +269,21 @@ export default function CustomerDineLayout({
         </div>
       )}
 
-      {/* Main Page Content */}
-      <main className="flex-1 pb-32 w-full overflow-x-hidden">{children}</main>
+      {/* Main Page Content - Scrollable with safe bottom clearance */}
+      <main className="flex-1 pb-36 w-full overflow-x-hidden">{children}</main>
 
       {/* Floating Bottom Cart Bar (shows if items in cart and on menu page) */}
       {cartCount > 0 && !pathname.includes("/checkout") && (
-        <div className="fixed bottom-16 left-0 right-0 max-w-md mx-auto px-4 z-40 animate-in slide-in-from-bottom duration-300">
+        <div className="fixed bottom-20 inset-x-0 max-w-md mx-auto px-3 z-40 pointer-events-none animate-in slide-in-from-bottom duration-300">
           <Link
             href={`/dine/${sessionId}/checkout`}
-            className="w-full bg-primary hover:bg-primary-hover text-background font-bold py-3.5 px-5 rounded-2xl shadow-xl shadow-primary/25 flex items-center justify-between active:scale-[0.98] transition-all"
+            className="pointer-events-auto w-full bg-primary hover:bg-primary-hover text-background font-bold py-3.5 px-5 rounded-2xl shadow-2xl shadow-primary/30 flex items-center justify-between active:scale-[0.98] transition-all border border-amber-300/30"
           >
             <div className="flex items-center gap-2.5">
               <div className="w-7 h-7 rounded-lg bg-background/20 flex items-center justify-center text-background">
                 <ShoppingBag className="w-4 h-4" />
               </div>
-              <span className="text-sm">
+              <span className="text-sm font-bold">
                 {cartCount} {cartCount === 1 ? "Item" : "Items"} •{" "}
                 {formatMoney(cartSubtotalMinor)}
               </span>
@@ -296,38 +296,40 @@ export default function CustomerDineLayout({
         </div>
       )}
 
-      {/* Bottom Floating Spatial Glass Dock */}
-      <nav className="fixed bottom-3 left-3 right-3 max-w-[calc(28rem-1.5rem)] mx-auto glass-spatial rounded-3xl h-16 z-30 px-6 flex items-center justify-around shadow-2xl border border-white/15 specular-rim">
-        {navItems.map((item) => {
-          const Icon = item.icon;
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`flex flex-col items-center gap-1 relative py-1.5 px-3.5 rounded-2xl transition-all ${
-                item.active
-                  ? "text-primary font-bold bg-white/5 shadow-inner"
-                  : "text-gray-400 hover:text-gray-200 hover:bg-white/5"
-              }`}
-            >
-              <div className="relative">
-                <Icon className={`w-5 h-5 transition-transform ${item.active ? "text-primary scale-110" : ""}`} />
-                {item.badge && item.badge > 0 ? (
-                  <span className="absolute -top-1.5 -right-2.5 w-4 h-4 rounded-full bg-primary text-background font-black text-[9px] flex items-center justify-center shadow-glow">
-                    {item.badge}
-                  </span>
-                ) : null}
-              </div>
-              <span className="text-[11px] font-medium tracking-tight">
-                {item.label}
-              </span>
-              {item.active && (
-                <span className="w-5 h-0.5 rounded-full bg-primary -bottom-0.5 absolute shadow-glow" />
-              )}
-            </Link>
-          );
-        })}
-      </nav>
+      {/* Bottom Floating Spatial Glass Dock (Menu / Orders / Bill & Pay) - Sticks to bottom */}
+      <div className="fixed bottom-3 inset-x-0 max-w-md mx-auto px-3 z-40 pointer-events-none">
+        <nav className="pointer-events-auto w-full glass-spatial bg-[#0d111a]/92 backdrop-blur-2xl rounded-3xl h-16 px-4 flex items-center justify-around shadow-2xl border border-white/15 specular-rim">
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`flex flex-col items-center gap-1 relative py-1.5 px-3.5 rounded-2xl transition-all ${
+                  item.active
+                    ? "text-primary font-bold bg-white/10 shadow-inner"
+                    : "text-gray-400 hover:text-gray-200 hover:bg-white/5"
+                }`}
+              >
+                <div className="relative">
+                  <Icon className={`w-5 h-5 transition-transform ${item.active ? "text-primary scale-110" : ""}`} />
+                  {item.badge && item.badge > 0 ? (
+                    <span className="absolute -top-1.5 -right-2.5 w-4 h-4 rounded-full bg-primary text-background font-black text-[9px] flex items-center justify-center shadow-glow">
+                      {item.badge}
+                    </span>
+                  ) : null}
+                </div>
+                <span className="text-[11px] font-semibold tracking-tight">
+                  {item.label}
+                </span>
+                {item.active && (
+                  <span className="w-5 h-0.5 rounded-full bg-primary -bottom-0.5 absolute shadow-glow" />
+                )}
+              </Link>
+            );
+          })}
+        </nav>
+      </div>
 
       {/* Modal: Call Waiter / Service Assistance */}
       {showCallModal && (

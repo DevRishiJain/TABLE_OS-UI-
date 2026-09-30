@@ -45,9 +45,15 @@ function getTimeElapsed(dateStr?: string): { minutes: number; text: string } {
 }
 
 export default function RestaurantDashboardOverviewPage() {
-  const { data: today, isLoading: isTodayLoading } = useGetTodayAnalyticsQuery(
+  const { data: today, isLoading: isTodayLoading, error: todayError } = useGetTodayAnalyticsQuery(
     undefined,
     { pollingInterval: 6000 }
+  );
+
+  const isBackendUnreachable = Boolean(
+    (todayError as any)?.status === 502 ||
+    (todayError as any)?.data?.error === "Backend proxy unreachable" ||
+    (todayError as any)?.data?.details?.includes("fetch failed")
   );
   const { data: menuItems } = useGetMenuItemsQuery();
   const { data: staffTables } = useGetStaffTablesQuery(undefined, {
@@ -182,6 +188,24 @@ export default function RestaurantDashboardOverviewPage() {
           </Link>
         </div>
       </div>
+
+      {/* Backend Connectivity Alert Banner */}
+      {isBackendUnreachable && (
+        <div className="p-4 rounded-2xl bg-red-500/10 border border-red-500/30 flex items-center justify-between text-red-400 shadow-lg">
+          <div className="flex items-center gap-3">
+            <AlertTriangle className="w-5 h-5 shrink-0 text-red-400 animate-pulse" />
+            <div>
+              <p className="text-sm font-bold text-red-300">Backend Proxy Unreachable</p>
+              <p className="text-xs text-red-400/80 mt-0.5">
+                Frontend cannot connect to backend service (<code className="font-mono bg-red-500/20 px-1 py-0.5 rounded text-red-200">http://localhost:8088</code>). Live metrics, tables, and orders are paused.
+              </p>
+            </div>
+          </div>
+          <span className="text-[11px] font-mono font-bold px-2.5 py-1 rounded-lg bg-red-500/20 border border-red-500/40 text-red-300 shrink-0">
+            502 Proxy Unreachable
+          </span>
+        </div>
+      )}
 
       {/* SLA Delays & Live Bottlenecks Alert Center */}
       {totalActiveAlerts > 0 ? (
@@ -572,58 +596,112 @@ export default function RestaurantDashboardOverviewPage() {
                 </p>
               </div>
             ) : (
-              kitchenList.slice(0, 5).map((ord) => {
-                const dest = formatDestination(
-                  (ord as any).table_number,
-                  (ord as any).vehicle_number,
-                  (ord as any).customer_name,
-                  (ord as any).guest_count
-                );
-                const { text: elapsed } = getTimeElapsed(ord.accepted_at || ord.placed_at);
-                const isReady = ord.status === "READY";
+              [...kitchenList]
+                .sort((a, b) => {
+                  const priority = (s: string) => {
+                    if (s === "PREPARING") return 1;
+                    if (s === "ACCEPTED" || s === "PLACED_VERIFIED") return 2;
+                    if (s === "READY") return 3;
+                    if (s === "SERVED") return 4;
+                    return 5;
+                  };
+                  return priority(a.status) - priority(b.status);
+                })
+                .slice(0, 5)
+                .map((ord) => {
+                  const dest = formatDestination(
+                    (ord as any).table_number,
+                    (ord as any).vehicle_number,
+                    (ord as any).customer_name,
+                    (ord as any).guest_count
+                  );
+                  const { text: elapsed } = getTimeElapsed(ord.accepted_at || ord.placed_at);
+                  
+                  // Accurate status classification
+                  const getStatusInfo = (status: string) => {
+                    switch (status) {
+                      case "READY":
+                        return {
+                          label: "READY ON PASS 🛎️",
+                          badgeVariant: "success" as const,
+                          cardBg: "bg-emerald-500/10 border-emerald-500/40 shadow-emerald-500/10",
+                          badgeBg: "bg-emerald-500/20 text-emerald-300 border-emerald-500/50",
+                        };
+                      case "SERVED":
+                        return {
+                          label: "SERVED ✅",
+                          badgeVariant: "default" as const,
+                          cardBg: "bg-surface/70 border-surface-border opacity-90",
+                          badgeBg: "bg-surface-subtle text-gray-300 border-surface-border",
+                        };
+                      case "PREPARING":
+                        return {
+                          label: "COOKING 🔥",
+                          badgeVariant: "gold" as const,
+                          cardBg: "bg-amber-500/10 border-amber-500/40 shadow-amber-500/5",
+                          badgeBg: "bg-primary/20 text-primary border-primary/40",
+                        };
+                      case "ACCEPTED":
+                      case "PLACED_VERIFIED":
+                        return {
+                          label: "ACCEPTED 📋",
+                          badgeVariant: "amber" as const,
+                          cardBg: "bg-surface border-amber-500/30",
+                          badgeBg: "bg-amber-500/20 text-amber-300 border-amber-500/40",
+                        };
+                      case "CANCELLED":
+                        return {
+                          label: "CANCELLED ✕",
+                          badgeVariant: "error" as const,
+                          cardBg: "bg-red-500/10 border-red-500/30 opacity-70",
+                          badgeBg: "bg-red-500/20 text-red-400 border-red-500/40",
+                        };
+                      default:
+                        return {
+                          label: status,
+                          badgeVariant: "default" as const,
+                          cardBg: "bg-surface border-surface-border",
+                          badgeBg: "bg-surface-subtle text-gray-400 border-surface-border",
+                        };
+                    }
+                  };
 
-                return (
-                  <div
-                    key={ord.id}
-                    className={`p-3.5 rounded-xl border flex items-center justify-between gap-3 shadow-sm transition-colors ${
-                      isReady
-                        ? "bg-emerald-500/10 border-emerald-500/40 shadow-emerald-500/10"
-                        : "bg-surface border-surface-border"
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <span
-                        className={`w-9 h-9 rounded-xl font-bold font-display flex items-center justify-center text-xs shrink-0 border ${
-                          isReady
-                            ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/50"
-                            : "bg-primary/20 text-primary border-primary/40"
-                        }`}
-                      >
-                        {dest.shortBadge}
-                      </span>
-                      <div className="flex flex-col">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-bold text-gray-100">
-                            {dest.display} • Order #{ord.sequence_number}
-                          </span>
-                          <Badge
-                            variant={isReady ? "success" : "gold"}
-                            size="sm"
-                          >
-                            {isReady ? "READY ON PASS 🛎️" : "COOKING 🔥"}
-                          </Badge>
-                        </div>
-                        <span className="text-[11px] text-gray-400 truncate max-w-xs mt-0.5">
-                          {ord.items?.map(it => `${it.quantity}x ${it.item_name_snapshot}`).join(", ")}
+                  const info = getStatusInfo(ord.status);
+
+                  return (
+                    <div
+                      key={ord.id}
+                      className={`p-3.5 rounded-xl border flex items-center justify-between gap-3 shadow-sm transition-colors ${info.cardBg}`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <span
+                          className={`w-9 h-9 rounded-xl font-bold font-display flex items-center justify-center text-xs shrink-0 border ${info.badgeBg}`}
+                        >
+                          {dest.shortBadge}
                         </span>
+                        <div className="flex flex-col">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold text-gray-100">
+                              {dest.display} • Order #{ord.sequence_number}
+                            </span>
+                            <Badge
+                              variant={info.badgeVariant}
+                              size="sm"
+                            >
+                              {info.label}
+                            </Badge>
+                          </div>
+                          <span className="text-[11px] text-gray-400 truncate max-w-xs mt-0.5">
+                            {ord.items?.map(it => `${it.quantity}x ${it.item_name_snapshot}`).join(", ")}
+                          </span>
+                        </div>
                       </div>
+                      <span className="text-[11px] font-mono text-gray-400 shrink-0">
+                        {elapsed}
+                      </span>
                     </div>
-                    <span className="text-[11px] font-mono text-gray-400 shrink-0">
-                      {elapsed}
-                    </span>
-                  </div>
-                );
-              })
+                  );
+                })
             )}
           </div>
         </Card>

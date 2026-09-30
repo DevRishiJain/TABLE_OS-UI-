@@ -25,6 +25,7 @@ import {
   ShieldCheck,
   CheckCircle2,
   QrCode,
+  ShoppingBag,
 } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { RoleGuard } from "@/components/auth/RoleGuard";
@@ -127,6 +128,19 @@ export default function RestaurantAdminLayout({
             >
               <LayoutDashboard className="w-4 h-4" />
               <span>Executive Overview</span>
+            </Link>
+
+            {/* Order History & Logs */}
+            <Link
+              href="/restaurant/orders"
+              className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-colors ${
+                pathname === "/restaurant/orders"
+                  ? "bg-primary text-background font-bold shadow-md shadow-primary/20"
+                  : "text-gray-300 hover:text-white hover:bg-surface-hover"
+              }`}
+            >
+              <ShoppingBag className="w-4 h-4 text-emerald-400" />
+              <span>Order History & Logs</span>
             </Link>
 
             {/* Analytics Accordion */}
