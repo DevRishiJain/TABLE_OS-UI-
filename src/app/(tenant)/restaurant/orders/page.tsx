@@ -33,18 +33,59 @@ import {
   FileSpreadsheet,
 } from "lucide-react";
 
+const formatDateInput = (date: Date) => {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+};
+
 export default function RestaurantOrderHistoryPage() {
   const restaurantId = useAppSelector((state) => state.auth.restaurantId);
   const restaurantName = useAppSelector((state) => state.auth.restaurantName) || "The Spice Route";
 
-  const { data: orders, isLoading, refetch, isFetching } = useGetRestaurantOrdersQuery(
-    restaurantId ? { restaurantId, limit: 200 } : undefined,
-    { pollingInterval: 5000 }
-  );
-
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStatus, setSelectedStatus] = useState<string>("ALL");
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [datePreset, setDatePreset] = useState<string>("TODAY");
+  const [startDate, setStartDate] = useState<string>(() => formatDateInput(new Date()));
+  const [endDate, setEndDate] = useState<string>(() => formatDateInput(new Date()));
+
+  const handlePresetChange = (preset: string) => {
+    setDatePreset(preset);
+    const now = new Date();
+    if (preset === "ALL") {
+      setStartDate("");
+      setEndDate("");
+    } else if (preset === "TODAY") {
+      const today = formatDateInput(now);
+      setStartDate(today);
+      setEndDate(today);
+    } else if (preset === "7D") {
+      const past = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      setStartDate(formatDateInput(past));
+      setEndDate(formatDateInput(now));
+    } else if (preset === "30D") {
+      const past = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      setStartDate(formatDateInput(past));
+      setEndDate(formatDateInput(now));
+    }
+  };
+
+  const queryArgs = useMemo(() => {
+    if (!restaurantId) return undefined;
+    return {
+      restaurantId,
+      limit: 200,
+      startDate: startDate || undefined,
+      endDate: endDate || undefined,
+    };
+  }, [restaurantId, startDate, endDate]);
+
+  const { data: orders, isLoading, refetch, isFetching } = useGetRestaurantOrdersQuery(
+    queryArgs,
+    { pollingInterval: 5000 }
+  );
 
   const allOrders = orders || [];
 
@@ -287,6 +328,73 @@ export default function RestaurantOrderHistoryPage() {
                 </span>
               </button>
             ))}
+          </div>
+        </div>
+
+        {/* Date Filter Row */}
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-surface-border/60 text-xs">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5 mr-1">
+              <Calendar className="w-3.5 h-3.5 text-primary" /> Date Filter:
+            </span>
+            {[
+              { id: "TODAY", label: "Today" },
+              { id: "7D", label: "Last 7 Days" },
+              { id: "30D", label: "Last 30 Days" },
+              { id: "ALL", label: "All Time" },
+              { id: "CUSTOM", label: "Custom" },
+            ].map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => handlePresetChange(p.id)}
+                className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${
+                  datePreset === p.id
+                    ? "bg-primary text-background font-bold shadow-sm"
+                    : "bg-surface-subtle text-gray-400 hover:text-white border border-surface-border hover:border-gray-500"
+                }`}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 bg-surface-subtle px-2.5 py-1 rounded-lg border border-surface-border">
+              <span className="text-[10px] text-gray-400 font-semibold uppercase">From</span>
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => {
+                  setStartDate(e.target.value);
+                  setDatePreset("CUSTOM");
+                }}
+                className="bg-transparent text-gray-200 text-xs border-none outline-none focus:ring-0 p-0 font-mono [color-scheme:dark]"
+              />
+            </div>
+            <div className="flex items-center gap-1.5 bg-surface-subtle px-2.5 py-1 rounded-lg border border-surface-border">
+              <span className="text-[10px] text-gray-400 font-semibold uppercase">To</span>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => {
+                  setEndDate(e.target.value);
+                  setDatePreset("CUSTOM");
+                }}
+                className="bg-transparent text-gray-200 text-xs border-none outline-none focus:ring-0 p-0 font-mono [color-scheme:dark]"
+              />
+            </div>
+            {datePreset !== "TODAY" && (
+              <button
+                type="button"
+                onClick={() => handlePresetChange("TODAY")}
+                className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-surface border border-surface-border transition-colors flex items-center gap-1 text-[11px]"
+                title="Reset to Today"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                <span>Reset</span>
+              </button>
+            )}
           </div>
         </div>
 

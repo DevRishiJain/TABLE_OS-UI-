@@ -197,3 +197,55 @@ export interface OnboardingStatus {
   steps_completed: string[];
   is_live: boolean;
 }
+
+export interface CreateExpenseLineItemRequest {
+  inventory_item_id?: string;
+  item_name: string;
+  quantity: number;
+  unit: string;
+  unit_price_minor: number;
+  total_price_minor: number;
+}
+
+export interface CreateExpenseRequest {
+  type: string;
+  category: string;
+  title: string;
+  amount_minor: number;
+  currency?: string;
+  paid_via: string;
+  vendor_name?: string;
+  expense_date?: string;
+  notes?: string;
+  is_stock_purchase?: boolean;
+  line_items?: CreateExpenseLineItemRequest[];
+}
+
+export interface InventorySummaryResponse {
+  items: import("./domain").InventoryItem[];
+  total_items_count: number;
+  low_stock_items_count: number;
+  total_valuation: import("./domain").Money;
+}
+
+export interface CreateInventoryItemRequest {
+  name: string;
+  category: string;
+  unit: string;
+  current_stock: number;
+  min_threshold: number;
+  unit_cost_minor: number;
+}
+
+export interface LogStockRequest {
+  change_type: string;
+  quantity: number;
+  unit_cost_minor?: number;
+  reference?: string;
+}
+
+export interface SaveRecipeItemRequest {
+  inventory_item_id: string;
+  quantity_required: number;
+}
+

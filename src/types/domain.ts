@@ -210,3 +210,146 @@ export interface RestaurantSettlement {
   settled_at?: string;
   created_at: string;
 }
+
+export type ExpenseType = 'VARIABLE' | 'FIXED';
+export type ExpenseCategory =
+  | 'VEGETABLES'
+  | 'MEAT_POULTRY'
+  | 'DAIRY'
+  | 'GROCERY_SPICES'
+  | 'PACKAGING'
+  | 'GAS_UTILITY'
+  | 'SALARY'
+  | 'RENT'
+  | 'ELECTRICITY'
+  | 'MAINTENANCE'
+  | 'FOOD_WASTAGE'
+  | 'OTHER';
+
+export interface ExpenseLineItem {
+  id: string;
+  expense_id: string;
+  inventory_item_id?: string;
+  item_name: string;
+  quantity: number;
+  unit: string;
+  unit_price: Money;
+  total_price: Money;
+  created_at: string;
+}
+
+export interface Expense {
+  id: string;
+  restaurant_id: string;
+  type: ExpenseType;
+  category: ExpenseCategory;
+  title: string;
+  amount: Money;
+  paid_via: string;
+  vendor_name?: string;
+  expense_date: string;
+  notes?: string;
+  is_stock_purchase?: boolean;
+  inventory_log_id?: string;
+  line_items?: ExpenseLineItem[];
+  created_by_staff_id?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface InventoryItem {
+  id: string;
+  restaurant_id: string;
+  name: string;
+  category: string;
+  unit: string;
+  current_stock: number;
+  min_threshold: number;
+  unit_cost: Money;
+  created_at: string;
+  updated_at: string;
+}
+
+export type InventoryChangeType = 'STOCK_IN' | 'WASTAGE' | 'ORDER_CONSUMPTION' | 'ADJUSTMENT';
+
+export interface InventoryLog {
+  id: string;
+  restaurant_id: string;
+  inventory_item_id: string;
+  item_name?: string;
+  unit?: string;
+  change_type: InventoryChangeType;
+  quantity: number;
+  unit_cost: Money;
+  total_cost: Money;
+  reference?: string;
+  expense_id?: string;
+  order_id?: string;
+  logged_at: string;
+}
+
+export interface RecipeIngredient {
+  id?: string;
+  restaurant_id?: string;
+  menu_item_id?: string;
+  inventory_item_id: string;
+  item_name?: string;
+  unit?: string;
+  quantity_required: number;
+  unit_cost?: Money;
+  cost_contribution?: Money;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface DishMargin {
+  menu_item_id: string;
+  menu_item_name: string;
+  category_name: string;
+  selling_price: Money;
+  cost_price: Money;
+  gross_profit: Money;
+  margin_pct: number;
+}
+
+export interface PnLSummary {
+  gross_revenue: Money;
+  cogs_variable_expenses: Money;
+  fixed_expenses: Money;
+  total_expenses: Money;
+  net_profit: Money;
+  food_cost_pct: number;
+  net_margin_pct: number;
+  target_food_cost_pct: number;
+}
+
+export interface DailySalesTrend {
+  date: string;
+  revenue: number;
+  order_count: number;
+  variable_cost: number;
+}
+
+export interface TopDishPerformance {
+  menu_item_name: string;
+  quantity_sold: number;
+  total_revenue_minor: number;
+  cost_minor: number;
+  gross_profit_minor: number;
+  margin_pct: number;
+}
+
+export interface ExecutiveAnalytics {
+  date_range: {
+    start_date: string;
+    end_date: string;
+  };
+  pnl: PnLSummary;
+  sales_trend: DailySalesTrend[];
+  payment_methods: Record<string, number>;
+  top_dishes: TopDishPerformance[];
+  low_stock_alerts_count: number;
+  total_orders: number;
+  average_order_value: Money;
+}
+

@@ -23,9 +23,11 @@ import {
   Layers2,
   PieChart,
   ShieldCheck,
-  CheckCircle2,
   QrCode,
   ShoppingBag,
+  CheckCircle2,
+  Package,
+  Wallet,
 } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { RoleGuard } from "@/components/auth/RoleGuard";
@@ -40,46 +42,11 @@ export default function RestaurantAdminLayout({
   const restaurantName = useAppSelector((state) => state.auth.restaurantName) || "{restaurantName}";
   const router = useRouter();
   const dispatch = useAppDispatch();
-  const [isAnalyticsExpanded, setIsAnalyticsExpanded] = useState(true);
 
   const handleLogout = () => {
     dispatch(logoutStaff());
     router.push("/login");
   };
-
-  const analyticsSubLinks = [
-    { href: "/restaurant/analytics/today", label: "Today's Curve", icon: Clock },
-    {
-      href: "/restaurant/analytics/month-to-date",
-      label: "Month-to-Date",
-      icon: TrendingUp,
-    },
-    {
-      href: "/restaurant/analytics/compare",
-      label: "Period Compare",
-      icon: Calendar,
-    },
-    {
-      href: "/restaurant/analytics/peak-hours",
-      label: "Peak Hours Heatmap",
-      icon: Flame,
-    },
-    {
-      href: "/restaurant/analytics/forecast",
-      label: "Sales Forecast",
-      icon: Sparkles,
-    },
-    {
-      href: "/restaurant/analytics/table-performance",
-      label: "Table Turn-Time",
-      icon: Layers2,
-    },
-    {
-      href: "/restaurant/analytics/menu-performance",
-      label: "Menu Velocity",
-      icon: PieChart,
-    },
-  ];
 
   return (
     <RoleGuard
@@ -143,46 +110,44 @@ export default function RestaurantAdminLayout({
               <span>Order History & Logs</span>
             </Link>
 
-            {/* Analytics Accordion */}
-            <div className="flex flex-col gap-1 pt-2">
-              <button
-                onClick={() => setIsAnalyticsExpanded(!isAnalyticsExpanded)}
-                className="flex items-center justify-between px-3.5 py-2 text-gray-400 hover:text-gray-200 text-xs font-bold uppercase tracking-wider"
-              >
-                <div className="flex items-center gap-2">
-                  <LineChart className="w-4 h-4 text-primary" />
-                  <span>Analytics Suite (7)</span>
-                </div>
-                <ChevronRight
-                  className={`w-3.5 h-3.5 transition-transform ${
-                    isAnalyticsExpanded ? "rotate-90" : ""
-                  }`}
-                />
-              </button>
+            {/* Consolidated Analytics & P&L */}
+            <Link
+              href="/restaurant/analytics"
+              className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-colors ${
+                pathname === "/restaurant/analytics"
+                  ? "bg-primary text-background font-bold shadow-md shadow-primary/20"
+                  : "text-gray-300 hover:text-white hover:bg-surface-hover"
+              }`}
+            >
+              <LineChart className="w-4 h-4 text-primary" />
+              <span>Analytics & P&L</span>
+            </Link>
 
-              {isAnalyticsExpanded && (
-                <div className="flex flex-col gap-1 pl-4 border-l border-surface-border/60 ml-3 my-1">
-                  {analyticsSubLinks.map((sub) => {
-                    const SubIcon = sub.icon;
-                    const isActive = pathname === sub.href;
-                    return (
-                      <Link
-                        key={sub.href}
-                        href={sub.href}
-                        className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-[11px] transition-colors ${
-                          isActive
-                            ? "text-primary font-bold bg-primary/10"
-                            : "text-gray-400 hover:text-gray-200 hover:bg-surface-hover"
-                        }`}
-                      >
-                        <SubIcon className="w-3.5 h-3.5" />
-                        <span>{sub.label}</span>
-                      </Link>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
+            {/* Expenses & Bills */}
+            <Link
+              href="/restaurant/expenses"
+              className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-colors ${
+                pathname === "/restaurant/expenses"
+                  ? "bg-primary text-background font-bold shadow-md shadow-primary/20"
+                  : "text-gray-300 hover:text-white hover:bg-surface-hover"
+              }`}
+            >
+              <Wallet className="w-4 h-4 text-rose-400" />
+              <span>Expenses & Bills</span>
+            </Link>
+
+            {/* Stock & Inventory */}
+            <Link
+              href="/restaurant/inventory"
+              className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-colors ${
+                pathname === "/restaurant/inventory"
+                  ? "bg-primary text-background font-bold shadow-md shadow-primary/20"
+                  : "text-gray-300 hover:text-white hover:bg-surface-hover"
+              }`}
+            >
+              <Package className="w-4 h-4 text-cyan-400" />
+              <span>Stock & Inventory</span>
+            </Link>
 
             {/* Menu Studio */}
             <Link

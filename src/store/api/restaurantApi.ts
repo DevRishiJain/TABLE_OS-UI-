@@ -9,6 +9,11 @@ import {
   MenuPerformance,
   AICatalogResponse,
   OnboardingStatus,
+  CreateExpenseRequest,
+  InventorySummaryResponse,
+  CreateInventoryItemRequest,
+  LogStockRequest,
+  SaveRecipeItemRequest,
 } from "@/types/api";
 import {
   MenuCategory,
@@ -18,6 +23,13 @@ import {
   PlatformFeeLedgerEntry,
   RestaurantSettlement,
   Order,
+  Expense,
+  ExpenseLineItem,
+  InventoryItem,
+  InventoryLog,
+  RecipeIngredient,
+  DishMargin,
+  ExecutiveAnalytics,
 } from "@/types/domain";
 
 export const restaurantApi = baseApi.injectEndpoints({
@@ -199,12 +211,14 @@ export const restaurantApi = baseApi.injectEndpoints({
 
     getRestaurantOrders: builder.query<
       Order[],
-      { restaurantId?: string; limit?: number } | void
+      { restaurantId?: string; limit?: number; startDate?: string; endDate?: string } | void
     >({
       query: (params) => {
         const queryParams = new URLSearchParams();
         if (params?.restaurantId) queryParams.set("restaurant_id", params.restaurantId);
         if (params?.limit) queryParams.set("limit", String(params.limit));
+        if (params?.startDate) queryParams.set("start_date", params.startDate);
+        if (params?.endDate) queryParams.set("end_date", params.endDate);
         const qs = queryParams.toString();
         return `/api/v1/restaurant/orders${qs ? `?${qs}` : ""}`;
       },
@@ -218,6 +232,156 @@ export const restaurantApi = baseApi.injectEndpoints({
         body,
       }),
       invalidatesTags: ["Onboarding", "Tenant", "Table", "MenuItem", "MenuCategory", "Staff"],
+    }),
+
+    // Executive Unified Analytics & P&L Dashboard
+    getExecutiveDashboardAnalytics: builder.query<
+      ExecutiveAnalytics,
+      { restaurantId?: string; startDate?: string; endDate?: string } | void
+    >({
+      query: (params) => {
+        const queryParams = new URLSearchParams();
+        if (params?.restaurantId) queryParams.set("restaurant_id", params.restaurantId);
+        if (params?.startDate) queryParams.set("start_date", params.startDate);
+        if (params?.endDate) queryParams.set("end_date", params.endDate);
+        const qs = queryParams.toString();
+        return `/api/v1/restaurant/analytics/dashboard${qs ? `?${qs}` : ""}`;
+      },
+      providesTags: ["Analytics", "Expense", "Inventory"],
+    }),
+
+    // Expense Management
+    getExpenses: builder.query<
+      Expense[],
+      { restaurantId?: string; type?: string; category?: string; startDate?: string; endDate?: string } | void
+    >({
+      query: (params) => {
+        const queryParams = new URLSearchParams();
+        if (params?.restaurantId) queryParams.set("restaurant_id", params.restaurantId);
+        if (params?.type) queryParams.set("type", params.type);
+        if (params?.category) queryParams.set("category", params.category);
+        if (params?.startDate) queryParams.set("start_date", params.startDate);
+        if (params?.endDate) queryParams.set("end_date", params.endDate);
+        const qs = queryParams.toString();
+        return `/api/v1/restaurant/expenses${qs ? `?${qs}` : ""}`;
+      },
+      providesTags: ["Expense"],
+    }),
+
+    createExpense: builder.mutation<Expense, CreateExpenseRequest & { restaurantId?: string }>({
+      query: ({ restaurantId, ...body }) => ({
+        url: `/api/v1/restaurant/expenses${restaurantId ? `?restaurant_id=${restaurantId}` : ""}`,
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Expense", "Analytics", "Inventory"],
+    }),
+
+    getExpenseLineItems: builder.query<ExpenseLineItem[], { id: string; restaurantId?: string }>({
+      query: ({ id, restaurantId }) =>
+        `/api/v1/restaurant/expenses/${id}/items${restaurantId ? `?restaurant_id=${restaurantId}` : ""}`,
+      providesTags: ["Expense"],
+    }),
+
+    deleteExpense: builder.mutation<{ status: string }, { id: string; restaurantId?: string }>({
+      query: ({ id, restaurantId }) => ({
+        url: `/api/v1/restaurant/expenses/${id}${restaurantId ? `?restaurant_id=${restaurantId}` : ""}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["Expense", "Analytics", "Inventory"],
+    }),
+
+    // Inventory & Stock Management
+    getInventory: builder.query<InventorySummaryResponse, { restaurantId?: string } | void>({
+      query: (params) => {
+        const queryParams = new URLSearchParams();
+        if (params?.restaurantId) queryParams.set("restaurant_id", params.restaurantId);
+        const qs = queryParams.toString();
+        return `/api/v1/restaurant/inventory${qs ? `?${qs}` : ""}`;
+      },
+      providesTags: ["Inventory"],
+    }),
+
+    createInventoryItem: builder.mutation<InventoryItem, CreateInventoryItemRequest & { restaurantId?: string }>({
+      query: ({ restaurantId, ...body }) => ({
+        url: `/api/v1/restaurant/inventory${restaurantId ? `?restaurant_id=${restaurantId}` : ""}`,
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Inventory", "Recipe"],
+    }),
+
+    updateInventoryItem: builder.mutation<
+      InventoryItem,
+      { id: string; restaurantId?: string } & Partial<CreateInventoryItemRequest>
+    >({
+      query: ({ id, restaurantId, ...body }) => ({
+        url: `/api/v1/restaurant/inventory/${id}${restaurantId ? `?restaurant_id=${restaurantId}` : ""}`,
+        method: "PUT",
+        body,
+      }),
+      invalidatesTags: ["Inventory", "Recipe"],
+    }),
+
+    deleteInventoryItem: builder.mutation<{ status: string }, { id: string; restaurantId?: string }>({
+      query: ({ id, restaurantId }) => ({
+        url: `/api/v1/restaurant/inventory/${id}${restaurantId ? `?restaurant_id=${restaurantId}` : ""}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["Inventory", "Recipe"],
+    }),
+
+    logStockMovement: builder.mutation<InventoryLog, { itemId: string; restaurantId?: string } & LogStockRequest>({
+      query: ({ itemId, restaurantId, ...body }) => ({
+        url: `/api/v1/restaurant/inventory/${itemId}/stock${restaurantId ? `?restaurant_id=${restaurantId}` : ""}`,
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Inventory", "Analytics", "Expense"],
+    }),
+
+    getInventoryLogs: builder.query<
+      InventoryLog[],
+      { restaurantId?: string; inventoryItemId?: string; limit?: number } | void
+    >({
+      query: (params) => {
+        const queryParams = new URLSearchParams();
+        if (params?.restaurantId) queryParams.set("restaurant_id", params.restaurantId);
+        if (params?.inventoryItemId) queryParams.set("inventory_item_id", params.inventoryItemId);
+        if (params?.limit) queryParams.set("limit", String(params.limit));
+        const qs = queryParams.toString();
+        return `/api/v1/restaurant/inventory/logs${qs ? `?${qs}` : ""}`;
+      },
+      providesTags: ["Inventory"],
+    }),
+
+    // Recipe Costing & Dish Margins
+    getRecipe: builder.query<RecipeIngredient[], { menuItemId: string; restaurantId?: string }>({
+      query: ({ menuItemId, restaurantId }) =>
+        `/api/v1/restaurant/recipes/${menuItemId}${restaurantId ? `?restaurant_id=${restaurantId}` : ""}`,
+      providesTags: ["Recipe"],
+    }),
+
+    saveRecipe: builder.mutation<
+      RecipeIngredient[],
+      { menuItemId: string; restaurantId?: string; ingredients: SaveRecipeItemRequest[] }
+    >({
+      query: ({ menuItemId, restaurantId, ingredients }) => ({
+        url: `/api/v1/restaurant/recipes/${menuItemId}${restaurantId ? `?restaurant_id=${restaurantId}` : ""}`,
+        method: "POST",
+        body: ingredients,
+      }),
+      invalidatesTags: ["Recipe", "Analytics"],
+    }),
+
+    getDishMargins: builder.query<DishMargin[], { restaurantId?: string } | void>({
+      query: (params) => {
+        const queryParams = new URLSearchParams();
+        if (params?.restaurantId) queryParams.set("restaurant_id", params.restaurantId);
+        const qs = queryParams.toString();
+        return `/api/v1/restaurant/recipes/margins${qs ? `?${qs}` : ""}`;
+      },
+      providesTags: ["Recipe", "MenuItem"],
     }),
   }),
 });
@@ -248,4 +412,19 @@ export const {
   useCreateRestaurantTableMutation,
   useGetRestaurantOrdersQuery,
   useOnboardRestaurantMutation,
+  useGetExecutiveDashboardAnalyticsQuery,
+  useGetExpensesQuery,
+  useGetExpenseLineItemsQuery,
+  useCreateExpenseMutation,
+  useDeleteExpenseMutation,
+  useGetInventoryQuery,
+  useCreateInventoryItemMutation,
+  useUpdateInventoryItemMutation,
+  useDeleteInventoryItemMutation,
+  useLogStockMovementMutation,
+  useGetInventoryLogsQuery,
+  useGetRecipeQuery,
+  useSaveRecipeMutation,
+  useGetDishMarginsQuery,
 } = restaurantApi;
+

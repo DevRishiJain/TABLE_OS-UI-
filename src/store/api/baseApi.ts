@@ -75,6 +75,9 @@ export const baseApi = createApi({
     "Onboarding",
     "Tenant",
     "FraudRisk",
+    "Expense",
+    "Inventory",
+    "Recipe",
   ],
   endpoints: () => ({}),
 });
