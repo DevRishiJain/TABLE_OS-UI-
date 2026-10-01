@@ -92,7 +92,7 @@ export default function TableQREntryPage() {
       const roomNum = match ? match[1] : "101";
       return {
         badge: `🏨 Room ${roomNum} • In-Room Dining`,
-        title: "The Grand Royale Hotel",
+        title: "Hotel In-Room Dining",
         subtext: `In-room gourmet dining delivered directly to Room ${roomNum}`,
         icon: Hotel,
         accentColor: "text-purple-400 border-purple-500/40 bg-purple-500/10",
@@ -102,7 +102,7 @@ export default function TableQREntryPage() {
     const tableNum = match ? parseInt(match[1], 10) : 1;
     return {
       badge: `🍽️ Table ${tableNum} • Dine-In`,
-      title: "The Spice Route",
+      title: "Restaurant",
       subtext: "Please enter your details below so our kitchen and floor team can prepare your seating and dishes accordingly.",
       icon: Utensils,
       accentColor: "text-primary border-primary/40 bg-primary/20",

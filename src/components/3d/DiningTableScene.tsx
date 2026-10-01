@@ -44,7 +44,7 @@ function useQRStandeeTexture(): THREE.CanvasTexture {
     ctx.textAlign = "center";
     ctx.fillStyle = "#E5A93C";
     ctx.font = "bold 44px 'Plus Jakarta Sans', system-ui, sans-serif";
-    ctx.fillText("THE SPICE ROUTE", 512, 160);
+    ctx.fillText("TABLEOS DINING", 512, 160);
 
     ctx.fillStyle = "#9CA3AF";
     ctx.font = "600 24px 'Plus Jakarta Sans', system-ui, sans-serif";
@@ -221,7 +221,7 @@ function usePhoneScreenTexture(): THREE.CanvasTexture {
     // Restaurant Title & Table Badge
     ctx.fillStyle = "#F3F4F6";
     ctx.font = "bold 56px 'Plus Jakarta Sans', system-ui, sans-serif";
-    ctx.fillText("The Spice Route", 64, 250);
+    ctx.fillText("TableOS Dining", 64, 250);
 
     // Emerald Active Table Pill
     ctx.fillStyle = "rgba(16, 185, 129, 0.15)";

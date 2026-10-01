@@ -42,7 +42,7 @@ const formatDateInput = (date: Date) => {
 
 export default function RestaurantOrderHistoryPage() {
   const restaurantId = useAppSelector((state) => state.auth.restaurantId);
-  const restaurantName = useAppSelector((state) => state.auth.restaurantName) || "The Spice Route";
+  const restaurantName = useAppSelector((state) => state.auth.restaurantName) || "Restaurant";
 
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStatus, setSelectedStatus] = useState<string>("ALL");

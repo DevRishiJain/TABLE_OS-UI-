@@ -39,7 +39,7 @@ export default function RestaurantAdminLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const restaurantName = useAppSelector((state) => state.auth.restaurantName) || "{restaurantName}";
+  const restaurantName = useAppSelector((state) => state.auth.restaurantName) || "Restaurant";
   const router = useRouter();
   const dispatch = useAppDispatch();
 
@@ -245,9 +245,9 @@ export default function RestaurantAdminLayout({
         {/* Footer info & Logout */}
         <div className="p-4 border-t border-surface-border flex items-center justify-between">
           <div className="flex flex-col">
-            <span className="text-xs font-bold text-gray-200">Vikram Mehta</span>
+            <span className="text-xs font-bold text-gray-200">{useAppSelector((state) => state.auth.userName) || "Admin"}</span>
             <span className="text-[10px] text-gray-500 font-mono">
-              admin@spiceroute.com
+              {useAppSelector((state) => state.auth.employeeId) || "Staff"}
             </span>
           </div>
           <button
@@ -281,7 +281,7 @@ export default function RestaurantAdminLayout({
 
           <div className="flex items-center gap-3">
             <span className="text-xs text-gray-400 font-mono hidden sm:inline">
-              Host: 54.146.192.20:8088
+              API Connected
             </span>
             <Badge variant="success" size="sm">
               Online

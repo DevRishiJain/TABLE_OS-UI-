@@ -2,6 +2,7 @@
 
 import React, { useMemo } from "react";
 import Link from "next/link";
+import { useAppSelector } from "@/store";
 import {
   useGetTodayAnalyticsQuery,
   useGetMenuItemsQuery,
@@ -45,6 +46,7 @@ function getTimeElapsed(dateStr?: string): { minutes: number; text: string } {
 }
 
 export default function RestaurantDashboardOverviewPage() {
+  const restaurantName = useAppSelector((state) => state.auth.restaurantName) || "Restaurant";
   const { data: today, isLoading: isTodayLoading, error: todayError } = useGetTodayAnalyticsQuery(
     undefined,
     { pollingInterval: 6000 }
@@ -151,7 +153,7 @@ export default function RestaurantDashboardOverviewPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold font-display text-gray-100 flex items-center gap-2">
-            The Spice Route — Executive Overview
+            {restaurantName} — Executive Overview
           </h1>
           <p className="text-xs text-gray-400">
             Real-time floor operations, live kitchen queue & SLA monitoring

@@ -1,5 +1,8 @@
+"use client";
+
 import React from "react";
 import Link from "next/link";
+import { useAppSelector } from "@/store";
 import { Shield, ArrowLeft } from "lucide-react";
 
 export default function GuardLayout({
@@ -7,6 +10,8 @@ export default function GuardLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const restaurantName = useAppSelector((state) => state.auth.restaurantName) || "Restaurant";
+
   return (
     <div className="min-h-screen bg-black text-gray-100 flex flex-col justify-between">
       {/* Guard Zero-Chrome Top Header */}
@@ -20,7 +25,7 @@ export default function GuardLayout({
               EXIT VERIFICATION STATION
             </h1>
             <p className="text-[10px] font-mono text-gray-400">
-              The Spice Route • Gate 1
+              {restaurantName} • Gate 1
             </p>
           </div>
         </div>

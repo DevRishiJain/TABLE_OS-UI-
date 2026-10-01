@@ -196,7 +196,7 @@ export const AIMenuSearchDrawer: React.FC<AIMenuSearchDrawerProps> = ({
           <div className="py-8 flex flex-col items-center justify-center gap-3 text-center">
             <Loader2 className="w-7 h-7 animate-spin text-primary" />
             <p className="text-xs text-gray-400">
-              Consulting the Spice Route kitchen catalog...
+              Consulting the kitchen menu catalog...
             </p>
           </div>
         )}

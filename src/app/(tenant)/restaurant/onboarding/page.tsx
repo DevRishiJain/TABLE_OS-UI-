@@ -22,7 +22,7 @@ import {
 
 export default function RestaurantOnboardingPipelinePage() {
   const dispatch = useAppDispatch();
-  const restaurantName = useAppSelector((state) => state.auth.restaurantName) || "The Spice Route";
+  const restaurantName = useAppSelector((state) => state.auth.restaurantName) || "Restaurant";
   const storedCount = typeof window !== "undefined" ? Number(localStorage.getItem("tableos_table_count")) || 8 : 8;
 
   const steps = [

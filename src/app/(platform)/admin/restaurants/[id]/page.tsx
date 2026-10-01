@@ -126,7 +126,7 @@ export default function AdminRestaurantDetailPage() {
     }
   };
 
-  const tenantName = tenant?.name || "The Spice Route";
+  const tenantName = tenant?.name || "Restaurant Details";
   const gstin = tenant?.gstin || "07AAAAA0000A1Z5";
   const status = tenant?.status || "LIVE";
   const commissionRateBps = tenant?.commission_rate_bps || 100;

@@ -102,6 +102,33 @@ function TablePaymentCard({
     }
   };
 
+  const [showItems, setShowItems] = useState(false);
+
+  // Group items across all orders for unified waiter confirmation
+  const consolidatedItems = React.useMemo(() => {
+    const map = new Map<string, { name: string; qty: number; totalMinor: number }>();
+    orders.forEach((o) => {
+      o.items?.forEach((it) => {
+        const key = it.item_name_snapshot.toLowerCase().trim();
+        const lineTotal = it.line_total?.amount_minor_units || 0;
+        const existing = map.get(key);
+        if (existing) {
+          existing.qty += it.quantity;
+          existing.totalMinor += lineTotal;
+        } else {
+          map.set(key, {
+            name: it.item_name_snapshot,
+            qty: it.quantity,
+            totalMinor: lineTotal,
+          });
+        }
+      });
+    });
+    return Array.from(map.values());
+  }, [orders]);
+
+  const totalItemsCount = consolidatedItems.reduce((acc, it) => acc + it.qty, 0);
+
   return (
     <Card className="p-6 flex flex-col gap-5 border-primary/40 shadow-glow">
       <div className="flex items-start justify-between">
@@ -129,16 +156,55 @@ function TablePaymentCard({
       </div>
 
       {/* Amount Breakdown */}
-      <div className="p-4 rounded-xl bg-surface-subtle border border-surface-border flex items-center justify-between">
-        <div className="flex flex-col">
-          <span className="text-[10px] text-gray-400 uppercase font-semibold">
-            Total Bill (Taxes Included)
-          </span>
-          <span className="text-2xl font-black font-mono text-primary">
-            {formatMoney(totalBillMinor)}
-          </span>
+      <div className="p-4 rounded-xl bg-surface-subtle border border-surface-border flex flex-col gap-3">
+        <div className="flex items-center justify-between">
+          <div className="flex flex-col">
+            <span className="text-[10px] text-gray-400 uppercase font-semibold">
+              United Big Bill (Taxes Included)
+            </span>
+            <span className="text-2xl font-black font-mono text-primary">
+              {formatMoney(totalBillMinor)}
+            </span>
+          </div>
+          <Receipt className="w-8 h-8 text-gray-500" />
         </div>
-        <Receipt className="w-8 h-8 text-gray-500" />
+
+        {consolidatedItems.length > 0 && (
+          <div className="pt-2 border-t border-surface-border/50">
+            <button
+              onClick={() => setShowItems(!showItems)}
+              className="text-xs text-primary hover:underline flex items-center justify-between w-full font-medium"
+            >
+              <span>
+                {showItems ? "Hide" : "Review"} All Ordered Items ({totalItemsCount} items)
+              </span>
+              <span className="font-mono text-[11px] text-gray-400">
+                {orders.length} {orders.length === 1 ? "round" : "rounds"}
+              </span>
+            </button>
+
+            {showItems && (
+              <div className="mt-2 flex flex-col gap-1.5 max-h-48 overflow-y-auto pr-1">
+                {consolidatedItems.map((item, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-center justify-between text-xs py-1 border-b border-surface-border/30 last:border-0"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono font-bold text-primary">
+                        {item.qty}x
+                      </span>
+                      <span className="text-gray-200">{item.name}</span>
+                    </div>
+                    <span className="font-mono text-gray-400">
+                      {formatMoney(item.totalMinor)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Payment Method Selector */}
