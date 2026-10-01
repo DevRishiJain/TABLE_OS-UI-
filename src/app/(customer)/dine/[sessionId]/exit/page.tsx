@@ -106,7 +106,7 @@ function NamasteMascotAnimation({ isCompleted, customerName }: { isCompleted: bo
           Thank You, {customerName || "Guest"}!
         </h3>
         <p className="text-xs text-gray-300 mt-1 max-w-xs leading-relaxed mx-auto">
-          We loved hosting you at The Spice Route. Have a safe journey and see you again soon!
+          We loved hosting you. Have a safe journey and see you again soon!
         </p>
       </div>
     </div>
@@ -136,6 +136,9 @@ export default function CustomerExitPassPage() {
     useAppSelector((state) => state.auth.customerName) ||
     session?.customer_name ||
     "Guest Diner";
+  const restaurantName =
+    useAppSelector((state) => state.auth.restaurantName) ||
+    "TableOS Restaurant";
   const isCompleted =
     isSessionGone ||
     session?.status === "COMPLETED" ||
@@ -217,7 +220,7 @@ export default function CustomerExitPassPage() {
         <div className="p-6 flex flex-col items-center text-center gap-4">
           <div>
             <h2 className="text-xl font-black text-gray-100 font-display tracking-tight">
-              The Spice Route
+              {restaurantName}
             </h2>
             <p className="text-xs text-gray-300 mt-0.5">
               Verified Dining Clearance • Bill Settled
@@ -326,7 +329,7 @@ export default function CustomerExitPassPage() {
       </div>
 
       <div className="text-center text-[11px] text-gray-500 pt-2">
-        Thank you for dining with The Spice Route. We look forward to hosting you again!
+        Thank you for dining with us! We look forward to hosting you again.
       </div>
     </div>
   );

@@ -48,6 +48,8 @@ export default function CustomerDineLayout({
     pollingInterval: 3000,
   });
 
+  const restaurantName = useAppSelector((state) => state.auth.restaurantName) || (sessionData?.session as any)?.restaurant_name || "Restaurant";
+
   const isSessionGone =
     (sessionError as any)?.status === 410 ||
     JSON.stringify(sessionError || {}).includes("session has closed");
@@ -181,7 +183,7 @@ export default function CustomerDineLayout({
           </div>
           <div className="flex flex-col">
             <span className="text-xs font-bold text-gray-100 font-display flex items-center gap-1.5">
-              The Spice Route
+              {restaurantName}
               <span className="w-1 h-1 rounded-full bg-gray-500" />
               <span className="text-[11px] font-normal text-gray-300">Table {tableNumber}</span>
             </span>

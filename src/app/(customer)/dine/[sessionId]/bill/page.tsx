@@ -289,7 +289,7 @@ export default function CustomerBillPage() {
           </Link>
 
           <p className="text-xs text-gray-400 italic pt-1">
-            Thank you for dining with us at The Spice Route! Have a wonderful day ahead.
+            Thank you for dining with us! Have a wonderful day ahead.
           </p>
         </div>
 

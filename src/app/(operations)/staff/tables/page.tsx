@@ -1,15 +1,18 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   useGetStaffTablesQuery,
   useVerifyFirstOrderMutation,
   useForceCloseSessionMutation,
+  useStartStaffSessionMutation,
 } from "@/store/api/staffApi";
 import { useGetSessionQuery } from "@/store/api/customerApi";
 import { formatMoney } from "@/lib/money";
 import { addToast } from "@/store/slices/uiSlice";
-import { useAppDispatch } from "@/store";
+import { useAppDispatch, useAppSelector } from "@/store";
 import { translateBackendError } from "@/lib/errors";
 import { humanizeStatus } from "@/lib/statusLabels";
 import { Card } from "@/components/ui/Card";
@@ -17,7 +20,6 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Drawer } from "@/components/ui/Drawer";
 import { Input } from "@/components/ui/Input";
-import { Skeleton } from "@/components/ui/Skeleton";
 import {
   Layers,
   KeyRound,
@@ -29,35 +31,60 @@ import {
   Utensils,
   AlertTriangle,
   Users,
+  Plus,
+  ArrowRight,
+  UserPlus,
+  Phone,
+  ShoppingCart,
+  X,
+  Sparkles,
 } from "lucide-react";
 
-
-
 export default function StaffTablesFloorPage() {
+  const router = useRouter();
   const dispatch = useAppDispatch();
+  const restaurantName = useAppSelector((state) => state.auth.restaurantName) || "Restaurant";
+  const restaurantId = useAppSelector((state) => state.auth.restaurantId) || undefined;
+
   const { data: liveTables, isLoading, refetch } = useGetStaffTablesQuery(
-    undefined,
-    { pollingInterval: 4000 }
+    restaurantId,
+    { pollingInterval: 3500 }
   );
 
+  const [filterMode, setFilterMode] = useState<"ALL" | "AVAILABLE" | "OCCUPIED" | "BILL">("ALL");
+
+  // Selected table for side drawer view
   const [selectedTable, setSelectedTable] = useState<{
     tableNumber: string;
     tableId: string;
+    tableToken?: string;
     sessionId?: string;
     status?: string;
     customerName?: string;
     customerPhone?: string;
     guestCount?: number;
+    isOccupied?: boolean;
   } | null>(null);
 
+  // Walk-in Guest Seating Modal State (Issue 7)
+  const [seatGuestTable, setSeatGuestTable] = useState<{
+    tableNumber: string;
+    tableId: string;
+    tableToken?: string;
+  } | null>(null);
+  const [walkinName, setWalkinName] = useState("Walk-in Diner");
+  const [walkinPhone, setWalkinPhone] = useState("");
+  const [walkinGuestCount, setWalkinGuestCount] = useState(2);
+  const [isSeating, setIsSeating] = useState(false);
+
+  // Drawer Action States
   const [otpInput, setOtpInput] = useState("");
   const [forceCloseReason, setForceCloseReason] = useState("");
   const [showForceCloseConfirm, setShowForceCloseConfirm] = useState(false);
 
-  const [verifyFirstOrder, { isLoading: isVerifying }] =
-    useVerifyFirstOrderMutation();
-  const [forceCloseSession, { isLoading: isClosing }] =
-    useForceCloseSessionMutation();
+  const [verifyFirstOrder, { isLoading: isVerifying }] = useVerifyFirstOrderMutation();
+  const [forceCloseSession, { isLoading: isClosing }] = useForceCloseSessionMutation();
+  const [startStaffSession] = useStartStaffSessionMutation();
 
   // If a table is selected and has active session, query session details
   const activeSessionId = selectedTable?.sessionId || "";
@@ -65,6 +92,47 @@ export default function StaffTablesFloorPage() {
     activeSessionId,
     { skip: !selectedTable?.sessionId }
   );
+
+  const handleStartWalkinSession = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!seatGuestTable) return;
+
+    setIsSeating(true);
+    try {
+      const sess = await startStaffSession({
+        table_number: seatGuestTable.tableNumber,
+        table_id: seatGuestTable.tableId,
+        customer_name: walkinName.trim() || "Walk-in Diner",
+        customer_phone: walkinPhone.trim(),
+        guest_count: Number(walkinGuestCount) || 2,
+      }).unwrap();
+
+      dispatch(
+        addToast({
+          type: "success",
+          title: `Table ${seatGuestTable.tableNumber} Seated!`,
+          message: `Session started for ${walkinName || "Walk-in Diner"} (${walkinGuestCount} guests). Table is verified & ready for orders.`,
+        })
+      );
+
+      setSeatGuestTable(null);
+      setWalkinName("Walk-in Diner");
+      setWalkinPhone("");
+      setWalkinGuestCount(2);
+      refetch();
+    } catch (err: any) {
+      console.error("Failed to start walk-in session:", err);
+      dispatch(
+        addToast({
+          type: "error",
+          title: "Seating Failed",
+          message: translateBackendError(err) || "Could not start session for this table.",
+        })
+      );
+    } finally {
+      setIsSeating(false);
+    }
+  };
 
   const handleVerifyOtp = async () => {
     if (!otpInput.trim() || !selectedTable?.sessionId) return;
@@ -78,14 +146,13 @@ export default function StaffTablesFloorPage() {
         addToast({
           type: "success",
           title: "Table Verified!",
-          message: `Table ${selectedTable.tableNumber} is now verified and active. Orders routed to KDS.`,
+          message: `Table ${selectedTable.tableNumber} is verified. Orders released to kitchen.`,
         })
       );
       setOtpInput("");
       refetch();
       refetchSession();
     } catch (err) {
-      console.error("OTP verification failed:", err);
       dispatch(
         addToast({
           type: "error",
@@ -108,14 +175,13 @@ export default function StaffTablesFloorPage() {
         addToast({
           type: "warning",
           title: "Session Terminated",
-          message: `Table ${selectedTable.tableNumber} has been freed.`,
+          message: `Table ${selectedTable.tableNumber} has been cleared and marked available.`,
         })
       );
       setSelectedTable(null);
       setShowForceCloseConfirm(false);
       refetch();
     } catch (err) {
-      console.error("Force close failed:", err);
       dispatch(
         addToast({
           type: "error",
@@ -126,328 +192,555 @@ export default function StaffTablesFloorPage() {
     }
   };
 
-  // Live tables returned by backend
-  const tablesToRender = (liveTables || []).map((t) => ({
-    table_id: t.table_id,
-    table_number: t.table_number,
-    isOccupied: t.is_occupied ?? false,
-    status: t.session_status ?? "FREE",
-    sessionId: t.active_session_id,
-    runningTotalMinor: t.running_total_minor ?? 0,
-    customerName: t.customer_name || "",
-    customerPhone: t.customer_phone || "",
-    guestCount: t.guest_count || 0,
-  }));
+  // Live tables formatted
+  const tablesList = useMemo(() => {
+    return (liveTables || []).map((t, idx) => ({
+      table_id: t.table_id || `tbl-${idx + 1}`,
+      table_number: t.table_number || `Table ${idx + 1}`,
+      table_token: (t as any).table_token,
+      isOccupied: t.is_occupied ?? Boolean(t.active_session_id),
+      status: t.session_status ?? (t.is_occupied ? "OPEN_VERIFIED" : "FREE"),
+      sessionId: t.active_session_id,
+      runningTotalMinor: t.running_total_minor ?? 0,
+      customerName: t.customer_name || "",
+      customerPhone: t.customer_phone || "",
+      guestCount: t.guest_count || 0,
+      assistanceReason: (t as any).assistance_reason,
+    }));
+  }, [liveTables]);
+
+  const filteredTables = useMemo(() => {
+    if (filterMode === "AVAILABLE") return tablesList.filter((t) => !t.isOccupied);
+    if (filterMode === "OCCUPIED") return tablesList.filter((t) => t.isOccupied);
+    if (filterMode === "BILL") return tablesList.filter((t) => t.status === "AWAITING_PAYMENT");
+    return tablesList;
+  }, [tablesList, filterMode]);
+
+  const totalCount = tablesList.length;
+  const occupiedCount = tablesList.filter((t) => t.isOccupied).length;
+  const availableCount = tablesList.filter((t) => !t.isOccupied).length;
+  const assistanceCount = tablesList.filter((t) => Boolean(t.assistanceReason)).length;
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Top Controls */}
+      {/* Top Header & Metrics Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold font-display text-gray-100 flex items-center gap-2">
+          <h1 className="text-2xl font-bold font-display text-gray-100 flex items-center gap-2.5">
             <Layers className="w-6 h-6 text-primary" />
-            Live Floor Plan
+            Floor Tables & Seating Management
           </h1>
-          <p className="text-xs text-gray-400">
-            Real-time occupancy, first-order OTP verification & table status
+          <p className="text-xs text-gray-400 mt-1">
+            Real-time table occupancy, walk-in guest check-in, and table billing status for{" "}
+            <strong className="text-gray-200">{restaurantName}</strong>.
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5">
           <Button
             variant="subtle"
             size="sm"
             onClick={() => refetch()}
             leftIcon={<RefreshCw className="w-3.5 h-3.5" />}
+            className="font-mono text-xs"
           >
             Refresh Floor
+          </Button>
+
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={() => router.push("/staff/orders")}
+            leftIcon={<ShoppingCart className="w-4 h-4" />}
+            className="font-bold text-xs"
+          >
+            Take Order
           </Button>
         </div>
       </div>
 
-      {/* Legend */}
-      <div className="flex flex-wrap items-center gap-4 p-3 rounded-2xl bg-surface border border-surface-border text-xs text-gray-300">
-        <div className="flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded bg-surface-subtle border border-surface-border" />
-          <span>Available / Free</span>
+      {/* KPI Stats Strip */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="p-4 rounded-2xl bg-surface border border-surface-border flex flex-col gap-1">
+          <span className="text-[10px] font-mono text-gray-400 uppercase">Total Floor Tables</span>
+          <span className="text-2xl font-black font-mono text-gray-100">{totalCount}</span>
+          <span className="text-[11px] text-gray-500">Physical dining tables</span>
         </div>
-        <div className="flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded bg-amber-500/20 border border-amber-500 animate-pulse" />
-          <span>Unverified (Needs OTP)</span>
+
+        <div className="p-4 rounded-2xl bg-surface border border-surface-border flex flex-col gap-1">
+          <span className="text-[10px] font-mono text-gray-400 uppercase">Available / Empty</span>
+          <span className="text-2xl font-black font-mono text-emerald-400">{availableCount}</span>
+          <span className="text-[11px] text-emerald-500/80">Ready to seat guests</span>
         </div>
-        <div className="flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded bg-emerald-500/20 border border-emerald-500" />
-          <span>Verified Active</span>
+
+        <div className="p-4 rounded-2xl bg-surface border border-surface-border flex flex-col gap-1">
+          <span className="text-[10px] font-mono text-gray-400 uppercase">Currently Occupied</span>
+          <span className="text-2xl font-black font-mono text-amber-400">{occupiedCount}</span>
+          <span className="text-[11px] text-amber-500/80">Active dining sessions</span>
         </div>
-        <div className="flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded bg-sky-500/20 border border-sky-500" />
-          <span>Awaiting Payment</span>
+
+        <div className="p-4 rounded-2xl bg-surface border border-surface-border flex flex-col gap-1">
+          <span className="text-[10px] font-mono text-gray-400 uppercase">Waiter Calls</span>
+          <span className={`text-2xl font-black font-mono ${assistanceCount > 0 ? "text-red-400 animate-pulse" : "text-gray-400"}`}>
+            {assistanceCount}
+          </span>
+          <span className="text-[11px] text-gray-500">Service requests</span>
         </div>
       </div>
 
-      {/* Visual Table Grid */}
-      {tablesToRender.length === 0 && !isLoading ? (
-        <div className="p-12 text-center rounded-2xl bg-surface border border-surface-border">
-          <Layers className="w-12 h-12 text-gray-500 mx-auto mb-3" />
-          <h3 className="text-lg font-semibold text-gray-200">No Live Tables Found</h3>
-          <p className="text-xs text-gray-400 mt-1 max-w-sm mx-auto">
-            No dining tables are currently provisioned for this restaurant in the backend. Tables provisioned during onboarding will appear here.
-          </p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-          {tablesToRender.map((table) => {
-          const isUnverified = table.status === "OPEN";
-          const isVerified = table.status === "OPEN_VERIFIED";
-          const isAwaitingPayment = table.status === "AWAITING_PAYMENT";
-          const isFree = table.status === "FREE" || !table.isOccupied;
+      {/* Floor Filter Tabs */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-1">
+        <button
+          type="button"
+          onClick={() => setFilterMode("ALL")}
+          className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+            filterMode === "ALL"
+              ? "bg-primary text-black font-extrabold shadow-sm"
+              : "bg-surface-subtle text-gray-300 border border-surface-border"
+          }`}
+        >
+          All Tables ({tablesList.length})
+        </button>
 
-          let borderStyle = "border-surface-border hover:border-gray-500";
-          let badgeVariant: "default" | "amber" | "success" | "blue" = "default";
-          let statusText = "Available";
+        <button
+          type="button"
+          onClick={() => setFilterMode("AVAILABLE")}
+          className={`px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all ${
+            filterMode === "AVAILABLE"
+              ? "bg-emerald-500 text-black font-extrabold shadow-sm"
+              : "bg-surface-subtle text-gray-300 border border-surface-border"
+          }`}
+        >
+          <span className="w-2 h-2 rounded-full bg-emerald-400" />
+          <span>Available ({availableCount})</span>
+        </button>
 
-          if (isUnverified) {
-            borderStyle = "border-amber-500/80 bg-amber-500/5 shadow-glow";
-            badgeVariant = "amber";
-            statusText = "Enter OTP";
-          } else if (isVerified) {
-            borderStyle = "border-emerald-500/60 bg-emerald-500/5";
-            badgeVariant = "success";
-            statusText = "Active Dining";
-          } else if (isAwaitingPayment) {
-            borderStyle = "border-sky-500/60 bg-sky-500/5";
-            badgeVariant = "blue";
-            statusText = "Bill Requested";
-          }
+        <button
+          type="button"
+          onClick={() => setFilterMode("OCCUPIED")}
+          className={`px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all ${
+            filterMode === "OCCUPIED"
+              ? "bg-amber-500 text-black font-extrabold shadow-sm"
+              : "bg-surface-subtle text-gray-300 border border-surface-border"
+          }`}
+        >
+          <span className="w-2 h-2 rounded-full bg-amber-400" />
+          <span>Occupied ({occupiedCount})</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setFilterMode("BILL")}
+          className={`px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all ${
+            filterMode === "BILL"
+              ? "bg-sky-500 text-black font-extrabold shadow-sm"
+              : "bg-surface-subtle text-gray-300 border border-surface-border"
+          }`}
+        >
+          <span className="w-2 h-2 rounded-full bg-sky-400" />
+          <span>Bill Requested ({tablesList.filter((t) => t.status === "AWAITING_PAYMENT").length})</span>
+        </button>
+      </div>
+
+      {/* Tables Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        {filteredTables.map((t) => {
+          const isOccupied = t.isOccupied;
+          const isAwaitingOtp = t.status === "OPEN";
+          const isAwaitingBill = t.status === "AWAITING_PAYMENT";
+          const hasAssistance = Boolean(t.assistanceReason);
 
           return (
             <Card
-              key={table.table_id}
-              hoverable
-              onClick={() =>
-                setSelectedTable({
-                  tableNumber: table.table_number,
-                  tableId: table.table_id,
-                  sessionId: table.sessionId,
-                  status: table.status,
-                  customerName: table.customerName,
-                  customerPhone: table.customerPhone,
-                  guestCount: table.guestCount,
-                })
-              }
-              className={`p-5 flex flex-col justify-between min-h-[160px] cursor-pointer transition-all ${borderStyle}`}
+              key={t.table_id}
+              className={`p-4 rounded-2xl flex flex-col justify-between gap-4 border transition-all duration-200 shadow-md ${
+                hasAssistance
+                  ? "bg-red-500/10 border-red-500/60 shadow-red-500/10"
+                  : isOccupied
+                  ? "bg-surface border-surface-border hover:border-amber-400/50"
+                  : "bg-surface/60 border-surface-border/70 hover:border-emerald-500/50"
+              }`}
             >
+              {/* Card Top: Number & Status Badge */}
               <div className="flex items-start justify-between">
-                <div className="w-10 h-10 rounded-xl bg-surface-subtle border border-surface-border flex items-center justify-center font-bold text-base text-gray-100 font-display">
-                  {table.table_number}
+                <div className="flex items-center gap-2.5">
+                  <div
+                    className={`w-10 h-10 rounded-xl font-black font-display text-sm flex items-center justify-center border shadow-sm ${
+                      isOccupied
+                        ? "bg-amber-500/20 text-amber-300 border-amber-500/40"
+                        : "bg-emerald-500/20 text-emerald-300 border-emerald-500/40"
+                    }`}
+                  >
+                    T{t.table_number.replace(/\D/g, "") || t.table_number}
+                  </div>
+                  <div>
+                    <span className="font-bold text-sm text-gray-100 font-display block">
+                      {t.table_number}
+                    </span>
+                    <span className="text-[10px] text-gray-400 font-mono">
+                      {isOccupied ? "Active Session" : "Vacant Table"}
+                    </span>
+                  </div>
                 </div>
-                <Badge variant={badgeVariant} size="sm" dot={!isFree}>
-                  {statusText}
+
+                <Badge
+                  variant={
+                    isOccupied
+                      ? isAwaitingOtp
+                        ? "amber"
+                        : isAwaitingBill
+                        ? "blue"
+                        : "gold"
+                      : "success"
+                  }
+                  size="sm"
+                >
+                  {isOccupied
+                    ? isAwaitingOtp
+                      ? "Awaiting OTP"
+                      : isAwaitingBill
+                      ? "Bill Asked"
+                      : "Occupied"
+                    : "Available"}
                 </Badge>
               </div>
 
-              <div className="flex flex-col gap-1 pt-3 border-t border-surface-border/40 mt-3">
-                {isFree ? (
-                  <span className="text-xs text-gray-500">Ready for diner QR scan</span>
-                ) : (
+              {/* Service Call Alert Banner if calling */}
+              {hasAssistance && (
+                <div className="p-2 rounded-xl bg-red-500/20 border border-red-500/40 flex items-center gap-2 text-red-200 text-xs font-bold animate-pulse">
+                  <span className="text-sm">🛎️</span>
+                  <span className="truncate">"{t.assistanceReason}"</span>
+                </div>
+              )}
+
+              {/* Middle: Details depending on state */}
+              {isOccupied ? (
+                <div className="p-3 rounded-xl bg-surface-subtle border border-surface-border/60 flex flex-col gap-1.5 text-xs">
+                  <div className="flex justify-between items-center text-gray-300">
+                    <span className="text-gray-400">Guest:</span>
+                    <span className="font-bold text-gray-100 truncate max-w-[120px]">
+                      {t.customerName || "Diner"}
+                    </span>
+                  </div>
+                  {t.guestCount > 0 && (
+                    <div className="flex justify-between items-center text-gray-300">
+                      <span className="text-gray-400">Covers:</span>
+                      <span className="font-mono text-primary font-bold">
+                        {t.guestCount} Guests
+                      </span>
+                    </div>
+                  )}
+                  <div className="flex justify-between items-center text-gray-300 pt-1 border-t border-surface-border/40">
+                    <span className="text-gray-400">Running Total:</span>
+                    <span className="font-mono font-black text-amber-400 text-sm">
+                      {formatMoney(t.runningTotalMinor)}
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                /* Empty Table State: Ready for Walk-in Guests (Issue 7) */
+                <div className="p-4 rounded-xl bg-emerald-500/5 border border-emerald-500/20 flex flex-col items-center justify-center text-center gap-1.5 min-h-[90px]">
+                  <Utensils className="w-5 h-5 text-emerald-400/80 mb-0.5" />
+                  <span className="text-xs font-bold text-emerald-300">
+                    Table Ready for Dining
+                  </span>
+                  <span className="text-[10px] text-gray-400">
+                    Guests can scan QR or waiter can seat directly
+                  </span>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex items-center gap-2 pt-1 border-t border-surface-border/60">
+                {isOccupied ? (
                   <>
-                    <div className="flex items-center justify-between text-[11px] text-gray-400">
-                      <span className="flex items-center gap-1 font-mono">
-                        <Users className="w-3 h-3 text-primary" />
-                        {table.guestCount ? `${table.guestCount} Guests` : "Seated"}
-                      </span>
-                      {table.customerName && (
-                        <span className="font-semibold text-gray-300 truncate max-w-[100px]">
-                          {table.customerName}
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex items-baseline justify-between mt-0.5">
-                      <span className="text-xs text-gray-400">Total</span>
-                      <span className="text-base font-extrabold font-mono text-primary">
-                        {formatMoney(table.runningTotalMinor)}
-                      </span>
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setSelectedTable({
+                          tableNumber: t.table_number,
+                          tableId: t.table_id,
+                          tableToken: t.table_token,
+                          sessionId: t.sessionId,
+                          status: t.status,
+                          customerName: t.customerName,
+                          customerPhone: t.customerPhone,
+                          guestCount: t.guestCount,
+                          isOccupied: true,
+                        })
+                      }
+                      className="flex-1 py-2 px-3 rounded-xl bg-surface-subtle hover:bg-surface-hover border border-surface-border text-gray-200 text-xs font-bold transition-all text-center"
+                    >
+                      Manage Table
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => router.push(`/staff/orders?table=${t.table_number}`)}
+                      className="py-2 px-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-black text-xs font-extrabold transition-all flex items-center justify-center gap-1"
+                    >
+                      <Plus className="w-3.5 h-3.5" /> Order
+                    </button>
                   </>
+                ) : (
+                  /* Issue 7: Walk-in Seat Guests Button */
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setSeatGuestTable({
+                        tableNumber: t.table_number,
+                        tableId: t.table_id,
+                        tableToken: t.table_token,
+                      })
+                    }
+                    className="w-full py-2.5 px-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-extrabold transition-all flex items-center justify-center gap-1.5 shadow-md shadow-emerald-500/20"
+                  >
+                    <UserPlus className="w-4 h-4" />
+                    <span>Seat Walk-In Guests</span>
+                  </button>
                 )}
               </div>
             </Card>
           );
         })}
-        </div>
-      )}
+      </div>
 
-      {/* Table Detail & Verification Drawer */}
-      <Drawer
-        isOpen={!!selectedTable}
-        onClose={() => setSelectedTable(null)}
-        position="right"
-        title={`Table ${selectedTable?.tableNumber} Management`}
-      >
-        {selectedTable && (
-          <div className="flex flex-col gap-6">
-            {/* Status overview */}
-            <div className="flex items-center justify-between p-4 rounded-2xl bg-surface-subtle border border-surface-border">
-              <div>
-                <span className="text-[11px] text-gray-400 uppercase font-semibold">
-                  Current Session
-                </span>
-                <div className="text-xs font-mono text-gray-200 mt-0.5">
-                  {selectedTable.sessionId
-                    ? `${selectedTable.sessionId.substring(0, 16)}...`
-                    : "No Active Session"}
+      {/* WALK-IN GUEST SEATING MODAL (Issue 7: For customers who don't use smartphones) */}
+      {seatGuestTable && (
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-surface border border-surface-border rounded-3xl p-6 max-w-sm w-full shadow-2xl flex flex-col gap-4 relative animate-scaleUp">
+            <div className="flex items-center justify-between border-b border-surface-border pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
+                  <UserPlus className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold font-display text-gray-100">
+                    Seat Guests • {seatGuestTable.tableNumber}
+                  </h3>
+                  <span className="text-[11px] text-gray-400">
+                    Initiate dining session on empty table
+                  </span>
                 </div>
               </div>
-              <Badge
-                variant={
-                  selectedTable.status === "OPEN"
-                    ? "amber"
-                    : selectedTable.status === "OPEN_VERIFIED"
-                    ? "success"
-                    : "default"
-                }
+              <button
+                type="button"
+                onClick={() => setSeatGuestTable(null)}
+                className="text-gray-400 hover:text-white"
               >
-                {humanizeStatus(selectedTable.status || "FREE")}
-              </Badge>
+                <X className="w-4 h-4" />
+              </button>
             </div>
 
-            {/* Diner & Party Info Section */}
-            {selectedTable.sessionId && (
-              <div className="p-4 rounded-2xl bg-surface-subtle border border-surface-border flex flex-col gap-2">
-                <span className="text-[11px] text-gray-400 uppercase font-semibold flex items-center gap-1.5">
-                  <Users className="w-3.5 h-3.5 text-primary" />
-                  Diner & Party Seating Info
-                </span>
-                <div className="flex items-center justify-between text-xs text-gray-200">
-                  <span className="text-gray-400">Diner Name:</span>
-                  <span className="font-bold">{selectedTable.customerName || (sessionDetail?.session as any)?.customer_name || "Guest Diner"}</span>
-                </div>
-                <div className="flex items-center justify-between text-xs text-gray-200">
-                  <span className="text-gray-400">Phone:</span>
-                  <span className="font-mono">{selectedTable.customerPhone || (sessionDetail?.session as any)?.customer_phone || "Not Provided"}</span>
-                </div>
-                <div className="flex items-center justify-between text-xs text-gray-200">
-                  <span className="text-gray-400">Party Size:</span>
-                  <span className="font-bold text-primary">{selectedTable.guestCount || (sessionDetail?.session as any)?.guest_count || 2} Guests</span>
-                </div>
-              </div>
-            )}
-
-            {/* First-Order OTP Verification Section */}
-            {selectedTable.sessionId && (
-              <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex flex-col gap-3">
-                <div className="flex items-center gap-2">
-                  <KeyRound className="w-5 h-5 text-amber-400" />
-                  <h4 className="text-xs font-bold text-amber-200 uppercase tracking-wider">
-                    First-Order Table Verification
-                  </h4>
-                </div>
-                <p className="text-xs text-gray-300">
-                  Ask the diner for the 4-digit verification code shown on their screen.
-                </p>
-                <div className="flex gap-2 mt-1">
-                  <Input
-                    placeholder="Enter 4-digit OTP"
-                    value={otpInput}
-                    onChange={(e) => setOtpInput(e.target.value)}
-                    maxLength={4}
-                    className="font-mono text-center tracking-widest text-lg font-bold"
-                  />
-                  <Button
-                    variant="gold"
-                    onClick={handleVerifyOtp}
-                    isLoading={isVerifying}
-                    disabled={otpInput.length !== 4}
-                  >
-                    Verify
-                  </Button>
-                </div>
-              </div>
-            )}
-
-            {/* Active Orders List in Drawer */}
-            {sessionDetail?.orders && sessionDetail.orders.length > 0 && (
-              <div className="flex flex-col gap-3">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-gray-300">
-                  Active Table Orders ({sessionDetail.orders.length})
-                </h4>
-                <div className="flex flex-col gap-2">
-                  {sessionDetail.orders.map((order, idx) => (
-                    <div
-                      key={order.id}
-                      className="p-3 rounded-xl bg-surface border border-surface-border text-xs flex flex-col gap-1.5"
+            <form onSubmit={handleStartWalkinSession} className="flex flex-col gap-3.5">
+              <div>
+                <label className="text-xs font-bold text-gray-300 block mb-1">
+                  Number of Guests (Covers)
+                </label>
+                <div className="grid grid-cols-4 gap-2">
+                  {[1, 2, 4, 6].map((num) => (
+                    <button
+                      key={num}
+                      type="button"
+                      onClick={() => setWalkinGuestCount(num)}
+                      className={`py-2 rounded-xl text-xs font-mono font-bold border transition-all ${
+                        walkinGuestCount === num
+                          ? "bg-emerald-500 text-black border-emerald-400 shadow-sm"
+                          : "bg-surface-subtle text-gray-300 border-surface-border"
+                      }`}
                     >
-                      <div className="flex items-center justify-between">
-                        <span className="font-mono font-bold text-gray-300">
-                          Order #{idx + 1}
-                        </span>
-                        <Badge variant="default" size="sm">
-                          {humanizeStatus(order.status)}
-                        </Badge>
-                      </div>
-                      <div className="flex flex-col gap-1 text-gray-400">
-                        {order.items.map((i) => (
-                          <div key={i.id} className="flex justify-between">
-                            <span>
-                              {i.quantity}x {i.item_name_snapshot}
-                            </span>
-                            <span className="font-mono">
-                              {formatMoney(i.line_total.amount_minor_units)}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
+                      {num} {num === 1 ? "Person" : "Guests"}
+                    </button>
                   ))}
                 </div>
               </div>
-            )}
 
-            {/* Force Close Override */}
-            {selectedTable.sessionId && (
-              <div className="pt-4 border-t border-surface-border flex flex-col gap-3">
-                <span className="text-xs font-bold text-red-400 uppercase tracking-wider">
-                  Manager Overrides
+              <div>
+                <label className="text-xs font-bold text-gray-300 block mb-1">
+                  Guest Name (Optional)
+                </label>
+                <input
+                  type="text"
+                  value={walkinName}
+                  onChange={(e) => setWalkinName(e.target.value)}
+                  placeholder="e.g. Walk-in Diner"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-surface-subtle border border-surface-border text-sm text-gray-100 focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-gray-300 block mb-1">
+                  Mobile Number (Optional)
+                </label>
+                <div className="relative">
+                  <input
+                    type="tel"
+                    value={walkinPhone}
+                    onChange={(e) => setWalkinPhone(e.target.value)}
+                    placeholder="e.g. 9876543210"
+                    className="w-full pl-9 pr-3.5 py-2.5 rounded-xl bg-surface-subtle border border-surface-border text-sm text-gray-100 focus:outline-none focus:border-emerald-500 font-mono"
+                  />
+                  <Phone className="w-4 h-4 text-gray-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                </div>
+              </div>
+
+              <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs flex items-start gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                <span>
+                  This creates an immediately verified session. You can take orders on behalf of guests who do not have a smartphone.
                 </span>
-                {!showForceCloseConfirm ? (
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setSeatGuestTable(null)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  variant="primary"
+                  size="sm"
+                  disabled={isSeating}
+                >
+                  {isSeating ? "Seating Table..." : "Seat & Activate Table"}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* TABLE MANAGEMENT DRAWER */}
+      <Drawer
+        isOpen={Boolean(selectedTable)}
+        onClose={() => {
+          setSelectedTable(null);
+          setShowForceCloseConfirm(false);
+        }}
+        title={`Table Operations — ${selectedTable?.tableNumber}`}
+      >
+        {selectedTable && (
+          <div className="flex flex-col gap-5 text-gray-100">
+            {/* Status Strip */}
+            <div className="p-4 rounded-2xl bg-surface-subtle border border-surface-border flex items-center justify-between">
+              <div>
+                <span className="text-xs text-gray-400 block font-mono">
+                  Current Session
+                </span>
+                <span className="font-bold text-gray-100 text-sm">
+                  {selectedTable.customerName || "Diner Guest"}
+                </span>
+              </div>
+              <Badge variant="amber" size="sm">
+                {humanizeStatus(selectedTable.status || "ACTIVE")}
+              </Badge>
+            </div>
+
+            {/* Quick Actions */}
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => {
+                  router.push(`/staff/orders?table=${selectedTable.tableNumber}`);
+                }}
+                leftIcon={<Plus className="w-4 h-4" />}
+                className="font-bold"
+              >
+                Add Dishes
+              </Button>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  router.push(`/staff/payments`);
+                }}
+                leftIcon={<Receipt className="w-4 h-4" />}
+              >
+                Collect Bill
+              </Button>
+            </div>
+
+            {/* Verify First Order OTP Section */}
+            {selectedTable.status === "OPEN" && (
+              <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex flex-col gap-3">
+                <span className="text-xs font-bold text-amber-300 flex items-center gap-1.5">
+                  <KeyRound className="w-4 h-4" />
+                  Verify Table OTP
+                </span>
+                <p className="text-xs text-gray-300">
+                  Ask guests for the 4-digit code on their screen or bypass for staff-attended tables.
+                </p>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Enter 4-digit OTP or BYPASS"
+                    value={otpInput}
+                    onChange={(e) => setOtpInput(e.target.value)}
+                    className="flex-1 font-mono text-sm"
+                  />
                   <Button
-                    variant="danger"
+                    variant="primary"
                     size="sm"
-                    onClick={() => setShowForceCloseConfirm(true)}
+                    disabled={isVerifying || !otpInput.trim()}
+                    onClick={handleVerifyOtp}
                   >
-                    Force-Close / Free Table
+                    {isVerifying ? "Verifying..." : "Verify"}
                   </Button>
-                ) : (
-                  <div className="p-3.5 rounded-xl bg-red-500/10 border border-red-500/30 flex flex-col gap-2">
-                    <p className="text-xs text-red-300">
-                      Are you sure you want to terminate this active dining session?
-                    </p>
-                    <Input
-                      placeholder="Reason (e.g. Walkout, Duplicate scan)"
-                      value={forceCloseReason}
-                      onChange={(e) => setForceCloseReason(e.target.value)}
-                    />
-                    <div className="flex gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setShowForceCloseConfirm(false)}
-                      >
-                        Cancel
-                      </Button>
-                      <Button
-                        variant="danger"
-                        size="sm"
-                        isLoading={isClosing}
-                        onClick={handleForceClose}
-                      >
-                        Confirm Termination
-                      </Button>
-                    </div>
-                  </div>
-                )}
+                </div>
               </div>
             )}
+
+            {/* Force Close Table Emergency Action */}
+            <div className="pt-4 border-t border-surface-border flex flex-col gap-2">
+              <span className="text-xs text-gray-400 font-mono uppercase">
+                Floor Controls
+              </span>
+              {!showForceCloseConfirm ? (
+                <Button
+                  variant="danger"
+                  size="sm"
+                  onClick={() => setShowForceCloseConfirm(true)}
+                  leftIcon={<ShieldAlert className="w-4 h-4" />}
+                >
+                  Clear & Force Close Table
+                </Button>
+              ) : (
+                <div className="p-3 rounded-2xl bg-red-500/10 border border-red-500/30 flex flex-col gap-2.5">
+                  <span className="text-xs font-bold text-red-300">
+                    Confirm Force Close? Table will be freed.
+                  </span>
+                  <input
+                    type="text"
+                    placeholder="Reason (e.g. Guest walked out, cash paid offline)"
+                    value={forceCloseReason}
+                    onChange={(e) => setForceCloseReason(e.target.value)}
+                    className="w-full px-3 py-1.5 rounded-xl bg-black border border-red-500/40 text-xs text-gray-100"
+                  />
+                  <div className="flex justify-end gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowForceCloseConfirm(false)}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      variant="danger"
+                      size="sm"
+                      disabled={isClosing}
+                      onClick={handleForceClose}
+                    >
+                      {isClosing ? "Closing..." : "Yes, Force Clear"}
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         )}
       </Drawer>
