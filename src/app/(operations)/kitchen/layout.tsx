@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { useAppSelector } from "@/store";
 import { RoleGuard } from "@/components/auth/RoleGuard";
 import { StaffRole } from "@/types/enums";
 import Link from "next/link";
@@ -11,6 +12,8 @@ export default function KitchenLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const restaurantName = useAppSelector((state) => state.auth.restaurantName) || "Restaurant";
+
   return (
     <RoleGuard
       allowedRoles={[
@@ -36,7 +39,7 @@ export default function KitchenLayout({
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
             </h1>
             <p className="text-[11px] text-gray-400 font-mono">
-              The Spice Route • Active Line Cook Station
+              {restaurantName} • Active Line Cook Station
             </p>
           </div>
         </div>
