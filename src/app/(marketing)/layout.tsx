@@ -71,7 +71,7 @@ export default function MarketingLayout({
               Onboard Restaurant
             </Link>
             <Link
-              href="/staff/login"
+              href="/login?tab=staff"
               className="px-3.5 py-2 text-xs font-bold text-amber-400 hover:text-white bg-amber-500/10 hover:bg-amber-500/20 rounded-xl border border-amber-500/30 transition-all font-mono hidden sm:inline-flex"
             >
               Staff Terminal

@@ -10,6 +10,7 @@ interface AuthState {
   employeeId: string | null;
   restaurantId: string;
   restaurantName: string | null;
+  restaurantSlug: string | null;
   userName: string | null;
   // Customer session state
   sessionToken: string | null;
@@ -31,8 +32,9 @@ function getInitialState(): AuthState {
       isPlatformAdmin: false,
       staffId: null,
       employeeId: null,
-      restaurantId: DEFAULT_RESTAURANT_ID,
-      restaurantName: process.env.NEXT_PUBLIC_DEFAULT_RESTAURANT_NAME || null,
+      restaurantId: "",
+      restaurantName: null,
+      restaurantSlug: null,
       userName: null,
       sessionToken: null,
       activeSessionId: null,
@@ -48,8 +50,9 @@ function getInitialState(): AuthState {
     isPlatformAdmin: localStorage.getItem("tableos_is_platform") === "true",
     staffId: localStorage.getItem("tableos_staff_id"),
     employeeId: localStorage.getItem("tableos_employee_id"),
-    restaurantId: localStorage.getItem("tableos_restaurant_id") || DEFAULT_RESTAURANT_ID,
-    restaurantName: localStorage.getItem("tableos_restaurant_name") || process.env.NEXT_PUBLIC_DEFAULT_RESTAURANT_NAME || null,
+    restaurantId: localStorage.getItem("tableos_restaurant_id") || "",
+    restaurantName: localStorage.getItem("tableos_restaurant_name") || null,
+    restaurantSlug: localStorage.getItem("tableos_restaurant_slug") || null,
     userName: localStorage.getItem("tableos_user_name"),
     sessionToken: localStorage.getItem("tableos_session_token"),
     activeSessionId: localStorage.getItem("tableos_session_id"),
@@ -137,6 +140,37 @@ const authSlice = createSlice({
         localStorage.setItem("tableos_device_fingerprint", action.payload.deviceFingerprint);
       }
     },
+    setRestaurantInfo(
+      state,
+      action: PayloadAction<{
+        restaurantId: string;
+        restaurantName: string;
+        restaurantSlug?: string;
+      }>
+    ) {
+      state.restaurantId = action.payload.restaurantId;
+      state.restaurantName = action.payload.restaurantName;
+      if (action.payload.restaurantSlug) {
+        state.restaurantSlug = action.payload.restaurantSlug;
+      }
+      if (typeof window !== "undefined") {
+        localStorage.setItem("tableos_restaurant_id", action.payload.restaurantId);
+        localStorage.setItem("tableos_restaurant_name", action.payload.restaurantName);
+        if (action.payload.restaurantSlug) {
+          localStorage.setItem("tableos_restaurant_slug", action.payload.restaurantSlug);
+        }
+      }
+    },
+    clearRestaurant(state) {
+      state.restaurantId = "";
+      state.restaurantName = null;
+      state.restaurantSlug = null;
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("tableos_restaurant_id");
+        localStorage.removeItem("tableos_restaurant_name");
+        localStorage.removeItem("tableos_restaurant_slug");
+      }
+    },
     logoutStaff(state) {
       state.staffToken = null;
       state.staffRole = null;
@@ -176,6 +210,8 @@ export const {
   setStaffAuth,
   setGuardAuth,
   setCustomerSession,
+  setRestaurantInfo,
+  clearRestaurant,
   logoutStaff,
   logoutGuard,
   clearCustomerSession,

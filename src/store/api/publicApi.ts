@@ -40,6 +40,32 @@ export const publicApi = baseApi.injectEndpoints({
       },
       providesTags: ["MenuItem"],
     }),
+
+    lookupRestaurant: builder.query<{
+      id: string;
+      name: string;
+      slug: string;
+      venue_type: string;
+      status: string;
+    }, string>({
+      query: (identifier) => `/api/v1/public/restaurant/${identifier}`,
+    }),
+
+    checkHandleAvailability: builder.query<{
+      handle: string;
+      available: boolean;
+      exists: boolean;
+      message?: string;
+      restaurant?: {
+        id: string;
+        name: string;
+        slug: string;
+        venue_type?: string;
+        status?: string;
+      };
+    }, string>({
+      query: (handle) => `/api/v1/public/restaurant/check-handle?handle=${encodeURIComponent(handle)}`,
+    }),
   }),
 });
 
@@ -49,4 +75,8 @@ export const {
   useUploadPublicAiMenuCatalogMutation,
   useGetPublicMenuCategoriesQuery,
   useGetPublicMenuItemsQuery,
+  useLookupRestaurantQuery,
+  useLazyLookupRestaurantQuery,
+  useCheckHandleAvailabilityQuery,
+  useLazyCheckHandleAvailabilityQuery,
 } = publicApi;

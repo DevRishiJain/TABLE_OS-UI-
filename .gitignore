@@ -30,3 +30,6 @@ credentials.txt
 
 # vercel
 .vercel
+
+# typescript build cache
+*.tsbuildinfo

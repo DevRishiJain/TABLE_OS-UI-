@@ -1,13 +1,18 @@
 "use client";
 
 import React, { useState } from "react";
-import { useGetStaffRosterQuery, useCreateStaffMemberMutation } from "@/store/api/restaurantApi";
+import {
+  useGetStaffRosterQuery,
+  useCreateStaffMemberMutation,
+  useUpdateStaffPasswordMutation,
+} from "@/store/api/restaurantApi";
 import { useAppDispatch } from "@/store";
 import { addToast } from "@/store/slices/uiSlice";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { StaffUser } from "@/types/domain";
 import {
   Users,
   Plus,
@@ -20,14 +25,18 @@ import {
   X,
   CheckCircle2,
   Copy,
+  Lock,
 } from "lucide-react";
 
 export default function RestaurantStaffPage() {
   const dispatch = useAppDispatch();
   const { data: staffList, isLoading, refetch } = useGetStaffRosterQuery();
   const [createStaffMember, { isLoading: isCreating }] = useCreateStaffMemberMutation();
+  const [updateStaffPassword, { isLoading: isUpdatingPassword }] = useUpdateStaffPasswordMutation();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [passwordModalStaff, setPasswordModalStaff] = useState<StaffUser | null>(null);
+  const [newPassword, setNewPassword] = useState("");
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
@@ -95,6 +104,48 @@ export default function RestaurantStaffPage() {
           type: "error",
           title: "Provisioning Failed",
           message: err?.data?.error || "Could not add staff member. Check credentials.",
+        })
+      );
+    }
+  };
+
+  const handleUpdatePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!passwordModalStaff) return;
+    if (!newPassword.trim() || newPassword.trim().length < 6) {
+      dispatch(
+        addToast({
+          type: "error",
+          title: "Invalid Password",
+          message: "Password must be at least 6 characters.",
+        })
+      );
+      return;
+    }
+
+    try {
+      await updateStaffPassword({
+        staffId: passwordModalStaff.id,
+        password: newPassword.trim(),
+      }).unwrap();
+
+      dispatch(
+        addToast({
+          type: "success",
+          title: "Password Updated",
+          message: `New password successfully saved for ${passwordModalStaff.name}.`,
+        })
+      );
+
+      setPasswordModalStaff(null);
+      setNewPassword("");
+    } catch (err: any) {
+      console.error("Password update error:", err);
+      dispatch(
+        addToast({
+          type: "error",
+          title: "Update Failed",
+          message: err?.data?.error || "Could not change password.",
         })
       );
     }
@@ -239,12 +290,18 @@ export default function RestaurantStaffPage() {
                         </Badge>
                       </td>
                       <td className="py-3.5 text-right">
-                        <span className="text-[11px] text-gray-500 font-mono">
-                          {new Date(staff.created_at || Date.now()).toLocaleDateString([], {
-                            month: "short",
-                            day: "numeric",
-                          })}
-                        </span>
+                        <Button
+                          size="sm"
+                          variant="subtle"
+                          leftIcon={<KeyRound className="w-3.5 h-3.5 text-amber-400" />}
+                          onClick={() => {
+                            setPasswordModalStaff(staff);
+                            setNewPassword("");
+                          }}
+                          className="text-xs border-amber-500/30 text-amber-300 hover:bg-amber-500/10 font-medium"
+                        >
+                          Change Password
+                        </Button>
                       </td>
                     </tr>
                   );
@@ -322,7 +379,7 @@ export default function RestaurantStaffPage() {
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="arjun@spiceroute.com"
+                    placeholder="staff@restaurant.com"
                     required
                   />
                 </div>
@@ -388,6 +445,75 @@ export default function RestaurantStaffPage() {
                   leftIcon={<CheckCircle2 className="w-4 h-4" />}
                 >
                   Provision Staff Member
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Change Password Modal */}
+      {passwordModalStaff && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in">
+          <div className="w-full max-w-md bg-surface-elevated border border-surface-border rounded-2xl p-6 shadow-2xl flex flex-col gap-4">
+            <div className="flex items-center justify-between border-b border-surface-border pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center">
+                  <KeyRound className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-gray-100 font-display">
+                    Change Staff Password
+                  </h3>
+                  <span className="text-xs text-gray-400">
+                    {passwordModalStaff.name} ({passwordModalStaff.employee_id || passwordModalStaff.role})
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={() => setPasswordModalStaff(null)}
+                className="text-gray-400 hover:text-gray-200"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <p className="text-xs text-gray-300">
+              Set a new login password for this employee. They can immediately log in with this new password using their name or employee ID.
+            </p>
+
+            <form onSubmit={handleUpdatePassword} className="flex flex-col gap-4">
+              <div>
+                <label className="text-xs font-bold text-gray-300 block mb-1">
+                  New Password
+                </label>
+                <Input
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Min. 6 characters"
+                  required
+                  autoFocus
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-surface-border">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setPasswordModalStaff(null)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  variant="primary"
+                  size="sm"
+                  isLoading={isUpdatingPassword}
+                  leftIcon={<CheckCircle2 className="w-4 h-4" />}
+                >
+                  Save New Password
                 </Button>
               </div>
             </form>

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAppDispatch } from "@/store";
@@ -10,6 +10,7 @@ import { addToast } from "@/store/slices/uiSlice";
 import { StaffRole } from "@/types/enums";
 import { generateUUID } from "@/lib/idempotency";
 import { QRCodeSVG } from "qrcode.react";
+import { useLazyCheckHandleAvailabilityQuery } from "@/store/api/publicApi";
 import {
   Utensils,
   Store,
@@ -73,6 +74,26 @@ export default function RestaurantSignupPage() {
   // STEP 1: Restaurant Info
   const [restaurantName, setRestaurantName] = useState("The Golden Spoon");
   const [slug, setSlug] = useState("golden-spoon");
+  const [triggerCheckHandle, { isFetching: isCheckingHandle }] = useLazyCheckHandleAvailabilityQuery();
+  const [handleAvailability, setHandleAvailability] = useState<{ available: boolean; message?: string } | null>(null);
+
+  useEffect(() => {
+    const clean = slug.trim().replace(/^@/, "").toLowerCase();
+    if (!clean || clean.length < 2) {
+      setHandleAvailability(null);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      try {
+        const res = await triggerCheckHandle(clean).unwrap();
+        setHandleAvailability({ available: res.available, message: res.message });
+      } catch {
+        setHandleAvailability(null);
+      }
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [slug, triggerCheckHandle]);
+
   const [legalName, setLegalName] = useState("Golden Spoon Hospitality LLP");
   const [gstin, setGstin] = useState("07AABCG1234F1Z5");
   const [phone, setPhone] = useState("+91 98765 43210");
@@ -86,8 +107,8 @@ export default function RestaurantSignupPage() {
   const [startingRoomNumber, setStartingRoomNumber] = useState<number>(101);
 
   // Admin User
-  const [adminName, setAdminName] = useState("Vikram Malhotra");
-  const [adminEmail, setAdminEmail] = useState("owner@goldenspoon.com");
+  const [adminName, setAdminName] = useState("");
+  const [adminEmail, setAdminEmail] = useState("");
   const [adminPassword, setAdminPassword] = useState("");
 
   // STEP 2: Menu Items
@@ -549,18 +570,36 @@ export default function RestaurantSignupPage() {
               </div>
 
               <div>
-                <label className="text-xs font-bold text-gray-300 block mb-1">
-                  URL Handle / Slug
+                <label className="text-xs font-bold text-gray-300 block mb-1 flex items-center justify-between">
+                  <span>Restaurant Username / Handle *</span>
+                  <span className="text-[10px] font-mono text-gray-500">like Instagram @username</span>
                 </label>
                 <div className="flex items-center rounded-xl bg-surface-subtle border border-surface-border overflow-hidden">
-                  <span className="px-3 text-xs text-gray-500 font-mono">tableos.com/</span>
+                  <span className="px-3 text-xs text-amber-400 font-mono font-bold">@</span>
                   <input
                     type="text"
                     value={slug}
-                    onChange={(e) => setSlug(e.target.value)}
-                    className="w-full py-2.5 pr-3 bg-transparent text-sm text-gray-100 focus:outline-none"
+                    onChange={(e) => setSlug(e.target.value.replace(/^@/, "").toLowerCase().replace(/[^a-z0-9_-]/g, ""))}
+                    placeholder="spiceroute"
+                    className="w-full py-2.5 pr-3 bg-transparent text-sm text-gray-100 focus:outline-none font-mono"
                   />
+                  {isCheckingHandle && (
+                    <span className="pr-3 text-[11px] font-mono text-amber-400 animate-spin">⟳</span>
+                  )}
                 </div>
+                {handleAvailability && slug.trim() && (
+                  <div className="mt-1 text-[11px] font-mono">
+                    {handleAvailability.available ? (
+                      <span className="text-emerald-400 font-bold flex items-center gap-1">
+                        <CheckCircle2 className="w-3.5 h-3.5" /> @{slug} is available!
+                      </span>
+                    ) : (
+                      <span className="text-rose-400 font-bold flex items-center gap-1">
+                        ✗ @{slug} is already taken. Try another handle.
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div>
@@ -644,7 +683,7 @@ export default function RestaurantSignupPage() {
                     type="text"
                     value={adminName}
                     onChange={(e) => setAdminName(e.target.value)}
-                    placeholder="e.g. Vikram Malhotra"
+                    placeholder="e.g. Full Name"
                     className="w-full px-3.5 py-2.5 rounded-xl bg-surface-subtle border border-surface-border text-sm text-gray-100 focus:outline-none focus:border-primary"
                   />
                 </div>

@@ -164,6 +164,26 @@ export const staffApi = baseApi.injectEndpoints({
         "Table",
       ],
     }),
+
+    startStaffSession: builder.mutation<
+      DiningSession,
+      {
+        table_id?: string;
+        table_number?: string;
+        table_token?: string;
+        customer_name?: string;
+        customer_phone?: string;
+        guest_count?: number;
+        vehicle_number?: string;
+      }
+    >({
+      query: (body) => ({
+        url: "/api/v1/staff/sessions/start",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Table", "Session"],
+    }),
   }),
 });
 
@@ -178,4 +198,5 @@ export const {
   useForceCloseSessionMutation,
   useStaffVerifyExitMutation,
   useStaffDismissAssistanceMutation,
+  useStartStaffSessionMutation,
 } = staffApi;
