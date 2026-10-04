@@ -5,33 +5,36 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAppDispatch, useAppSelector } from "@/store";
 import { logoutStaff } from "@/store/slices/authSlice";
-import {
-  LayoutDashboard,
-  LineChart,
-  UtensilsCrossed,
-  Users,
-  Settings,
-  Receipt,
-  Layers,
-  Sparkles,
-  LogOut,
-  ChevronRight,
-  TrendingUp,
-  Clock,
-  Flame,
-  Calendar,
-  Layers2,
-  PieChart,
-  ShieldCheck,
-  QrCode,
-  ShoppingBag,
-  CheckCircle2,
-  Package,
-  Wallet,
-} from "lucide-react";
-import { Badge } from "@/components/ui/Badge";
 import { RoleGuard } from "@/components/auth/RoleGuard";
 import { StaffRole } from "@/types/enums";
+import { LogOut } from "lucide-react";
+import { useRestaurantTheme } from "@/components/providers/RestaurantThemeProvider";
+import "./admin.css";
+
+const SVGIcons: Record<string, string> = {
+  home: '<path d="M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',
+  ord: '<path d="M5 3h14v18l-3-2-2 2-2-2-2 2-2-2-3 2zM9 8h6M9 12h6"/>',
+  an: '<path d="M3 20h18M6 16V9M11 16V5M16 16v-5M21 16V8"/>',
+  ex: '<rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18M7 15h3"/>',
+  st: '<path d="M21 8l-9-5-9 5v8l9 5 9-5zM3 8l9 5 9-5M12 13v8"/>',
+  mn: '<path d="M6 3v8a2 2 0 0 0 2 2v8M10 3v6M14 3c0 6 4 6 4 10v8"/>',
+  tb: '<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3M21 14v7h-4"/>',
+  pp: '<circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0 1 14 0M17 4a4 4 0 0 1 0 8M22 21a7 7 0 0 0-4-6"/>',
+  se: '<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/>',
+  cf: '<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/>',
+  pl: '<path d="M12 5v14M5 12h14"/>',
+  ob: '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>',
+};
+
+function Icon({ name }: { name: string }) {
+  const path = SVGIcons[name] || SVGIcons.home;
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      dangerouslySetInnerHTML={{ __html: path }}
+    />
+  );
+}
 
 export default function RestaurantAdminLayout({
   children,
@@ -39,14 +42,56 @@ export default function RestaurantAdminLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const restaurantName = useAppSelector((state) => state.auth.restaurantName) || "Restaurant";
   const router = useRouter();
   const dispatch = useAppDispatch();
+
+  const [quickOpen, setQuickOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const { colorMode } = useRestaurantTheme();
+
+  const restaurantName = useAppSelector((state) => state.auth.restaurantName) || "The Spice Route";
+  const userName = useAppSelector((state) => state.auth.userName) || "Vikram Mehta";
+  const employeeId = useAppSelector((state) => state.auth.employeeId) || "EMP-ADM-001";
+  const userRole = useAppSelector((state) => state.auth.staffRole) || "Admin";
 
   const handleLogout = () => {
     dispatch(logoutStaff());
     router.push("/login");
   };
+
+  const navGroups = [
+    {
+      group: "Run service",
+      items: [
+        { key: "home", label: "Home", href: "/restaurant/dashboard", icon: "home", exact: true },
+        { key: "orders", label: "Orders", href: "/restaurant/orders", icon: "ord", exact: true },
+      ],
+    },
+    {
+      group: "Money",
+      items: [
+        { key: "analytics", label: "Profit & Loss", href: "/restaurant/analytics", icon: "an", exact: true },
+        { key: "expenses", label: "Expenses", href: "/restaurant/expenses", icon: "ex", exact: true },
+        { key: "settle", label: "Payouts", href: "/restaurant/settlements", icon: "se", exact: false },
+      ],
+    },
+    {
+      group: "Kitchen",
+      items: [
+        { key: "inventory", label: "Stock", href: "/restaurant/inventory", icon: "st", exact: true },
+        { key: "menu", label: "Menu", href: "/restaurant/menu", icon: "mn", exact: false },
+      ],
+    },
+    {
+      group: "Setup",
+      items: [
+        { key: "tables", label: "Tables & QR", href: "/restaurant/tables", icon: "tb", exact: false },
+        { key: "staff", label: "Staff", href: "/restaurant/staff", icon: "pp", exact: false },
+        { key: "onboarding", label: "Onboarding", href: "/restaurant/onboarding", icon: "ob", exact: false },
+        { key: "settings", label: "Settings", href: "/restaurant/settings", icon: "cf", exact: false },
+      ],
+    },
+  ];
 
   return (
     <RoleGuard
@@ -59,120 +104,223 @@ export default function RestaurantAdminLayout({
       portalName="Restaurant Management & Analytics Hub"
       fallbackRedirect="/staff/orders"
     >
-      <div style={{ minHeight: "100vh", background: "var(--bg)", color: "var(--ink)", display: "flex", flexDirection: "row" }}>
-      {/* Sidebar Navigation */}
-      <aside style={{ width: 240, background: "var(--panel)", borderRight: "1px solid var(--line)", display: "flex", flexDirection: "column", justifyContent: "space-between", flexShrink: 0, overflowY: "auto" }} className="hidden lg:flex">
-        <div className="flex flex-col">
-          {/* Brand Header */}
-          <div style={{ padding: "20px 16px", borderBottom: "1px solid var(--line)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <Link href="/restaurant/dashboard" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none", color: "var(--ink)" }}>
-              <div style={{ width: 32, height: 32, borderRadius: 10, background: "linear-gradient(115deg, var(--b), var(--b2))", display: "flex", alignItems: "center", justifyContent: "center", color: "#1b1206" }}>
-                <UtensilsCrossed style={{ width: 16, height: 16 }} />
-              </div>
-              <div style={{ display: "flex", flexDirection: "column" }}>
-                <span style={{ fontFamily: "var(--serif)", fontSize: "1.1rem", color: "var(--ink)", lineHeight: 1 }}>
-                  Table<em>OS</em>
-                </span>
-                <span style={{ fontSize: 9, color: "var(--mute)", letterSpacing: "0.08em", textTransform: "uppercase", fontWeight: 700, marginTop: 2 }}>
-                  {restaurantName}
-                </span>
-              </div>
-            </Link>
-            <span style={{ fontSize: 9, fontWeight: 800, padding: "3px 8px", borderRadius: 99, background: "linear-gradient(115deg, var(--b), var(--b2))", color: "#1b1206" }}>Live</span>
-          </div>
+      <div className={`admin-screen ${colorMode}`}>
+        {/* Desktop Sidebar Navigation */}
+        <aside id="nv">
+          <Link href="/restaurant/dashboard" className="lg">
+            Table<em>OS</em>
+          </Link>
+          <div className="rs">{restaurantName} · Live</div>
 
-          {/* Nav Links */}
-          <nav style={{ padding: "12px", display: "flex", flexDirection: "column", gap: 2 }}>
-            {([
-              { href: "/restaurant/dashboard", label: "Executive Overview", Icon: LayoutDashboard, exact: true },
-              { href: "/restaurant/orders",    label: "Order History",       Icon: ShoppingBag,    exact: true },
-              { href: "/restaurant/analytics", label: "Analytics & P&L",    Icon: LineChart,      exact: true },
-              { href: "/restaurant/expenses",  label: "Expenses & Bills",    Icon: Wallet,         exact: true },
-              { href: "/restaurant/inventory", label: "Stock & Inventory",   Icon: Package,        exact: true },
-              { href: "/restaurant/menu",      label: "Menu & AI Studio",    Icon: Sparkles,       exact: false },
-              { href: "/restaurant/tables",    label: "Tables & QR",         Icon: QrCode,         exact: false },
-              { href: "/restaurant/staff",     label: "Staff & Roles",       Icon: Users,          exact: false },
-              { href: "/restaurant/settlements",label: "Settlements",        Icon: ShieldCheck,    exact: false },
-              { href: "/restaurant/onboarding",label: "Onboarding",          Icon: CheckCircle2,   exact: false },
-              { href: "/restaurant/settings",  label: "Settings",            Icon: Settings,       exact: false },
-            ] as const).map(({ href, label, Icon, exact }) => {
-              const active = exact ? pathname === href : pathname.startsWith(href);
-              return (
-                <Link
-                  key={href}
-                  href={href}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 9,
-                    padding: "8px 10px",
-                    borderRadius: 10,
-                    fontSize: "0.78rem",
-                    fontWeight: active ? 700 : 500,
-                    textDecoration: "none",
-                    transition: "background 0.15s, color 0.15s",
-                    color: active ? "#1b1206" : "var(--mute)",
-                    background: active ? "linear-gradient(115deg, var(--b), var(--b2))" : "transparent",
-                  }}
-                  onMouseEnter={e => { if (!active) { (e.currentTarget as HTMLElement).style.background = "rgba(244,236,221,0.05)"; (e.currentTarget as HTMLElement).style.color = "var(--ink)"; }}}
-                  onMouseLeave={e => { if (!active) { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = "var(--mute)"; }}}
-                >
-                  <Icon style={{ width: 14, height: 14, flexShrink: 0 }} />
-                  <span>{label}</span>
-                </Link>
-              );
-            })}
-          </nav>
-        </div>
-
-        {/* Footer info & Logout */}
-        <div style={{ padding: "12px 16px", borderTop: "1px solid var(--line)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div style={{ display: "flex", flexDirection: "column" }}>
-            <span style={{ fontSize: "0.78rem", fontWeight: 700, color: "var(--ink)" }}>{useAppSelector((state) => state.auth.userName) || "Admin"}</span>
-            <span style={{ fontSize: 9, color: "var(--mute)", fontFamily: "monospace" }}>
-              {useAppSelector((state) => state.auth.employeeId) || "Staff"}
-            </span>
-          </div>
-          <button
-            onClick={handleLogout}
-            title="Sign out"
-            style={{ padding: 7, background: "none", border: 0, color: "var(--mute)", cursor: "pointer", borderRadius: 8, transition: "color 0.2s" }}
-            onMouseEnter={e => (e.currentTarget.style.color = "var(--late)")}
-            onMouseLeave={e => (e.currentTarget.style.color = "var(--mute)")}
-          >
-            <LogOut style={{ width: 14, height: 14 }} />
+          <button className="btn qa" onClick={() => setQuickOpen(true)}>
+            <Icon name="pl" />
+            Quick add
           </button>
+
+          {navGroups.map((grp) => (
+            <React.Fragment key={grp.group}>
+              <div className="gl">{grp.group}</div>
+              {grp.items.map((item) => {
+                const isActive = item.exact
+                  ? pathname === item.href
+                  : pathname.startsWith(item.href);
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`ni ${isActive ? "active" : ""}`}
+                    aria-current={isActive ? "page" : undefined}
+                  >
+                    <Icon name={item.icon} />
+                    <span>{item.label}</span>
+                  </Link>
+                );
+              })}
+            </React.Fragment>
+          ))}
+
+          <div className="me">
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <b>{userName}</b>
+              <span style={{ fontSize: "0.78rem", color: "var(--admin-mute)" }}>
+                {userRole} · {employeeId}
+              </span>
+            </div>
+            <button
+              onClick={handleLogout}
+              title="Sign out"
+              style={{
+                background: "none",
+                border: 0,
+                color: "var(--admin-mute)",
+                cursor: "pointer",
+                padding: "6px",
+                borderRadius: "8px",
+              }}
+            >
+              <LogOut style={{ width: 16, height: 16 }} />
+            </button>
+          </div>
+        </aside>
+
+        {/* Mobile Bottom Navigation */}
+        <nav className="bn" id="bn" aria-label="Main">
+          <Link
+            href="/restaurant/dashboard"
+            aria-selected={pathname === "/restaurant/dashboard" ? "true" : undefined}
+          >
+            <Icon name="home" />
+            <span>Home</span>
+          </Link>
+
+          <Link
+            href="/restaurant/orders"
+            aria-selected={pathname === "/restaurant/orders" ? "true" : undefined}
+          >
+            <Icon name="ord" />
+            <span>Orders</span>
+          </Link>
+
+          <button
+            className="fab"
+            aria-label="Quick add"
+            onClick={() => setQuickOpen(true)}
+          >
+            <Icon name="pl" />
+          </button>
+
+          <Link
+            href="/restaurant/analytics"
+            aria-selected={pathname === "/restaurant/analytics" ? "true" : undefined}
+          >
+            <Icon name="an" />
+            <span>Money</span>
+          </Link>
+
+          <button
+            onClick={() => setMoreOpen(true)}
+            aria-selected={moreOpen ? "true" : undefined}
+          >
+            <Icon name="mn" />
+            <span>More</span>
+          </button>
+        </nav>
+
+        {/* Main Work Area */}
+        <main>
+          <div className="in" id="v">
+            {children}
+          </div>
+        </main>
+
+        {/* Quick Add Modal */}
+        <div
+          className={`ov ${quickOpen ? "on" : ""}`}
+          onClick={(e) => {
+            if ((e.target as HTMLElement).classList.contains("ov")) setQuickOpen(false);
+          }}
+        >
+          <div className="md">
+            <h3>What would you like to do?</h3>
+            <div className="big">
+              {[
+                {
+                  title: "Log an expense",
+                  sub: "Bill, purchase or wastage",
+                  href: "/restaurant/expenses?action=new",
+                },
+                {
+                  title: "Add an ingredient",
+                  sub: "Track a new stock item",
+                  href: "/restaurant/inventory?action=new",
+                },
+                {
+                  title: "Add a dish",
+                  sub: "Put it on the menu",
+                  href: "/restaurant/menu?action=new",
+                },
+                {
+                  title: "Add a table",
+                  sub: "Creates a new QR code",
+                  href: "/restaurant/tables?action=new",
+                },
+                {
+                  title: "Add a staff member",
+                  sub: "Generates a login ID",
+                  href: "/restaurant/staff?action=new",
+                },
+              ].map((act) => (
+                <button
+                  key={act.title}
+                  onClick={() => {
+                    setQuickOpen(false);
+                    router.push(act.href);
+                  }}
+                >
+                  <div>
+                    <b>{act.title}</b>
+                    <small>{act.sub}</small>
+                  </div>
+                </button>
+              ))}
+            </div>
+            <div className="ac" style={{ marginTop: 16 }}>
+              <button className="btn s" onClick={() => setQuickOpen(false)}>
+                Close
+              </button>
+            </div>
+          </div>
         </div>
-      </aside>
 
-      {/* Main Content Area */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, overflowY: "auto" }}>
-        <header style={{ padding: "12px 24px", borderBottom: "1px solid var(--line)", display: "flex", alignItems: "center", justifyContent: "space-between", background: "rgba(20,16,12,0.7)", backdropFilter: "blur(12px)", position: "sticky", top: 0, zIndex: 10 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <Link
-              href="/staff/tables"
-              style={{ fontSize: "0.75rem", padding: "6px 12px", borderRadius: 8, background: "rgba(244,236,221,0.05)", border: "1px solid var(--line)", color: "var(--mute)", display: "flex", alignItems: "center", gap: 6, textDecoration: "none", transition: "color 0.2s" }}
-            >
-              <Layers style={{ width: 13, height: 13, color: "var(--b)" }} />
-              <span>Floor Grid</span>
-            </Link>
-            <Link
-              href="/kitchen/queue"
-              style={{ fontSize: "0.75rem", padding: "6px 12px", borderRadius: 8, background: "rgba(244,236,221,0.05)", border: "1px solid var(--line)", color: "var(--mute)", display: "flex", alignItems: "center", gap: 6, textDecoration: "none" }}
-            >
-              Kitchen KDS
-            </Link>
+        {/* Mobile More Sheet Modal */}
+        <div
+          className={`ov ${moreOpen ? "on" : ""}`}
+          onClick={(e) => {
+            if ((e.target as HTMLElement).classList.contains("ov")) setMoreOpen(false);
+          }}
+        >
+          <div className="md">
+            <h3>More</h3>
+            <div className="big t">
+              {[
+                { label: "Expenses", icon: "ex", href: "/restaurant/expenses" },
+                { label: "Stock", icon: "st", href: "/restaurant/inventory" },
+                { label: "Menu", icon: "mn", href: "/restaurant/menu" },
+                { label: "Tables & QR", icon: "tb", href: "/restaurant/tables" },
+                { label: "Staff", icon: "pp", href: "/restaurant/staff" },
+                { label: "Payouts", icon: "se", href: "/restaurant/settlements" },
+                { label: "Onboarding", icon: "ob", href: "/restaurant/onboarding" },
+                { label: "Settings", icon: "cf", href: "/restaurant/settings" },
+              ].map((m) => (
+                <button
+                  key={m.label}
+                  onClick={() => {
+                    setMoreOpen(false);
+                    router.push(m.href);
+                  }}
+                >
+                  <Icon name={m.icon} />
+                  <span>{m.label}</span>
+                </button>
+              ))}
+            </div>
+            <div className="ac" style={{ marginTop: 16, display: "flex", justifyContent: "space-between" }}>
+              <button
+                className="btn r sm"
+                onClick={() => {
+                  setMoreOpen(false);
+                  handleLogout();
+                }}
+              >
+                Sign out
+              </button>
+              <button className="btn s sm" onClick={() => setMoreOpen(false)}>
+                Close
+              </button>
+            </div>
           </div>
-
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <span style={{ fontSize: "0.72rem", color: "var(--mute)", fontFamily: "monospace" }}>API Connected</span>
-            <span style={{ fontSize: 9, fontWeight: 800, padding: "3px 10px", borderRadius: 99, background: "rgba(91,214,138,0.15)", border: "1px solid rgba(91,214,138,0.4)", color: "var(--ok)" }}>Online</span>
-          </div>
-        </header>
-
-        <main style={{ padding: 24, flex: 1 }}>{children}</main>
+        </div>
       </div>
-    </div>
     </RoleGuard>
   );
 }

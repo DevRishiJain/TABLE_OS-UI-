@@ -4,10 +4,6 @@ import React from "react";
 import { useGetPlatformFeeLedgerQuery } from "@/store/api/restaurantApi";
 import { formatMoney } from "@/lib/money";
 import { humanizeStatus } from "@/lib/statusLabels";
-import { Card } from "@/components/ui/Card";
-import { Badge } from "@/components/ui/Badge";
-import { Skeleton } from "@/components/ui/Skeleton";
-import { Receipt, ShieldCheck } from "lucide-react";
 
 export default function RestaurantLedgerPage() {
   const { data: ledgerEntries, isLoading } = useGetPlatformFeeLedgerQuery();
@@ -30,118 +26,111 @@ export default function RestaurantLedgerPage() {
   );
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
+    <>
+      {/* Header Bar */}
+      <div className="hd">
         <div>
-          <h1 className="text-2xl font-bold font-display text-gray-100 flex items-center gap-2">
-            <Receipt className="w-6 h-6 text-primary" />
-            Platform Fee Payable Ledger
-          </h1>
-          <p className="text-xs text-gray-400">
-            Audit-grade record of platform commissions accrued per settled session
-          </p>
+          <h1>Fee Ledger</h1>
+          <p>Audit-grade record of platform commissions accrued per settled session</p>
         </div>
-        <Badge variant="gold" size="sm">
-          Fixed Commission: 1.00% (100 bps)
-        </Badge>
+        <div className="sp"></div>
+        <span className="pill c-a">Platform Fee: 1.00%</span>
       </div>
 
-      {/* Summary Banner */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Card className="p-4">
-          <span className="text-xs font-bold uppercase tracking-wider text-gray-400">
-            Total GMV Processed
-          </span>
-          <div className="text-2xl font-black font-mono text-primary mt-1">
-            {isLoading ? <Skeleton className="h-8 w-28" /> : formatMoney(totalGmvMinor)}
-          </div>
-        </Card>
-        <Card className="p-4">
-          <span className="text-xs font-bold uppercase tracking-wider text-gray-400">
-            Commission Accrued
-          </span>
-          <div className="text-2xl font-black font-mono text-amber-400 mt-1">
-            {isLoading ? <Skeleton className="h-8 w-28" /> : formatMoney(totalFeesMinor)}
-          </div>
-        </Card>
-        <Card className="p-4">
-          <span className="text-xs font-bold uppercase tracking-wider text-gray-400">
-            Net Restaurant Payout
-          </span>
-          <div className="text-2xl font-black font-mono text-emerald-400 mt-1">
-            {isLoading ? <Skeleton className="h-8 w-28" /> : formatMoney(totalGmvMinor - totalFeesMinor)}
-          </div>
-        </Card>
+      {/* KPI Cards */}
+      <div className="g g4">
+        <div className="cd st" style={{ "--c": "var(--admin-am)" } as any}>
+          <small>Total GMV Processed</small>
+          <b>{formatMoney(totalGmvMinor)}</b>
+          <span>Across all settled tickets</span>
+        </div>
+
+        <div className="cd st" style={{ "--c": "var(--admin-grn)" } as any}>
+          <small>Platform Fees Accrued</small>
+          <b>{formatMoney(totalFeesMinor)}</b>
+          <span>1% deduction ledger</span>
+        </div>
+
+        <div className="cd st" style={{ "--c": "var(--admin-blu)" } as any}>
+          <small>Settled Sessions</small>
+          <b>{entries.length}</b>
+          <span>Dining closures</span>
+        </div>
       </div>
 
       {/* Ledger Table */}
-      <Card className="p-6">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead>
-              <tr className="border-b border-surface-border text-gray-400 uppercase tracking-wider">
-                <th className="pb-3 font-semibold">Session ID</th>
-                <th className="pb-3 font-semibold">Billing Period</th>
-                <th className="pb-3 font-semibold text-right">Dining GMV</th>
-                <th className="pb-3 font-semibold text-right">Fee</th>
-                <th className="pb-3 font-semibold text-right">Status</th>
+      <div className="cd tw mt">
+        <table>
+          <thead>
+            <tr>
+              <th>Session ID</th>
+              <th>Date</th>
+              <th className="n">GMV Amount</th>
+              <th className="n">Fee Accrued (1%)</th>
+              <th className="ac">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {isLoading ? (
+              <tr>
+                <td colSpan={5} className="em">
+                  <b>Loading ledger…</b>
+                </td>
               </tr>
-            </thead>
-            <tbody className="divide-y divide-surface-border/50">
-              {isLoading ? (
-                <tr>
-                  <td colSpan={5} className="py-8 text-center text-gray-500">
-                    Loading ledger data...
-                  </td>
-                </tr>
-              ) : entries.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="py-12 text-center text-gray-500">
-                    No platform fee ledger entries recorded yet.
-                  </td>
-                </tr>
-              ) : (
-                entries.map((e: any) => (
-                  <tr
-                    key={e.id || Math.random()}
-                    className="hover:bg-surface-subtle/50 transition-colors"
-                  >
-                    <td className="py-3.5">
-                      <div className="flex flex-col">
-                        <span className="font-mono text-gray-200">
-                          {e.session_id ? e.session_id.substring(0, 16) : e.id ? e.id.substring(0, 16) : "N/A"}...
-                        </span>
-                        <span className="text-[10px] text-gray-500">
-                          {e.created_at ? new Date(e.created_at).toLocaleString() : ""}
-                        </span>
-                      </div>
+            ) : entries.length === 0 ? (
+              <tr>
+                <td colSpan={5} className="em">
+                  <b>No ledger entries found</b>
+                  Ledger lines are generated when customer dining sessions settle.
+                </td>
+              </tr>
+            ) : (
+              entries.map((e: any, idx: number) => {
+                const gmvMinor = e.gmv_amount?.amount_minor_units || e.gross_sales_minor || 0;
+                const feeMinor = e.fee_amount?.amount_minor_units || e.platform_fees_owed_minor || 0;
+                const isPaid = e.status === "SETTLED" || e.status === "PAID";
+
+                return (
+                  <tr key={e.id || idx}>
+                    <td>
+                      <code>{e.session_id || e.id || `#${idx + 1}`}</code>
                     </td>
-                    <td className="py-3.5 font-mono text-gray-300">
-                      {e.billing_period || "Current"}
+                    <td>
+                      <b>
+                        {e.created_at
+                          ? new Date(e.created_at).toLocaleDateString([], {
+                              month: "short",
+                              day: "numeric",
+                            })
+                          : "—"}
+                      </b>
+                      <small>
+                        {e.created_at
+                          ? new Date(e.created_at).toLocaleTimeString([], {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })
+                          : ""}
+                      </small>
                     </td>
-                    <td className="py-3.5 text-right font-mono font-bold text-gray-100">
-                      {formatMoney(e.gmv_amount?.amount_minor_units || e.gross_sales_minor || 0)}
+                    <td className="n">
+                      <b>{formatMoney(gmvMinor)}</b>
                     </td>
-                    <td className="py-3.5 text-right font-mono font-bold text-amber-400">
-                      {formatMoney(e.fee_amount?.amount_minor_units || e.platform_fees_owed_minor || 0)}
+                    <td className="n" style={{ color: "var(--admin-am)" }}>
+                      <b>{formatMoney(feeMinor)}</b>
                     </td>
-                    <td className="py-3.5 text-right">
-                      <Badge
-                        variant={
-                          e.settlement_status === "SETTLED" || e.status === "SETTLED" ? "success" : "gold"
-                        }
-                        size="sm"
-                      >
-                        {humanizeStatus(e.settlement_status || e.status || "PENDING")}
-                      </Badge>
+                    <td className="ac">
+                      <span className={`pill ${isPaid ? "c-g" : "c-a"}`}>
+                        {humanizeStatus(e.status || "ACCRUED")}
+                      </span>
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </Card>
-    </div>
+                );
+              })
+            )}
+          </tbody>
+        </table>
+      </div>
+    </>
   );
 }

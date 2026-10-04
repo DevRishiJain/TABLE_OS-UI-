@@ -132,7 +132,7 @@ export function RestaurantThemeProvider({ children }: { children: React.ReactNod
   const storeTheme = useAppSelector((state) => state.auth.restaurantTheme);
 
   const [currentTheme, setCurrentThemeState] = useState<string>("");
-  const [colorMode, setColorModeState] = useState<ColorMode>("dark");
+  const [colorMode, setColorModeState] = useState<ColorMode>("light");
   const [isMounted, setIsMounted] = useState(false);
 
   // Synchronize theme attribute on HTML root element
@@ -152,8 +152,10 @@ export function RestaurantThemeProvider({ children }: { children: React.ReactNod
     document.documentElement.setAttribute("data-color-mode", mode);
     if (mode === "light") {
       document.documentElement.classList.add("light");
+      document.documentElement.classList.remove("dark");
     } else {
       document.documentElement.classList.remove("light");
+      document.documentElement.classList.add("dark");
     }
   }, []);
 
@@ -210,7 +212,7 @@ export function RestaurantThemeProvider({ children }: { children: React.ReactNod
       (typeof window !== "undefined" ? localStorage.getItem("tableos_restaurant_theme") : null) ||
       storeTheme ||
       "";
-    const savedMode = (typeof window !== "undefined" ? (localStorage.getItem("tableos_color_mode") as ColorMode) : null) || "dark";
+    const savedMode = (typeof window !== "undefined" ? (localStorage.getItem("tableos_color_mode") as ColorMode) : null) || "light";
 
     const normalized = normalizeTheme(savedTheme);
     setCurrentThemeState(normalized);

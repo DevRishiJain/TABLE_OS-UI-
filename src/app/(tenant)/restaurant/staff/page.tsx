@@ -6,30 +6,9 @@ import {
   useCreateStaffMemberMutation,
   useUpdateStaffPasswordMutation,
 } from "@/store/api/restaurantApi";
-import { useAppDispatch } from "@/store";
-import { addToast } from "@/store/slices/uiSlice";
-import { Card } from "@/components/ui/Card";
-import { Badge } from "@/components/ui/Badge";
-import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
 import { StaffUser } from "@/types/domain";
-import {
-  Users,
-  Plus,
-  ShieldCheck,
-  ChefHat,
-  Utensils,
-  CreditCard,
-  Briefcase,
-  KeyRound,
-  X,
-  CheckCircle2,
-  Copy,
-  Lock,
-} from "lucide-react";
 
 export default function RestaurantStaffPage() {
-  const dispatch = useAppDispatch();
   const { data: staffList, isLoading, refetch } = useGetStaffRosterQuery();
   const [createStaffMember, { isLoading: isCreating }] = useCreateStaffMemberMutation();
   const [updateStaffPassword, { isLoading: isUpdatingPassword }] = useUpdateStaffPasswordMutation();
@@ -42,86 +21,43 @@ export default function RestaurantStaffPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState("WAITER");
-  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const roster = staffList || [];
 
-  const handleCopy = (text: string) => {
-    navigator.clipboard.writeText(text);
-    setCopiedId(text);
-    setTimeout(() => setCopiedId(null), 2000);
-    dispatch(
-      addToast({
-        type: "success",
-        title: "Copied to Clipboard",
-        message: text,
-      })
-    );
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 2400);
   };
 
   const handleCreateStaff = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !email.trim() || !password.trim()) {
-      dispatch(
-        addToast({
-          type: "error",
-          title: "Validation Error",
-          message: "Please fill in Name, Email/Username, and Password.",
-        })
-      );
-      return;
-    }
+    if (!name.trim() || !role) return;
 
     try {
-      const created = await createStaffMember({
+      await createStaffMember({
         name: name.trim(),
-        phone: phone.trim(),
-        email: email.trim(),
-        password: password.trim(),
-        role,
+        role: role as any,
+        phone: phone.trim() || "",
+        email: email.trim() || "",
+        password: password.trim() || "tableos123",
       }).unwrap();
 
-      dispatch(
-        addToast({
-          type: "success",
-          title: "Staff Member Provisioned!",
-          message: `${created.name} assigned Employee ID: ${created.employee_id || "Generated"}`,
-        })
-      );
-
-      // Reset and close
+      setIsModalOpen(false);
       setName("");
       setPhone("");
       setEmail("");
       setPassword("");
-      setRole("WAITER");
-      setIsModalOpen(false);
+      showToast("Staff added. Login ID generated.");
       refetch();
-    } catch (err: any) {
-      console.error("Staff creation error:", err);
-      dispatch(
-        addToast({
-          type: "error",
-          title: "Provisioning Failed",
-          message: err?.data?.error || "Could not add staff member. Check credentials.",
-        })
-      );
+    } catch (err) {
+      console.error("Failed to create staff:", err);
     }
   };
 
-  const handleUpdatePassword = async (e: React.FormEvent) => {
+  const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!passwordModalStaff) return;
-    if (!newPassword.trim() || newPassword.trim().length < 6) {
-      dispatch(
-        addToast({
-          type: "error",
-          title: "Invalid Password",
-          message: "Password must be at least 6 characters.",
-        })
-      );
-      return;
-    }
+    if (!passwordModalStaff || !newPassword.trim()) return;
 
     try {
       await updateStaffPassword({
@@ -129,397 +65,248 @@ export default function RestaurantStaffPage() {
         password: newPassword.trim(),
       }).unwrap();
 
-      dispatch(
-        addToast({
-          type: "success",
-          title: "Password Updated",
-          message: `New password successfully saved for ${passwordModalStaff.name}.`,
-        })
-      );
-
+      showToast(`Password updated for ${passwordModalStaff.name}`);
       setPasswordModalStaff(null);
       setNewPassword("");
-    } catch (err: any) {
-      console.error("Password update error:", err);
-      dispatch(
-        addToast({
-          type: "error",
-          title: "Update Failed",
-          message: err?.data?.error || "Could not change password.",
-        })
-      );
+    } catch (err) {
+      console.error("Failed to update password:", err);
     }
   };
 
   const getRoleBadge = (r: string) => {
-    switch (r) {
+    switch (r?.toUpperCase()) {
+      case "ADMIN":
       case "RESTAURANT_ADMIN":
+      case "OWNER":
       case "RESTAURANT_OWNER":
-        return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30">
-            <Briefcase className="w-3 h-3" /> Restaurant Admin
-          </span>
-        );
+        return <span className="pill c-a">Admin</span>;
       case "MANAGER":
-        return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-purple-500/15 text-purple-300 border border-purple-500/30">
-            <Users className="w-3 h-3" /> Floor Manager
-          </span>
-        );
-      case "WAITER":
-        return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-sky-500/15 text-sky-300 border border-sky-500/30">
-            <Utensils className="w-3 h-3" /> Floor Waiter
-          </span>
-        );
-      case "CASHIER":
-        return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
-            <CreditCard className="w-3 h-3" /> Cashier
-          </span>
-        );
+        return <span className="pill c-v">Manager</span>;
+      case "CHEF":
       case "KITCHEN":
-        return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-500/15 text-rose-300 border border-rose-500/30">
-            <ChefHat className="w-3 h-3" /> Kitchen Staff
-          </span>
-        );
+      case "KITCHEN_STAFF":
+        return <span className="pill c-r">Kitchen</span>;
+      case "WAITER":
+      case "FLOOR_STAFF":
+        return <span className="pill c-b">Waiter</span>;
+      case "CASHIER":
+        return <span className="pill c-g">Cashier</span>;
       case "GUARD":
-        return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-green-500/15 text-green-300 border border-green-500/30">
-            <ShieldCheck className="w-3 h-3" /> Security Guard
-          </span>
-        );
+      case "SECURITY":
+        return <span className="pill c-g">Security</span>;
       default:
-        return <Badge variant="default">{r}</Badge>;
+        return <span className="pill">{r}</span>;
     }
   };
 
   return (
-    <div className="flex flex-col gap-6">
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold font-display text-gray-100 flex items-center gap-2">
-            <Users className="w-6 h-6 text-primary" />
-            Staff & Employee Roster
-          </h1>
-          <p className="text-xs text-gray-400 mt-0.5">
-            Provision waiters, floor captains, chefs, and cashiers with auto-generated Employee IDs and login access
-          </p>
-        </div>
-
-        <Button
-          variant="primary"
-          size="sm"
-          leftIcon={<Plus className="w-4 h-4" />}
-          onClick={() => setIsModalOpen(true)}
-        >
-          Add Staff Member
-        </Button>
+    <>
+      {/* Toast Notification */}
+      <div className={`toast ${toastMessage ? "on" : ""}`} role="status">
+        {toastMessage}
       </div>
 
-      {/* Staff Roster Card */}
-      <Card className="p-6">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead>
-              <tr className="border-b border-surface-border text-gray-400 uppercase tracking-wider text-[11px]">
-                <th className="pb-3 font-semibold">Employee ID</th>
-                <th className="pb-3 font-semibold">Name & Contact</th>
-                <th className="pb-3 font-semibold">Assigned Role</th>
-                <th className="pb-3 font-semibold">Status</th>
-                <th className="pb-3 font-semibold text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-surface-border/50">
-              {isLoading ? (
-                <tr>
-                  <td colSpan={5} className="py-12 text-center text-gray-500">
-                    Loading staff roster...
-                  </td>
-                </tr>
-              ) : roster.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="py-14 text-center text-gray-400">
-                    <Users className="w-10 h-10 text-gray-600 mx-auto mb-2" />
-                    <p className="font-bold text-sm text-gray-300">No staff registered yet</p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      Click "Add Staff Member" to create your first employee login.
-                    </p>
-                  </td>
-                </tr>
-              ) : (
-                roster.map((staff, idx) => {
-                  const empId = staff.employee_id || `EMP-${staff.role.slice(0, 3)}-${String(idx + 1).padStart(3, "0")}`;
-                  return (
-                    <tr
-                      key={staff.id}
-                      className="hover:bg-surface-subtle/50 transition-colors group"
-                    >
-                      <td className="py-3.5">
-                        <div className="flex items-center gap-1.5">
-                          <span className="font-mono font-bold text-xs px-2.5 py-1 rounded-lg bg-surface border border-surface-border text-primary">
-                            {empId}
-                          </span>
-                          <button
-                            onClick={() => handleCopy(empId)}
-                            className="p-1 text-gray-500 hover:text-primary transition-colors opacity-0 group-hover:opacity-100"
-                            title="Copy Employee ID"
-                          >
-                            <Copy className="w-3 h-3" />
-                          </button>
-                        </div>
-                      </td>
-                      <td className="py-3.5">
-                        <span className="font-bold text-gray-100 block text-sm">
-                          {staff.name}
-                        </span>
-                        <span className="text-[11px] text-gray-400 font-mono">
-                          {staff.email} {staff.phone ? `• ${staff.phone}` : ""}
-                        </span>
-                      </td>
-                      <td className="py-3.5">{getRoleBadge(staff.role)}</td>
-                      <td className="py-3.5">
-                        <Badge
-                          variant={staff.is_active ? "success" : "default"}
-                          size="sm"
-                          dot
-                        >
-                          {staff.is_active ? "Active" : "Inactive"}
-                        </Badge>
-                      </td>
-                      <td className="py-3.5 text-right">
-                        <Button
-                          size="sm"
-                          variant="subtle"
-                          leftIcon={<KeyRound className="w-3.5 h-3.5 text-amber-400" />}
-                          onClick={() => {
-                            setPasswordModalStaff(staff);
-                            setNewPassword("");
-                          }}
-                          className="text-xs border-amber-500/30 text-amber-300 hover:bg-amber-500/10 font-medium"
-                        >
-                          Change Password
-                        </Button>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
+      {/* Header Bar */}
+      <div className="hd">
+        <div>
+          <h1>Staff</h1>
+          <p>Team, roles and logins · {roster.length} registered members</p>
         </div>
-      </Card>
+        <div className="sp"></div>
+        <button className="btn" onClick={() => setIsModalOpen(true)}>
+          <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" /></svg>
+          Add staff
+        </button>
+      </div>
+
+      {/* Roster Table */}
+      <div className="cd tw">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Name</th>
+              <th>Role</th>
+              <th>Status</th>
+              <th className="ac">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {isLoading ? (
+              <tr>
+                <td colSpan={5} className="em">
+                  <b>Loading staff roster…</b>
+                </td>
+              </tr>
+            ) : roster.length === 0 ? (
+              <tr>
+                <td colSpan={5} className="em">
+                  <b>No staff members registered</b>
+                  Add waiters, kitchen staff, managers, and security guards to generate logins.
+                </td>
+              </tr>
+            ) : (
+              roster.map((s) => (
+                <tr key={s.id}>
+                  <td>
+                    <code>{s.employee_id || s.id.slice(0, 10)}</code>
+                  </td>
+                  <td>
+                    <b>{s.name}</b>
+                    <small>{s.email || s.phone || "No direct contact"}</small>
+                  </td>
+                  <td>{getRoleBadge(s.role)}</td>
+                  <td>
+                    <span className={`pill ${s.is_active ? "c-g" : "c-r"}`}>
+                      {s.is_active ? "Active" : "Disabled"}
+                    </span>
+                  </td>
+                  <td className="ac">
+                    <button
+                      className="btn s sm"
+                      onClick={() => setPasswordModalStaff(s)}
+                    >
+                      Reset password
+                    </button>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
 
       {/* Add Staff Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in">
-          <div className="w-full max-w-lg bg-surface-elevated border border-surface-border rounded-2xl p-6 shadow-2xl flex flex-col gap-5">
-            <div className="flex items-center justify-between pb-3 border-b border-surface-border">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-primary/20 text-primary flex items-center justify-center font-bold">
-                  <Users className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-base font-bold text-gray-100 font-display">
-                    Add New Staff Member
-                  </h3>
-                  <p className="text-xs text-gray-400">
-                    Generates an Employee ID and configures login credentials
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => setIsModalOpen(false)}
-                className="p-1.5 rounded-lg text-gray-400 hover:text-gray-200 hover:bg-surface-border transition-colors"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <form onSubmit={handleCreateStaff} className="flex flex-col gap-4 text-xs">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[11px] font-semibold text-gray-300 mb-1">
-                    Full Name *
-                  </label>
-                  <Input
+        <div
+          className="ov on"
+          onClick={(e) => {
+            if ((e.target as HTMLElement).classList.contains("ov")) setIsModalOpen(false);
+          }}
+        >
+          <div className="md">
+            <h3>Add staff member</h3>
+            <form onSubmit={handleCreateStaff}>
+              <div className="mf">
+                <label className="w">
+                  Full Name
+                  <input
+                    required
+                    placeholder="e.g. Aman Verma, Chef Rajesh"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    placeholder="e.g. Arjun Sharma"
-                    required
                   />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-semibold text-gray-300 mb-1">
-                    Assigned Role *
-                  </label>
+                </label>
+
+                <label>
+                  Role
                   <select
                     value={role}
                     onChange={(e) => setRole(e.target.value)}
-                    className="w-full h-10 px-3 rounded-xl bg-surface border border-surface-border text-gray-200 text-xs focus:outline-none focus:border-primary"
                   >
-                    <option value="WAITER">Floor Waiter (Accepts Orders & Collects Payments)</option>
-                    <option value="MANAGER">Floor Manager (Full Shift Control)</option>
-                    <option value="CASHIER">Cashier (POS & Bill Settlements)</option>
-                    <option value="KITCHEN">Kitchen Staff (KDS Preparation Queue)</option>
-                    <option value="GUARD">Exit Security Guard (Exit Verification)</option>
-                    <option value="RESTAURANT_ADMIN">Restaurant Admin</option>
+                    <option value="WAITER">Waiter (Floor Staff)</option>
+                    <option value="KITCHEN">Kitchen Chef</option>
+                    <option value="CASHIER">Cashier</option>
+                    <option value="GUARD">Security Guard</option>
+                    <option value="MANAGER">Manager</option>
+                    <option value="ADMIN">Admin</option>
                   </select>
-                </div>
-              </div>
+                </label>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[11px] font-semibold text-gray-300 mb-1">
-                    Login Email / Username *
-                  </label>
-                  <Input
+                <label>
+                  Email
+                  <input
                     type="email"
+                    placeholder="e.g. aman@spiceroute.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="staff@restaurant.com"
-                    required
                   />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-semibold text-gray-300 mb-1">
-                    Phone Number
-                  </label>
-                  <Input
+                </label>
+
+                <label>
+                  Phone Number
+                  <input
+                    placeholder="e.g. +91 9876543210"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
-                    placeholder="+91 98765 43210"
                   />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-semibold text-gray-300 mb-1 flex items-center justify-between">
-                  <span>Login Password *</span>
-                  <button
-                    type="button"
-                    onClick={() => setPassword("Pass" + Math.floor(100000 + Math.random() * 900000) + "!")}
-                    className="text-[10px] text-primary hover:underline"
-                  >
-                    Generate Random
-                  </button>
                 </label>
-                <Input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••••••"
-                  required
-                />
+
+                <label className="w">
+                  Temporary Password
+                  <input
+                    type="password"
+                    placeholder="Leave empty for default (tableos123)"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                  />
+                </label>
               </div>
 
-              {/* Employee ID Preview Banner */}
-              <div className="p-3 rounded-xl bg-surface border border-surface-border flex items-center justify-between">
-                <div>
-                  <span className="text-[11px] text-gray-400 block">Auto-Generated Employee ID</span>
-                  <span className="text-xs font-mono font-bold text-primary">
-                    EMP-{role.slice(0, 3)}-00{roster.filter(s => s.role === role).length + 1}
-                  </span>
-                </div>
-                <span className="text-[10px] text-gray-500 italic">
-                  Assigned automatically upon creation
-                </span>
-              </div>
-
-              <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-surface-border mt-2">
-                <Button
+              <div className="ac" style={{ marginTop: 20 }}>
+                <button
                   type="button"
-                  variant="secondary"
-                  size="sm"
+                  className="btn s"
                   onClick={() => setIsModalOpen(false)}
                 >
                   Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  variant="primary"
-                  size="sm"
-                  isLoading={isCreating}
-                  leftIcon={<CheckCircle2 className="w-4 h-4" />}
-                >
-                  Provision Staff Member
-                </Button>
+                </button>
+                <button type="submit" className="btn" disabled={isCreating}>
+                  {isCreating ? "Adding…" : "Add Staff"}
+                </button>
               </div>
             </form>
           </div>
         </div>
       )}
 
-      {/* Change Password Modal */}
+      {/* Reset Password Modal */}
       {passwordModalStaff && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in">
-          <div className="w-full max-w-md bg-surface-elevated border border-surface-border rounded-2xl p-6 shadow-2xl flex flex-col gap-4">
-            <div className="flex items-center justify-between border-b border-surface-border pb-3">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center">
-                  <KeyRound className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-base font-bold text-gray-100 font-display">
-                    Change Staff Password
-                  </h3>
-                  <span className="text-xs text-gray-400">
-                    {passwordModalStaff.name} ({passwordModalStaff.employee_id || passwordModalStaff.role})
-                  </span>
-                </div>
-              </div>
-              <button
-                onClick={() => setPasswordModalStaff(null)}
-                className="text-gray-400 hover:text-gray-200"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <p className="text-xs text-gray-300">
-              Set a new login password for this employee. They can immediately log in with this new password using their name or employee ID.
+        <div
+          className="ov on"
+          onClick={(e) => {
+            if ((e.target as HTMLElement).classList.contains("ov")) setPasswordModalStaff(null);
+          }}
+        >
+          <div className="md">
+            <h3>Reset password</h3>
+            <p className="sub" style={{ marginTop: -6, color: "var(--admin-mute)" }}>
+              {passwordModalStaff.name} ({passwordModalStaff.employee_id || "Staff"})
             </p>
-
-            <form onSubmit={handleUpdatePassword} className="flex flex-col gap-4">
-              <div>
-                <label className="text-xs font-bold text-gray-300 block mb-1">
+            <form onSubmit={handleResetPassword}>
+              <div className="mf">
+                <label className="w">
                   New Password
+                  <input
+                    required
+                    type="password"
+                    placeholder="Enter new login password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                  />
                 </label>
-                <Input
-                  type="password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="Min. 6 characters"
-                  required
-                  autoFocus
-                />
               </div>
 
-              <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-surface-border">
-                <Button
+              <div className="ac" style={{ marginTop: 20 }}>
+                <button
                   type="button"
-                  variant="secondary"
-                  size="sm"
+                  className="btn s"
                   onClick={() => setPasswordModalStaff(null)}
                 >
                   Cancel
-                </Button>
-                <Button
+                </button>
+                <button
                   type="submit"
-                  variant="primary"
-                  size="sm"
-                  isLoading={isUpdatingPassword}
-                  leftIcon={<CheckCircle2 className="w-4 h-4" />}
+                  className="btn"
+                  disabled={isUpdatingPassword}
                 >
-                  Save New Password
-                </Button>
+                  {isUpdatingPassword ? "Updating…" : "Update Password"}
+                </button>
               </div>
             </form>
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }
