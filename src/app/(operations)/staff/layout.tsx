@@ -264,7 +264,7 @@ export default function StaffOperationsLayout({
         </div>
 
         {/* Main Operations Body */}
-        <main className="flex-1 p-4 sm:p-6 max-w-7xl mx-auto w-full">
+        <main className="flex-1 p-4 sm:p-6 w-full">
           {children}
         </main>
       </div>

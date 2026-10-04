@@ -1,750 +1,514 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import dynamic from "next/dynamic";
-import {
-  QrCode,
-  Sparkles,
-  ShieldCheck,
-  ChefHat,
-  ReceiptText,
-  LineChart,
-  ArrowRight,
-  CheckCircle2,
-  Lock,
-  Layers,
-  Package,
-  Trash2,
-  Percent,
-  Clock,
-  Car,
-  BedDouble,
-  Coffee,
-  Utensils,
-  Phone,
-  Mail,
-  AlertTriangle,
-  Boxes,
-  FileSpreadsheet,
-  Check,
-} from "lucide-react";
-import { Badge } from "@/components/ui/Badge";
-import { Card } from "@/components/ui/Card";
-import { Skeleton } from "@/components/ui/Skeleton";
+import React, { useEffect, useRef, useCallback } from "react";
 import { ContactConciergeForm } from "@/components/marketing/ContactConciergeForm";
-import { THEME_OPTIONS, ThemeKey } from "@/components/providers/RestaurantThemeProvider";
-import { useTheme } from "@/components/providers/RestaurantThemeProvider";
+import { THEME_OPTIONS, useRestaurantTheme } from "@/components/providers/RestaurantThemeProvider";
 
-// Dynamic Three.js scene with zero layout-shift fallback
-const DiningTableScene = dynamic(
-  () =>
-    import("@/components/3d/DiningTableScene").then(
-      (mod) => mod.DiningTableScene
-    ),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="w-full h-[460px] md:h-[540px] rounded-3xl bg-surface border border-surface-border flex flex-col items-center justify-center p-8">
-        <Skeleton className="w-24 h-24 rounded-2xl mb-4" />
-        <Skeleton className="w-48 h-6 rounded-lg mb-2" />
-        <Skeleton className="w-64 h-4 rounded-lg" />
-      </div>
-    ),
-  }
-);
+// ── Static data (replace placeholder figures with real ones if available) ──
+const ORDERS = [
+  ["T4", "Butter chicken, naan × 2, biryani", 1180],
+  ["T9", "Paneer tikka, lime soda", 420],
+  ["T2", "Tasting menu × 2", 3600],
+  ["T7", "Cold coffee, brownie", 380],
+  ["T1", "Dal makhani, roti × 4", 560],
+  ["T12", "Sunset mocktail × 3", 690],
+  ["T5", "Room 412 · Club sandwich", 520],
+] as const;
+
+const KDS_ITEMS = [
+  ["T4 Biryani", 0.03, 0.28, 0.62],
+  ["T9 Naan × 4", 0.1, 0.3, 0.5],
+  ["T2 Tasting menu", 0.18, 0.4, 0.78],
+  ["T7 Tikka", 0.26, 0.46, 0.9],
+  ["T1 Dessert × 2", 0.34, 0.5, 0.7],
+  ["T12 Mocktails", 0.42, 0.6, 0.85],
+] as const;
+
+const TABLES = [[130,110],[260,90],[400,110],[520,90],[110,260],[250,290],[400,270],[530,280]] as const;
+const CALLS = [[2, 0.06, "Call waiter"], [5, 0.28, "Request bill"], [0, 0.5, "Need water"], [7, 0.72, "Call waiter"]] as const;
+
+const WASTE_ITEMS = [
+  ["Tomatoes", 60, 18],
+  ["Paneer",   48, 12],
+  ["Cream",    54,  9],
+  ["Bread",    68, 24],
+  ["Greens",   40, 14],
+] as const;
+
+const THEMES = [
+  { key: "",        color: "#E9B24C", label: "Imperial amber" },
+  { key: "jade",    color: "#4BD6A0", label: "Botanical jade" },
+  { key: "scarlet", color: "#FF6A5C", label: "Crimson scarlet" },
+  { key: "violet",  color: "#B79CFF", label: "Velvet violet" },
+  { key: "cobalt",  color: "#5CCBFF", label: "Ocean cobalt" },
+  { key: "rose",    color: "#FF8FB0", label: "Sunset rose" },
+];
+
+const clamp = (x: number, a = 0, b = 1) => Math.max(a, Math.min(b, x));
 
 export default function LandingPage() {
-  const { currentTheme, setTheme, isMounted, colorMode, themePrimaryColor } = useTheme();
-  const [activeInventoryTab, setActiveInventoryTab] = useState<"sourcing" | "packaging" | "wastage" | "bom">("sourcing");
-  const [mounted, setMounted] = useState(false);
+  const { currentTheme, setTheme } = useRestaurantTheme?.() ?? { currentTheme: "", setTheme: () => {} };
 
+  // ── Refs for each chapter ──
+  const chap0 = useRef<HTMLDivElement>(null);
+  const chap1 = useRef<HTMLDivElement>(null);
+  const chap2 = useRef<HTMLDivElement>(null);
+  const chap3 = useRef<HTMLDivElement>(null);
+  const heroRef = useRef<HTMLElement>(null);
+  const darkRef = useRef<HTMLDivElement>(null);
+
+  // ── KDS ticket elements held in ref ──
+  const kdsTickets = useRef<HTMLDivElement[]>([]);
+  const kdsColsRef = useRef<HTMLDivElement[]>([]);
+
+  // ── Hero cursor spotlight ──
   useEffect(() => {
-    setMounted(true);
+    const hero = heroRef.current;
+    const dark = darkRef.current;
+    if (!hero || !dark) return;
+    if (!matchMedia("(hover:hover)").matches) return;
+    const onMove = (e: MouseEvent) => {
+      const r = hero.getBoundingClientRect();
+      dark.style.setProperty("--mx", (e.clientX - r.left) + "px");
+      dark.style.setProperty("--my", (e.clientY - r.top) + "px");
+    };
+    hero.addEventListener("mousemove", onMove);
+    return () => hero.removeEventListener("mousemove", onMove);
   }, []);
 
-  return (
-    <div className="flex flex-col gap-24 py-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-      {/* Hero Section */}
-      <section className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center pt-4">
-        <div className="lg:col-span-6 flex flex-col gap-6">
-          <div className="inline-flex items-center gap-2.5">
-            <span className="px-3 py-1 rounded-full text-xs font-bold bg-primary/20 text-primary border border-primary/30 flex items-center gap-1.5 font-mono">
-              <Sparkles className="w-3.5 h-3.5 fill-current" />
-              2 MONTHS INITIALLY FREE
-            </span>
-            <span className="text-xs text-gray-400 font-mono">
-              Zero Platform Fee • Zero Setup Cost
-            </span>
-          </div>
+  // ── Scroll-driven chapter updates ──
+  const updateChapters = useCallback(() => {
+    const vh = window.innerHeight;
+    const chapters = [chap0, chap1, chap2, chap3];
 
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white tracking-tight leading-[1.1] font-display">
-            Hospitality Elegance. <br />
-            <span
-              className="bg-clip-text text-transparent transition-all duration-300 inline-block"
-              style={{
-                backgroundImage:
-                  colorMode === "light"
-                    ? "linear-gradient(135deg, var(--theme-primary) 0%, #0F172A 75%)"
-                    : "linear-gradient(135deg, var(--theme-primary) 0%, #FFFFFF 55%, var(--theme-primary-hover) 100%)",
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
+    chapters.forEach((ref, i) => {
+      const el = ref.current;
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      const p = clamp(-r.top / (r.height - vh));
+
+      // Progress bar
+      const bar = el.querySelector<HTMLElement>(".chap-prog-bar");
+      if (bar) bar.style.width = p * 100 + "%";
+
+      if (r.top > vh || r.bottom < 0) return; // not in view
+
+      if (i === 0) updateOrders(el, p);
+      if (i === 1) updateKDS(el, p);
+      if (i === 2) updateWaiter(el, p);
+      if (i === 3) updateWaste(el, p);
+    });
+  }, []);
+
+  function updateOrders(el: HTMLElement, p: number) {
+    const n = Math.floor(clamp(p / 0.8) * ORDERS.length + 0.001);
+    const rows = el.querySelectorAll<HTMLElement>(".order-row");
+    rows.forEach((row, i) => {
+      row.classList.toggle("on", i < n);
+      const st = row.querySelector(".order-status");
+      if (st) {
+        const accepted = i < n - 2;
+        st.textContent = accepted ? "Accepted" : "New";
+        st.classList.toggle("accepted", accepted);
+      }
+    });
+    const rev = el.querySelector<HTMLElement>("#rev");
+    if (rev) rev.textContent = "₹" + ORDERS.slice(0, n).reduce((s, o) => s + (o[2] as number), 0).toLocaleString("en-IN");
+    const f0 = el.querySelector<HTMLElement>("#f0");
+    if (f0) f0.textContent = String(Math.round(p * 12));
+  }
+
+  function updateKDS(el: HTMLElement, p: number) {
+    const cols = el.querySelectorAll<HTMLElement>(".kds-col");
+    const tickets = kdsTickets.current;
+    let act = 0, late = 0;
+    KDS_ITEMS.forEach((k, i) => {
+      const t = tickets[i];
+      if (!t) return;
+      const col = p < k[1] ? -1 : p < k[2] ? 0 : p < k[3] ? 1 : 2;
+      const prev = parseInt(t.dataset.col ?? "-1");
+      if (col !== prev) {
+        t.dataset.col = String(col);
+        if (col >= 0 && cols[col]) cols[col].appendChild(t);
+      }
+      if (col >= 0) {
+        const s = Math.floor((p - k[1]) * 900);
+        const isLate = col === 1 && s > 300;
+        t.className = "kds-ticket" + (isLate ? " late" : col === 2 ? " done" : "");
+        t.innerHTML = `<b>${k[0]}<span>${col === 2 ? "Ready" : Math.floor(s/60) + ":" + String(s%60).padStart(2,"0")}</span></b><small>${col === 0 ? "Waiting" : col === 1 ? "Cooking" : "Checked at the pass"}</small>`;
+        if (isLate) late++;
+        if (col < 2) act++;
+      }
+    });
+    const kt = el.querySelector<HTMLElement>("#kt");
+    if (kt) kt.textContent = act + " active";
+    const f1 = el.querySelector<HTMLElement>("#f1");
+    if (f1) f1.textContent = String(Math.max(late, Math.round(p * 3)));
+  }
+
+  function updateWaiter(el: HTMLElement, p: number) {
+    const rings = el.querySelectorAll<SVGElement>("[data-ring]");
+    const alerts = el.querySelectorAll<HTMLElement>(".alert-card");
+    const wt = el.querySelector<SVGGElement>("#wt");
+    let target: readonly [number, number] | null = null;
+    let done = 0;
+
+    CALLS.forEach((c, i) => {
+      const on = p >= c[1] && p < c[1] + 0.18;
+      if (alerts[i]) alerts[i].classList.toggle("on", p >= c[1] && p < c[1] + 0.24);
+      if (rings[i]) rings[i].setAttribute("opacity", on ? "1" : "0");
+      if (on) target = TABLES[c[0] as number];
+      if (p >= c[1] + 0.18) done++;
+    });
+
+    if (wt) {
+      const t = target ?? TABLES[0];
+      const tx = target ? (t[0] < 300 ? t[0] + 36 : t[0] - 36) : 60;
+      const ty = target ? t[1] : 210;
+      wt.style.transform = `translate(${tx}px,${ty}px)`;
+    }
+    const f2 = el.querySelector<HTMLElement>("#f2");
+    if (f2) f2.textContent = String(done);
+  }
+
+  function updateWaste(el: HTMLElement, p: number) {
+    const k = clamp(p / 0.85);
+    const rows = el.querySelectorAll<HTMLElement>(".waste-row");
+    rows.forEach((row, i) => {
+      const w = WASTE_ITEMS[i][2] * (1 - 0.6 * k);
+      const wBar = row.querySelector<HTMLElement>(".wasted");
+      if (wBar) wBar.style.width = w + "%";
+      const label = row.querySelector<HTMLElement>(".waste-pct");
+      if (label) label.textContent = w.toFixed(0) + "% waste";
+    });
+    const wp = el.querySelector<HTMLElement>("#wp");
+    if (wp) wp.textContent = "−" + Math.round(38 * k) + "%";
+    const f3 = el.querySelector<HTMLElement>("#f3");
+    if (f3) f3.textContent = "₹" + Math.round(4200 - 1600 * k).toLocaleString("en-IN");
+  }
+
+  useEffect(() => {
+    window.addEventListener("scroll", updateChapters, { passive: true });
+    window.addEventListener("resize", updateChapters);
+    updateChapters();
+    return () => {
+      window.removeEventListener("scroll", updateChapters);
+      window.removeEventListener("resize", updateChapters);
+    };
+  }, [updateChapters]);
+
+  // ── Build floor SVG ──
+  const floorSVG = `<rect x="6" y="6" width="628" height="408" rx="22" fill="none" stroke="#f4ecdd22"/>
+    <rect x="6" y="160" width="40" height="100" fill="#ffffff10"/>
+    <text x="14" y="215" font-size="11" fill="#A09684" font-family="sans-serif">Kitchen</text>
+    ${TABLES.map((t, i) => `<g>
+      <circle cx="${t[0]}" cy="${t[1]}" r="30" fill="#1d1710" stroke="#f4ecdd33"/>
+      <text x="${t[0]}" y="${t[1]+5}" text-anchor="middle" font-size="14" font-weight="800" fill="#F4ECDD" font-family="sans-serif">T${i+1}</text>
+      <circle data-ring="${i}" cx="${t[0]}" cy="${t[1]}" r="30" fill="none" stroke="var(--b)" stroke-width="3" opacity="0" class="table-ring"/>
+    </g>`).join("")}
+    <g class="waiter-dot" id="wt" style="transform:translate(60px,210px)">
+      <circle r="14" fill="var(--b)"/>
+      <circle r="5" fill="#1b1206"/>
+    </g>`;
+
+  return (
+    <>
+      {/* ══════════════════════════════════════════════════
+          HERO
+      ══════════════════════════════════════════════════ */}
+      <header className="tos-hero" id="top" ref={heroRef}>
+        {/* SVG scene */}
+        <svg className="hero-svg" viewBox="0 0 800 700" aria-hidden="true">
+          <defs>
+            <radialGradient id="g">
+              <stop offset="0" stopColor="var(--b)" stopOpacity=".6"/>
+              <stop offset="1" stopColor="var(--b)" stopOpacity="0"/>
+            </radialGradient>
+            <linearGradient id="gd" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stopColor="var(--b)"/>
+              <stop offset="1" stopColor="var(--b2)"/>
+            </linearGradient>
+          </defs>
+          <circle cx="400" cy="350" r="350" fill="url(#g)"/>
+          <circle cx="400" cy="350" r="255" fill="#1d1710" stroke="#f4ecdd22"/>
+          <circle cx="400" cy="350" r="195" fill="#f4ecdd" opacity=".93"/>
+          <circle cx="400" cy="350" r="152" fill="none" stroke="#0b090722" strokeWidth="2"/>
+          <circle cx="400" cy="350" r="64" fill="url(#gd)"/>
+          <circle cx="380" cy="330" r="18" fill="#fff" opacity=".35"/>
+          <rect x="150" y="190" width="16" height="320" rx="8" fill="#d9cdb6"/>
+          <path d="M650 190 q-32 120 0 190 v130" stroke="#d9cdb6" strokeWidth="16" fill="none" strokeLinecap="round"/>
+          <circle cx="620" cy="120" r="50" fill="#ffffff10" stroke="#f4ecdd44"/>
+          <circle cx="620" cy="120" r="21" fill="var(--b2)" opacity=".7"/>
+        </svg>
+
+        {/* Spotlight */}
+        <div className="hero-dark" ref={darkRef} />
+
+        {/* Hero copy */}
+        <div className="rise">
+          <div className="hero-pill">
+            <b>2 months free</b>No setup cost, no platform fee
+          </div>
+          <h1>
+            Every table,<br />
+            <em>perfectly</em> timed.
+          </h1>
+          <p className="hero-sub">
+            Orders, kitchen, waiter calls and wastage in one live system for restaurants, bars, hotels and cloud kitchens.
+          </p>
+          <div className="hero-cta">
+            <a className="btn-brand" href="#contact">Start 2 free months</a>
+            <a className="btn-outline" href="#orders">See it in action</a>
+          </div>
+        </div>
+
+        {/* Stats strip */}
+        <div className="hero-tick">
+          <div>&lt;30s<small>from scan to order</small></div>
+          <div>100%<small>orders checked at the pass</small></div>
+          <div>1 tap<small>to call a waiter</small></div>
+          <div>−38%<small>average wastage</small></div>
+        </div>
+      </header>
+
+      {/* ══════════════════════════════════════════════════
+          CHAPTER 01 — Orders
+      ══════════════════════════════════════════════════ */}
+      <section className="chap" id="orders" ref={chap0}>
+        <div className="chap-pin">
+          {/* Left */}
+          <div>
+            <div className="chap-num">01 · Order management</div>
+            <h2>Every order, <em>one stream.</em></h2>
+            <p>Dine-in, room service, drive-in and takeaway orders land in one live feed, accepted and routed with the table number attached.</p>
+            <div className="chap-facts">
+              <div>Orders per minute<span id="f0">0</span></div>
+              <div>Average accept time<span>4 sec</span></div>
+            </div>
+            <div className="chap-prog"><span className="chap-prog-bar" /></div>
+          </div>
+          {/* Right viz */}
+          <div className="chap-viz">
+            <div className="viz-header">
+              <span><span className="viz-dot"/>Live orders</span>
+              <span>Tonight</span>
+            </div>
+            <div className="order-list">
+              {ORDERS.map((o, i) => (
+                <div className="order-row" key={i}>
+                  <b>{o[0]}</b>
+                  <div>{o[1]}<small>Sent to kitchen</small></div>
+                  <u>₹{o[2]}</u>
+                  <span className="order-status">New</span>
+                </div>
+              ))}
+            </div>
+            <div className="order-total">
+              <span>Revenue so far</span>
+              <b id="rev">₹0</b>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ══════════════════════════════════════════════════
+          CHAPTER 02 — KDS
+      ══════════════════════════════════════════════════ */}
+      <section className="chap" id="kds" ref={chap1}>
+        <div className="chap-pin">
+          <div>
+            <div className="chap-num">02 · Kitchen display</div>
+            <h2>Tickets that <em>move themselves.</em></h2>
+            <p>Each ticket flows from new to cooking to the pass. Timers turn red before a guest notices a delay.</p>
+            <div className="chap-facts">
+              <div>Avg prep time<span>11 min</span></div>
+              <div>Late tickets caught<span id="f1">0</span></div>
+            </div>
+            <div className="chap-prog"><span className="chap-prog-bar" /></div>
+          </div>
+          <div className="chap-viz">
+            <div className="viz-header">
+              <span><span className="viz-dot"/>Kitchen display</span>
+              <span id="kt">0 active</span>
+            </div>
+            <div className="kds-board">
+              <div className="kds-col" ref={el => { if (el) kdsColsRef.current[0] = el; }}><small>New</small></div>
+              <div className="kds-col" ref={el => { if (el) kdsColsRef.current[1] = el; }}><small>Cooking</small></div>
+              <div className="kds-col" ref={el => { if (el) kdsColsRef.current[2] = el; }}><small>At the pass</small></div>
+            </div>
+            {/* Pre-create ticket DOM nodes via ref callback */}
+            {KDS_ITEMS.map((_, i) => (
+              <div
+                key={i}
+                className="kds-ticket"
+                style={{ display: "none" }}
+                ref={el => { if (el) kdsTickets.current[i] = el; }}
+              />
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ══════════════════════════════════════════════════
+          CHAPTER 03 — Waiter
+      ══════════════════════════════════════════════════ */}
+      <section className="chap" id="waiter" ref={chap2}>
+        <div className="chap-pin">
+          <div>
+            <div className="chap-num">03 · Waiter calling</div>
+            <h2>One tap, <em>a waiter arrives.</em></h2>
+            <p>Guests tap call waiter, ask for water or request the bill. The closest free waiter gets the alert with the table number.</p>
+            <div className="chap-facts">
+              <div>Avg response<span>38 sec</span></div>
+              <div>Requests answered<span id="f2">0</span></div>
+            </div>
+            <div className="chap-prog"><span className="chap-prog-bar" /></div>
+          </div>
+          <div className="chap-viz">
+            <div className="viz-header">
+              <span><span className="viz-dot"/>Floor view</span>
+              <span>Waiter: Ananya</span>
+            </div>
+            <div className="floor-wrap">
+              <svg viewBox="0 0 640 420" id="floor" dangerouslySetInnerHTML={{ __html: floorSVG }} />
+              <div className="alert-stack">
+                {CALLS.map((c, i) => (
+                  <div className="alert-card" key={i}>
+                    <small>Table {(c[0] as number) + 1}</small>
+                    {c[2]}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ══════════════════════════════════════════════════
+          CHAPTER 04 — Wastage
+      ══════════════════════════════════════════════════ */}
+      <section className="chap" id="waste" ref={chap3}>
+        <div className="chap-pin">
+          <div>
+            <div className="chap-num">04 · Wastage management</div>
+            <h2>Waste you can <em>finally see.</em></h2>
+            <p>Every dish deducts its ingredients, so spoilage and over-prep are logged and trimmed before they reach the bin.</p>
+            <div className="chap-facts">
+              <div>Waste logged<span id="f3">₹0</span></div>
+              <div>Supplier order<span>Auto-drafted</span></div>
+            </div>
+            <div className="chap-prog"><span className="chap-prog-bar" /></div>
+          </div>
+          <div className="chap-viz">
+            <div className="viz-header">
+              <span><span className="viz-dot"/>Stock and waste</span>
+              <span>This week</span>
+            </div>
+            <div className="waste-list">
+              {WASTE_ITEMS.map((w, i) => (
+                <div className="waste-row" key={i}>
+                  <span style={{ color: "var(--ink)", textAlign: "left" }}>{w[0]}</span>
+                  <div className="waste-bar">
+                    <span className="used" style={{ width: w[1] + "%" }} />
+                    <span className="wasted" style={{ width: w[2] + "%" }} />
+                  </div>
+                  <span className="waste-pct">{w[2]}% waste</span>
+                </div>
+              ))}
+            </div>
+            <div className="waste-total">
+              <span>Wastage vs last month</span>
+              <b id="wp">0%</b>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ══════════════════════════════════════════════════
+          VENUE STRIP
+      ══════════════════════════════════════════════════ */}
+      <section id="venues" style={{ paddingTop: 140, paddingBottom: 0 }}>
+        <h2 style={{ padding: "0 var(--px)", marginBottom: 60 }}>
+          Built for <em>every</em> kind of room.
+        </h2>
+        <div className="ven-grid">
+          <div className="ven-item">
+            <h3>Fine dining</h3>
+            <p>Course pacing, drink pairing and split bills.</p>
+          </div>
+          <div className="ven-item">
+            <h3>Drive-in bars</h3>
+            <p>Order from the car with a QR on every bay.</p>
+          </div>
+          <div className="ven-item">
+            <h3>Cafes and bakeries</h3>
+            <p>Fast orders, pastry stock and takeaway packaging.</p>
+          </div>
+          <div className="ven-item">
+            <h3>Hotel rooms</h3>
+            <p>In-room QR cards routed to one kitchen.</p>
+          </div>
+          <div className="ven-item" style={{ borderRight: 0 }}>
+            <h3>Cloud kitchens</h3>
+            <p>Batch tickets across brands with shared stock.</p>
+          </div>
+        </div>
+      </section>
+
+      {/* ══════════════════════════════════════════════════
+          THEME PICKER
+      ══════════════════════════════════════════════════ */}
+      <section className="theme-section" id="themes">
+        <h2>Your venue, <em>your colors.</em></h2>
+        <p>Every restaurant gets its own palette across the guest app and staff screens. Pick one and this whole page changes.</p>
+        <div className="theme-switcher">
+          {THEMES.map((t, i) => (
+            <button
+              key={t.key}
+              className="theme-btn"
+              aria-pressed={currentTheme === t.key || (!currentTheme && i === 0) ? "true" : "false"}
+              onClick={() => {
+                if (t.key) {
+                  document.documentElement.dataset.theme = t.key;
+                } else {
+                  delete document.documentElement.dataset.theme;
+                }
+                setTheme?.(t.key as any);
               }}
             >
-              Modern Restaurant OS.
-            </span>
-          </h1>
-
-          <p className="text-base sm:text-lg text-gray-300 leading-relaxed max-w-xl">
-            A unified operating platform engineered for fine dining, cafes, drive-in bars, hotels, and cloud kitchens. Seamlessly orchestrate guests, staff, kitchen KDS, raw material sourcing, packaging consumables, and automated wastage control.
-          </p>
-
-          <div className="flex flex-wrap items-center gap-3 pt-2">
-            <a
-              href="#contact"
-              className="px-6 py-3.5 rounded-xl bg-primary text-black font-bold text-sm hover:bg-primary-hover transition-all flex items-center gap-2 shadow-lg shadow-primary/20"
-            >
-              <Sparkles className="w-4 h-4 fill-current" />
-              <span>Claim 2 Months Free Trial</span>
-            </a>
-            <a
-              href="#features"
-              className="px-6 py-3.5 rounded-xl bg-surface-subtle border border-surface-border text-gray-200 hover:text-white hover:bg-surface-hover transition-all text-sm font-semibold flex items-center gap-2"
-            >
-              <span>Explore Features</span>
-              <ArrowRight className="w-4 h-4" />
-            </a>
-          </div>
-
-          {/* 4 Feature Value Props */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-6 border-t border-surface-border/60">
-            <div className="p-3 rounded-2xl bg-surface/40 border border-surface-border">
-              <div className="text-xl sm:text-2xl font-black text-primary font-display">
-                2 Months Free
-              </div>
-              <div className="text-[11px] text-gray-400 mt-0.5">Complimentary Trial</div>
-            </div>
-
-            <div className="p-3 rounded-2xl bg-surface/40 border border-surface-border">
-              <div className="text-xl sm:text-2xl font-black text-emerald-400 font-display">
-                &lt; 30s
-              </div>
-              <div className="text-[11px] text-gray-400 mt-0.5">Table Turn Initiation</div>
-            </div>
-
-            <div className="p-3 rounded-2xl bg-surface/40 border border-surface-border">
-              <div className="text-xl sm:text-2xl font-black text-cyan-400 font-display">
-                100%
-              </div>
-              <div className="text-[11px] text-gray-400 mt-0.5">Exit Pass Protection</div>
-            </div>
-
-            <div className="p-3 rounded-2xl bg-surface/40 border border-surface-border">
-              <div className="text-xl sm:text-2xl font-black text-primary font-display">
-                Auto BOM
-              </div>
-              <div className="text-[11px] text-gray-400 mt-0.5">Wastage & Sourcing</div>
-            </div>
-          </div>
-        </div>
-
-        {/* 3D Interactive Hero Canvas */}
-        <div className="lg:col-span-6 relative">
-          <DiningTableScene />
+              <span className="theme-dot" style={{ background: t.color }} />
+              {t.label}
+            </button>
+          ))}
         </div>
       </section>
 
-      {/* SECTION 1: GUEST & DINER EXPERIENCE (#features) */}
-      <section id="features" className="flex flex-col gap-8 scroll-mt-24">
-        <div className="flex flex-col gap-2">
-          <span className="text-xs font-bold uppercase tracking-wider text-primary font-mono">
-            Guest Experience Suite
-          </span>
-          <h2 className="text-3xl sm:text-4xl font-bold font-display text-white">
-            Frictionless Ordering. Zero Waiting.
-          </h2>
-          <p className="text-sm text-gray-300 max-w-2xl leading-relaxed">
-            Eliminate server delays and lost paper slips. Guests scan a high-resolution table QR code to explore interactive menus, customize dishes, and track meal progress in real time.
+      {/* ══════════════════════════════════════════════════
+          CONTACT / DEMO
+      ══════════════════════════════════════════════════ */}
+      <section className="contact-grid" id="contact">
+        <div>
+          <h2>Let's set up <em>your venue.</em></h2>
+          <p style={{ color: "var(--mute)", marginTop: 24, maxWidth: "44ch", fontSize: "1.1rem" }}>
+            We'll build your menu and table layout with you, then switch on two free months. No credit card needed.
           </p>
+          <div className="contact-care">
+            <div>
+              <small>Toll-free hotline</small>
+              <b>+91 1800 890 3240</b>
+            </div>
+            <div>
+              <small>Concierge email</small>
+              <b>concierge@tableos.in</b>
+            </div>
+            <div>
+              <small>Support</small>
+              <b>24/7 priority help and on-site setup</b>
+            </div>
+          </div>
         </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card className="flex flex-col justify-between p-6 space-y-4 hover:border-primary/50 transition-all">
-            <div className="space-y-3">
-              <div className="w-12 h-12 rounded-2xl bg-primary/10 border border-primary/30 flex items-center justify-center text-primary">
-                <QrCode className="w-6 h-6" />
-              </div>
-              <h3 className="text-lg font-bold text-white font-display">
-                Instant Mobile Digital Menu
-              </h3>
-              <p className="text-xs text-gray-400 leading-relaxed">
-                High-speed visual menu loading in under a second. Guests filter by dietary preferences (Veg, Non-Veg, Vegan), customize spices & add-ons, and add items directly to a shared table cart.
-              </p>
-            </div>
-            <ul className="space-y-2 text-xs text-gray-300 pt-4 border-t border-surface-border">
-              <li className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span>Zero app download required</span>
-              </li>
-              <li className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span>Multi-guest synchronized cart</span>
-              </li>
-            </ul>
-          </Card>
-
-          <Card className="flex flex-col justify-between p-6 space-y-4 hover:border-cyan-500/50 transition-all">
-            <div className="space-y-3">
-              <div className="w-12 h-12 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
-                <Sparkles className="w-6 h-6" />
-              </div>
-              <h3 className="text-lg font-bold text-white font-display">
-                Visual Menu Digitizer & Concierge
-              </h3>
-              <p className="text-xs text-gray-400 leading-relaxed">
-                Take a photo of your printed physical paper menu. The system automatically structures categories, dish titles, prices, descriptions, and tax rates without manual typing.
-              </p>
-            </div>
-            <ul className="space-y-2 text-xs text-gray-300 pt-4 border-t border-surface-border">
-              <li className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-cyan-400 shrink-0" />
-                <span>Instant paper menu photo onboarding</span>
-              </li>
-              <li className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-cyan-400 shrink-0" />
-                <span>Chef recommendation highlights</span>
-              </li>
-            </ul>
-          </Card>
-
-          <Card className="flex flex-col justify-between p-6 space-y-4 hover:border-emerald-500/50 transition-all">
-            <div className="space-y-3">
-              <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
-                <ReceiptText className="w-6 h-6" />
-              </div>
-              <h3 className="text-lg font-bold text-white font-display">
-                Split Billing & ExitPass Security
-              </h3>
-              <p className="text-xs text-gray-400 leading-relaxed">
-                Automated statutory tax breakdown (2.5% CGST / 2.5% SGST). Diners pay via UPI or card, receive a verifiable digital receipt, and generate a cryptographic exit door pass.
-              </p>
-            </div>
-            <ul className="space-y-2 text-xs text-gray-300 pt-4 border-t border-surface-border">
-              <li className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span>Zero calculation errors or bill disputes</span>
-              </li>
-              <li className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span>Camera-verified exit pass prevents walkouts</span>
-              </li>
-            </ul>
-          </Card>
-        </div>
+        <ContactConciergeForm />
       </section>
-
-      {/* SECTION 2: RAW MATERIAL SOURCING, PACKAGING & WASTAGE CALCULATOR (#inventory) */}
-      <section id="inventory" className="flex flex-col gap-8 scroll-mt-24">
-        <div className="flex flex-col gap-2">
-          <span className="text-xs font-bold uppercase tracking-wider text-primary font-mono">
-            Kitchen Back-of-House Intelligence
-          </span>
-          <h2 className="text-3xl sm:text-4xl font-bold font-display text-white">
-            Raw Material Sourcing, Packaging & Wastage Calculator
-          </h2>
-          <p className="text-sm text-gray-300 max-w-3xl leading-relaxed">
-            Every gram of raw ingredient and every piece of packaging matters. Monitor daily supplier procurement, keep count of tissue papers and takeaway boxes, record burnt or spoiled items with the automated wastage calculator, and maintain live plate margins.
-          </p>
-        </div>
-
-        {/* Interactive Tabs */}
-        <div className="flex flex-wrap gap-2 pb-2 border-b border-surface-border">
-          {[
-            { id: "sourcing" as const, label: "Raw Material Sourcing", icon: Boxes },
-            { id: "packaging" as const, label: "Packaging & Consumables", icon: Package },
-            { id: "wastage" as const, label: "Automated Wastage Calculator", icon: Trash2 },
-            { id: "bom" as const, label: "Recipe BOM & Food Costing", icon: FileSpreadsheet },
-          ].map((tab) => {
-            const Icon = tab.icon;
-            const isActive = activeInventoryTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveInventoryTab(tab.id)}
-                className={`px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 transition-all ${
-                  isActive
-                    ? "bg-primary text-black shadow-md shadow-primary/20"
-                    : "bg-surface-subtle text-gray-300 hover:text-white hover:bg-surface-hover border border-surface-border"
-                }`}
-              >
-                <Icon className="w-4 h-4" />
-                <span>{tab.label}</span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Tab 1: Raw Material Sourcing */}
-        {activeInventoryTab === "sourcing" && (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center bg-surface/50 border border-surface-border rounded-3xl p-6 sm:p-8 animate-fade-in">
-            <div className="lg:col-span-6 space-y-4">
-              <div className="inline-flex items-center gap-2 text-xs font-bold text-primary">
-                <Boxes className="w-4 h-4" />
-                <span>Supplier Delivery Intake & Inventory Valuation</span>
-              </div>
-              <h3 className="text-2xl font-bold font-display text-white">
-                Never Run Out of Essential Kitchen Stock
-              </h3>
-              <p className="text-xs sm:text-sm text-gray-300 leading-relaxed">
-                Log fresh farm produce, dairy, poultry, seafood, oils, spices, and dry staples as soon as vendor crates arrive at your loading dock. Set automatic re-order alerts so your kitchen never halts service during peak dinner rushes.
-              </p>
-              <div className="grid grid-cols-2 gap-3 pt-2">
-                <div className="p-3 rounded-xl bg-surface-subtle border border-surface-border">
-                  <div className="text-xs font-bold text-white">Low-Stock Warnings</div>
-                  <div className="text-[11px] text-gray-400 mt-1">Alerts when items fall below minimum kg/litre threshold</div>
-                </div>
-                <div className="p-3 rounded-xl bg-surface-subtle border border-surface-border">
-                  <div className="text-xs font-bold text-white">Live Stock Valuation</div>
-                  <div className="text-[11px] text-gray-400 mt-1">Real-time total rupee value of all items in your pantry</div>
-                </div>
-              </div>
-            </div>
-
-            <div className="lg:col-span-6">
-              <div className="terminal-display bg-[#0e1117] border border-surface-border rounded-2xl p-5 shadow-xl space-y-3 font-mono text-xs">
-                <div className="flex items-center justify-between pb-3 border-b border-surface-border text-gray-400">
-                  <span>RAW MATERIAL</span>
-                  <span>CATEGORY</span>
-                  <span>ON HAND</span>
-                  <span>STATUS</span>
-                </div>
-                <div className="flex items-center justify-between py-2 border-b border-surface-border/50 text-gray-200">
-                  <span className="font-sans font-semibold text-white">Farm Fresh Paneer</span>
-                  <span className="text-gray-400">Dairy</span>
-                  <span className="text-primary font-bold">14.5 kg</span>
-                  <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Optimal</span>
-                </div>
-                <div className="flex items-center justify-between py-2 border-b border-surface-border/50 text-gray-200">
-                  <span className="font-sans font-semibold text-white">San Marzano Tomatoes</span>
-                  <span className="text-gray-400">Produce</span>
-                  <span className="text-amber-400 font-bold">3.2 kg</span>
-                  <span className="text-[10px] px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">Low Stock</span>
-                </div>
-                <div className="flex items-center justify-between py-2 border-b border-surface-border/50 text-gray-200">
-                  <span className="font-sans font-semibold text-white">Basmati Aged Rice</span>
-                  <span className="text-gray-400">Dry Pantry</span>
-                  <span className="text-primary font-bold">50.0 kg</span>
-                  <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Optimal</span>
-                </div>
-                <div className="flex items-center justify-between py-2 text-gray-200">
-                  <span className="font-sans font-semibold text-white">Extra Virgin Olive Oil</span>
-                  <span className="text-gray-400">Oils</span>
-                  <span className="text-primary font-bold">18.0 L</span>
-                  <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Optimal</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Tab 2: Packaging Materials */}
-        {activeInventoryTab === "packaging" && (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center bg-surface/50 border border-surface-border rounded-3xl p-6 sm:p-8 animate-fade-in">
-            <div className="lg:col-span-6 space-y-4">
-              <div className="inline-flex items-center gap-2 text-xs font-bold text-cyan-400">
-                <Package className="w-4 h-4" />
-                <span>Takeaway Packaging & Dining Consumables</span>
-              </div>
-              <h3 className="text-2xl font-bold font-display text-white">
-                Tissue Papers, Takeaway Boxes & Disposables
-              </h3>
-              <p className="text-xs sm:text-sm text-gray-300 leading-relaxed">
-                Packaging materials are major hidden costs in modern dining and delivery. TableOS tracks tissue paper boxes, dining napkins, biodegradable takeout containers, cups, straws, cutlery packs, and delivery bags with zero guesswork.
-              </p>
-              <ul className="space-y-2 text-xs text-gray-300 pt-2">
-                <li className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-cyan-400" />
-                  <span>Track tissue paper packs & dining table napkins</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-cyan-400" />
-                  <span>Monitor meal packaging boxes, kraft bags & cups</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-cyan-400" />
-                  <span>Deduct packaging units automatically per takeaway order</span>
-                </li>
-              </ul>
-            </div>
-
-            <div className="lg:col-span-6">
-              <div className="terminal-display bg-[#0e1117] border border-surface-border rounded-2xl p-5 shadow-xl space-y-3 font-mono text-xs">
-                <div className="flex items-center justify-between pb-3 border-b border-surface-border text-gray-400">
-                  <span>PACKAGING ITEM</span>
-                  <span>UNIT</span>
-                  <span>QUANTITY</span>
-                  <span>REORDER LEVEL</span>
-                </div>
-                <div className="flex items-center justify-between py-2 border-b border-surface-border/50 text-gray-200">
-                  <span className="font-sans font-semibold text-white">Branded 2-Ply Tissue Napkins</span>
-                  <span className="text-gray-400">Boxes (100pcs)</span>
-                  <span className="text-cyan-400 font-bold">120 Boxes</span>
-                  <span className="text-gray-400">25 Boxes</span>
-                </div>
-                <div className="flex items-center justify-between py-2 border-b border-surface-border/50 text-gray-200">
-                  <span className="font-sans font-semibold text-white">Kraft Meal Containers (750ml)</span>
-                  <span className="text-gray-400">Pieces</span>
-                  <span className="text-cyan-400 font-bold">850 Pcs</span>
-                  <span className="text-gray-400">200 Pcs</span>
-                </div>
-                <div className="flex items-center justify-between py-2 border-b border-surface-border/50 text-gray-200">
-                  <span className="font-sans font-semibold text-white">Biryani Clay Handi / Sealed Bowls</span>
-                  <span className="text-gray-400">Pieces</span>
-                  <span className="text-cyan-400 font-bold">320 Pcs</span>
-                  <span className="text-gray-400">50 Pcs</span>
-                </div>
-                <div className="flex items-center justify-between py-2 text-gray-200">
-                  <span className="font-sans font-semibold text-white">Biodegradable Wooden Cutlery Set</span>
-                  <span className="text-gray-400">Packets</span>
-                  <span className="text-cyan-400 font-bold">500 Pkts</span>
-                  <span className="text-gray-400">100 Pkts</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Tab 3: Wastage Calculator */}
-        {activeInventoryTab === "wastage" && (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center bg-surface/50 border border-surface-border rounded-3xl p-6 sm:p-8 animate-fade-in">
-            <div className="lg:col-span-6 space-y-4">
-              <div className="inline-flex items-center gap-2 text-xs font-bold text-rose-400">
-                <Trash2 className="w-4 h-4" />
-                <span>Automated Kitchen Spoilage & Loss Calculator</span>
-              </div>
-              <h3 className="text-2xl font-bold font-display text-white">
-                Calculate Exact Rupee Loss from Spoilage & Burnt Food
-              </h3>
-              <p className="text-xs sm:text-sm text-gray-300 leading-relaxed">
-                Unrecorded food waste is the #1 killer of restaurant profit margins. With the TableOS Wastage Calculator, line cooks and head chefs record burnt dishes, expired produce, and transit spillages in 3 seconds. The system immediately calculates rupee loss.
-              </p>
-              <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-200 text-xs space-y-1">
-                <div className="font-bold flex items-center gap-1.5">
-                  <AlertTriangle className="w-4 h-4 text-rose-400" />
-                  Instant Financial Visibility
-                </div>
-                <p className="text-rose-300/80 leading-relaxed">
-                  Shift reports break down wastage by category: burnt in kitchen, expired in cold storage, or returned by guest. Managers pinpoint exact operational inefficiencies before they compound.
-                </p>
-              </div>
-            </div>
-
-            <div className="lg:col-span-6">
-              <div className="terminal-display bg-[#0e1117] border border-surface-border rounded-2xl p-5 shadow-xl space-y-3 font-mono text-xs">
-                <div className="flex items-center justify-between pb-3 border-b border-surface-border text-gray-400">
-                  <span>WASTED ITEM</span>
-                  <span>REASON</span>
-                  <span>QTY</span>
-                  <span>RUPEE LOSS</span>
-                </div>
-                <div className="flex items-center justify-between py-2 border-b border-surface-border/50 text-gray-200">
-                  <div>
-                    <div className="font-sans font-semibold text-white">Heavy Cream 1L</div>
-                    <div className="text-[10px] text-gray-500">Exp. 03 Oct</div>
-                  </div>
-                  <span className="text-gray-400">Expired in Chiller</span>
-                  <span className="text-rose-400">2 Units</span>
-                  <span className="text-rose-400 font-bold">₹540.00</span>
-                </div>
-                <div className="flex items-center justify-between py-2 border-b border-surface-border/50 text-gray-200">
-                  <div>
-                    <div className="font-sans font-semibold text-white">Butter Chicken Gravy</div>
-                    <div className="text-[10px] text-gray-500">Shift 2 Dinner</div>
-                  </div>
-                  <span className="text-gray-400">Burnt on Tandoor</span>
-                  <span className="text-rose-400">1.5 Litres</span>
-                  <span className="text-rose-400 font-bold">₹780.00</span>
-                </div>
-                <div className="flex items-center justify-between py-2 text-gray-200">
-                  <div>
-                    <div className="font-sans font-semibold text-white">Burger Buns (Brioche)</div>
-                    <div className="text-[10px] text-gray-500">Damaged Pack</div>
-                  </div>
-                  <span className="text-gray-400">Transit Damage</span>
-                  <span className="text-rose-400">12 Pcs</span>
-                  <span className="text-rose-400 font-bold">₹240.00</span>
-                </div>
-                <div className="pt-3 border-t border-surface-border flex items-center justify-between text-xs font-bold">
-                  <span className="text-gray-400">TODAY&#39;S WASTAGE LOSS</span>
-                  <span className="text-rose-400 text-sm">₹1,560.00</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Tab 4: Recipe BOM */}
-        {activeInventoryTab === "bom" && (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center bg-surface/50 border border-surface-border rounded-3xl p-6 sm:p-8 animate-fade-in">
-            <div className="lg:col-span-6 space-y-4">
-              <div className="inline-flex items-center gap-2 text-xs font-bold text-emerald-400">
-                <FileSpreadsheet className="w-4 h-4" />
-                <span>Recipe Bill of Materials & Food Costing</span>
-              </div>
-              <h3 className="text-2xl font-bold font-display text-white">
-                Live Plate Margin & Ingredient Depletion
-              </h3>
-              <p className="text-xs sm:text-sm text-gray-300 leading-relaxed">
-                Connect each menu dish directly to its underlying ingredient components. Whenever an order is prepared in the kitchen, TableOS automatically depletes exact grams of cheese, meat, spices, and packaging, while showing your gross profit margin percentage.
-              </p>
-              <div className="grid grid-cols-2 gap-3 pt-2">
-                <div className="p-3 rounded-xl bg-surface-subtle border border-surface-border">
-                  <div className="text-xs font-bold text-emerald-400">Auto Food Cost %</div>
-                  <div className="text-[11px] text-gray-400 mt-1">Calculates cost of goods sold (COGS) per dish automatically</div>
-                </div>
-                <div className="p-3 rounded-xl bg-surface-subtle border border-surface-border">
-                  <div className="text-xs font-bold text-emerald-400">Gross Margin %</div>
-                  <div className="text-[11px] text-gray-400 mt-1">Identifies top-profit margin dishes vs low-margin items</div>
-                </div>
-              </div>
-            </div>
-
-            <div className="lg:col-span-6">
-              <div className="terminal-display bg-[#0e1117] border border-surface-border rounded-2xl p-5 shadow-xl space-y-3 font-mono text-xs">
-                <div className="flex items-center justify-between pb-3 border-b border-surface-border text-gray-400">
-                  <span>DISH NAME</span>
-                  <span>MENU PRICE</span>
-                  <span>FOOD COST</span>
-                  <span>MARGIN %</span>
-                </div>
-                <div className="flex items-center justify-between py-2 border-b border-surface-border/50 text-gray-200">
-                  <span className="font-sans font-semibold text-white">Paneer Butter Masala</span>
-                  <span className="text-gray-300">₹360.00</span>
-                  <span className="text-amber-400">₹94.20</span>
-                  <span className="text-emerald-400 font-bold">73.8%</span>
-                </div>
-                <div className="flex items-center justify-between py-2 border-b border-surface-border/50 text-gray-200">
-                  <span className="font-sans font-semibold text-white">Murgh Tikka Angara</span>
-                  <span className="text-gray-300">₹440.00</span>
-                  <span className="text-amber-400">₹128.50</span>
-                  <span className="text-emerald-400 font-bold">70.8%</span>
-                </div>
-                <div className="flex items-center justify-between py-2 border-b border-surface-border/50 text-gray-200">
-                  <span className="font-sans font-semibold text-white">Dal Makhani Heritage</span>
-                  <span className="text-gray-300">₹290.00</span>
-                  <span className="text-amber-400">₹58.00</span>
-                  <span className="text-emerald-400 font-bold">80.0%</span>
-                </div>
-                <div className="flex items-center justify-between py-2 text-gray-200">
-                  <span className="font-sans font-semibold text-white">Truffle Mushroom Risotto</span>
-                  <span className="text-gray-300">₹520.00</span>
-                  <span className="text-amber-400">₹145.60</span>
-                  <span className="text-emerald-400 font-bold">72.0%</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-      </section>
-
-      {/* SECTION 3: OPERATIONS COMMAND (#operations) */}
-      <section id="operations" className="flex flex-col gap-8 scroll-mt-24">
-        <div className="flex flex-col gap-2">
-          <span className="text-xs font-bold uppercase tracking-wider text-cyan-400 font-mono">
-            Front & Back-of-House Harmony
-          </span>
-          <h2 className="text-3xl sm:text-4xl font-bold font-display text-white">
-            Dedicated Station Command. Zero Chaos.
-          </h2>
-          <p className="text-sm text-gray-300 max-w-2xl leading-relaxed">
-            Every staff member gets a purpose-built, high-contrast touch interface optimized for speed and resilience under rush hours.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card className="flex flex-col justify-between p-6 space-y-4">
-            <div className="space-y-3">
-              <div className="w-12 h-12 rounded-2xl bg-sky-500/10 border border-sky-500/30 flex items-center justify-center text-sky-400">
-                <Layers className="w-6 h-6" />
-              </div>
-              <h3 className="text-lg font-bold text-white font-display">
-                Floor & Waiter Terminal
-              </h3>
-              <p className="text-xs text-gray-400 leading-relaxed">
-                Color-coded interactive table grid. First-order OTP verification, walk-in guest initiation, live table occupancy, order acceptance, and offline Cash/POS settlements.
-              </p>
-            </div>
-            <div className="pt-4 border-t border-surface-border text-xs text-sky-400 font-semibold flex items-center gap-1.5">
-              <CheckCircle2 className="w-4 h-4" />
-              <span>Instant table seating & cash settlement</span>
-            </div>
-          </Card>
-
-          <Card className="flex flex-col justify-between p-6 space-y-4 hover:border-primary/50 transition-all">
-            <div className="space-y-3">
-              <div className="w-12 h-12 rounded-2xl bg-primary/10 border border-primary/30 flex items-center justify-center text-primary">
-                <ChefHat className="w-6 h-6" />
-              </div>
-              <h3 className="text-lg font-bold text-white font-display">
-                Kitchen Display System (KDS)
-              </h3>
-              <p className="text-xs text-gray-400 leading-relaxed">
-                Touch-first kitchen Kanban screen. 60px+ touch targets advancing tickets: Incoming → Preparing → Ready → Served. Eliminates thermal printer paper jams and lost orders.
-              </p>
-            </div>
-            <div className="pt-4 border-t border-surface-border text-xs text-primary font-semibold flex items-center gap-1.5">
-              <CheckCircle2 className="w-4 h-4" />
-              <span>Real-time prep timer & audio chimes</span>
-            </div>
-          </Card>
-
-          <Card className="flex flex-col justify-between p-6 space-y-4">
-            <div className="space-y-3">
-              <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
-                <ShieldCheck className="w-6 h-6" />
-              </div>
-              <h3 className="text-lg font-bold text-white font-display">
-                Exit Gate Pass Scanner
-              </h3>
-              <p className="text-xs text-gray-400 leading-relaxed">
-                Single-purpose camera scanner with 4-digit manual OTP fallback. Verifies that every departing guest holds an authentic paid digital receipt. Completely eliminates walkouts.
-              </p>
-            </div>
-            <div className="pt-4 border-t border-surface-border text-xs text-emerald-400 font-semibold flex items-center gap-1.5">
-              <CheckCircle2 className="w-4 h-4" />
-              <span>100% walkout loss elimination</span>
-            </div>
-          </Card>
-        </div>
-      </section>
-
-      {/* SECTION 4: MULTI-VENUE CONCEPTS (#venues) */}
-      <section id="venues" className="flex flex-col gap-8 scroll-mt-24">
-        <div className="flex flex-col gap-2">
-          <span className="text-xs font-bold uppercase tracking-wider text-purple-400 font-mono">
-            Hospitality Versatility
-          </span>
-          <h2 className="text-3xl sm:text-4xl font-bold font-display text-white">
-            Configured for Every Dining Concept
-          </h2>
-          <p className="text-sm text-gray-300 max-w-2xl leading-relaxed">
-            Whether running a drive-in car-o-bar, luxury hotel room service, rooftop cocktail lounge, or high-volume cloud kitchen, TableOS adapts effortlessly.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-          <div className="p-5 rounded-2xl bg-surface border border-surface-border space-y-3 hover:border-primary/50 transition-all">
-            <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
-              <Utensils className="w-5 h-5" />
-            </div>
-            <h4 className="text-sm font-bold text-white">Fine Dine Restaurant</h4>
-            <p className="text-xs text-gray-400 leading-relaxed">
-              Table seating, pacing multi-course meals, sommelier drink recommendations, and split payments.
-            </p>
-          </div>
-
-          <div className="p-5 rounded-2xl bg-surface border border-surface-border space-y-3 hover:border-cyan-500/50 transition-all">
-            <div className="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400">
-              <Car className="w-5 h-5" />
-            </div>
-            <h4 className="text-sm font-bold text-white">Drive-In / Car-O-Bar</h4>
-            <p className="text-xs text-gray-400 leading-relaxed">
-              Universal parking bay QR code. Guests order appetizers & drinks directly from their car without waiter delays.
-            </p>
-          </div>
-
-          <div className="p-5 rounded-2xl bg-surface border border-surface-border space-y-3 hover:border-amber-500/50 transition-all">
-            <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
-              <Coffee className="w-5 h-5" />
-            </div>
-            <h4 className="text-sm font-bold text-white">Cafe & Bakery</h4>
-            <p className="text-xs text-gray-400 leading-relaxed">
-              Rapid counter ordering, pastry inventory tracking, takeaway packaging, and custom coffee notes.
-            </p>
-          </div>
-
-          <div className="p-5 rounded-2xl bg-surface border border-surface-border space-y-3 hover:border-purple-500/50 transition-all">
-            <div className="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400">
-              <BedDouble className="w-5 h-5" />
-            </div>
-            <h4 className="text-sm font-bold text-white">Hotel Room Service</h4>
-            <p className="text-xs text-gray-400 leading-relaxed">
-              In-room dining QR cards, suite number routing, centralized kitchen routing, and checkout billing.
-            </p>
-          </div>
-
-          <div className="p-5 rounded-2xl bg-surface border border-surface-border space-y-3 hover:border-emerald-500/50 transition-all">
-            <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
-              <Boxes className="w-5 h-5" />
-            </div>
-            <h4 className="text-sm font-bold text-white">Cloud Kitchen / QSR</h4>
-            <p className="text-xs text-gray-400 leading-relaxed">
-              Multi-brand batch ticket routing, centralized packaging stock, rapid prep times, and dispatch alerts.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* SECTION 5: BRAND THEMES & ATMOSPHERE PALETTE */}
-      <section className="flex flex-col gap-8 bg-surface/40 border border-surface-border rounded-3xl p-6 sm:p-10 relative overflow-hidden">
-        <div className="flex flex-col gap-2">
-          <span className="text-xs font-bold uppercase tracking-wider text-primary font-mono">
-            Unique Identity For Every Restaurant
-          </span>
-          <h2 className="text-3xl font-bold font-display text-white">
-            Custom Restaurant Ambiance Themes
-          </h2>
-          <p className="text-sm text-gray-300 max-w-2xl leading-relaxed">
-            Every hospitality partner selects their brand ambiance palette during onboarding. When guests or staff enter your restaurant handle (e.g. <span className="font-mono text-primary font-bold">@spiceroute</span>), the entire platform automatically adopts your venue colors.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-          {THEME_OPTIONS.map((t) => {
-            const isSelected = mounted ? currentTheme === t.key : t.key === "gold";
-            return (
-              <button
-                key={t.key}
-                type="button"
-                onClick={() => setTheme(t.key)}
-                className={`p-3.5 rounded-2xl border text-left flex flex-col justify-between gap-3 transition-all cursor-pointer ${
-                  isSelected
-                    ? "border-primary ring-2 ring-primary/40 bg-surface shadow-glow"
-                    : "border-surface-border bg-surface-subtle hover:border-gray-500"
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <div
-                    suppressHydrationWarning
-                    className="w-7 h-7 rounded-full border border-white/20 shadow-sm flex items-center justify-center shrink-0"
-                    style={{ backgroundColor: t.primaryColor }}
-                  >
-                    {isSelected && <Check className="w-4 h-4 text-black stroke-[3]" />}
-                  </div>
-                  {isSelected && (
-                    <span
-                      suppressHydrationWarning
-                      className="text-[10px] font-bold text-primary font-mono uppercase"
-                    >
-                      Previewing
-                    </span>
-                  )}
-                </div>
-                <div>
-                  <div className="text-xs font-bold text-white font-display">
-                    {t.name}
-                  </div>
-                  <p className="text-[10px] text-gray-400 mt-1 leading-snug">
-                    {t.description}
-                  </p>
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      </section>
-
-      {/* SECTION 6: CONTACT CONCIERGE & DEMO REQUEST FORM (#contact) */}
-      <ContactConciergeForm />
-    </div>
+    </>
   );
 }

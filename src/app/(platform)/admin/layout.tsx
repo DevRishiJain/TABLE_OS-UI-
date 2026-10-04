@@ -121,7 +121,7 @@ export default function PlatformAdminLayout({
       </header>
 
       {/* Main Admin Content */}
-      <main className="flex-1 p-6 max-w-7xl mx-auto w-full">{children}</main>
+      <main className="flex-1 p-6 w-full">{children}</main>
     </div>
     </RoleGuard>
   );

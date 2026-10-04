@@ -59,225 +59,118 @@ export default function RestaurantAdminLayout({
       portalName="Restaurant Management & Analytics Hub"
       fallbackRedirect="/staff/orders"
     >
-      <div className="min-h-screen bg-background text-gray-100 flex flex-col lg:flex-row">
+      <div style={{ minHeight: "100vh", background: "var(--bg)", color: "var(--ink)", display: "flex", flexDirection: "row" }}>
       {/* Sidebar Navigation */}
-      <aside className="w-full lg:w-72 bg-[#12151B] border-r border-surface-border flex flex-col justify-between shrink-0">
+      <aside style={{ width: 240, background: "var(--panel)", borderRight: "1px solid var(--line)", display: "flex", flexDirection: "column", justifyContent: "space-between", flexShrink: 0, overflowY: "auto" }} className="hidden lg:flex">
         <div className="flex flex-col">
           {/* Brand Header */}
-          <div className="p-6 border-b border-surface-border flex items-center justify-between">
-            <Link href="/restaurant/dashboard" className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-primary/20 border border-primary/40 flex items-center justify-center text-primary shadow-glow">
-                <UtensilsCrossed className="w-5 h-5" />
+          <div style={{ padding: "20px 16px", borderBottom: "1px solid var(--line)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <Link href="/restaurant/dashboard" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none", color: "var(--ink)" }}>
+              <div style={{ width: 32, height: 32, borderRadius: 10, background: "linear-gradient(115deg, var(--b), var(--b2))", display: "flex", alignItems: "center", justifyContent: "center", color: "#1b1206" }}>
+                <UtensilsCrossed style={{ width: 16, height: 16 }} />
               </div>
-              <div className="flex flex-col">
-                <span className="font-extrabold text-sm font-display text-gray-100">
-                  {restaurantName}
+              <div style={{ display: "flex", flexDirection: "column" }}>
+                <span style={{ fontFamily: "var(--serif)", fontSize: "1.1rem", color: "var(--ink)", lineHeight: 1 }}>
+                  Table<em>OS</em>
                 </span>
-                <span className="text-[10px] text-gray-400 font-mono tracking-widest uppercase">
-                  Tenant Portal
+                <span style={{ fontSize: 9, color: "var(--mute)", letterSpacing: "0.08em", textTransform: "uppercase", fontWeight: 700, marginTop: 2 }}>
+                  {restaurantName}
                 </span>
               </div>
             </Link>
-            <Badge variant="gold" size="sm">
-              Live
-            </Badge>
+            <span style={{ fontSize: 9, fontWeight: 800, padding: "3px 8px", borderRadius: 99, background: "linear-gradient(115deg, var(--b), var(--b2))", color: "#1b1206" }}>Live</span>
           </div>
 
           {/* Nav Links */}
-          <nav className="p-4 flex flex-col gap-1.5 text-xs font-semibold overflow-y-auto max-h-[calc(100vh-140px)]">
-            <Link
-              href="/restaurant/dashboard"
-              className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-colors ${
-                pathname === "/restaurant/dashboard"
-                  ? "bg-primary text-background font-bold shadow-md shadow-primary/20"
-                  : "text-gray-300 hover:text-white hover:bg-surface-hover"
-              }`}
-            >
-              <LayoutDashboard className="w-4 h-4" />
-              <span>Executive Overview</span>
-            </Link>
-
-            {/* Order History & Logs */}
-            <Link
-              href="/restaurant/orders"
-              className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-colors ${
-                pathname === "/restaurant/orders"
-                  ? "bg-primary text-background font-bold shadow-md shadow-primary/20"
-                  : "text-gray-300 hover:text-white hover:bg-surface-hover"
-              }`}
-            >
-              <ShoppingBag className="w-4 h-4 text-emerald-400" />
-              <span>Order History & Logs</span>
-            </Link>
-
-            {/* Consolidated Analytics & P&L */}
-            <Link
-              href="/restaurant/analytics"
-              className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-colors ${
-                pathname === "/restaurant/analytics"
-                  ? "bg-primary text-background font-bold shadow-md shadow-primary/20"
-                  : "text-gray-300 hover:text-white hover:bg-surface-hover"
-              }`}
-            >
-              <LineChart className="w-4 h-4 text-primary" />
-              <span>Analytics & P&L</span>
-            </Link>
-
-            {/* Expenses & Bills */}
-            <Link
-              href="/restaurant/expenses"
-              className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-colors ${
-                pathname === "/restaurant/expenses"
-                  ? "bg-primary text-background font-bold shadow-md shadow-primary/20"
-                  : "text-gray-300 hover:text-white hover:bg-surface-hover"
-              }`}
-            >
-              <Wallet className="w-4 h-4 text-rose-400" />
-              <span>Expenses & Bills</span>
-            </Link>
-
-            {/* Stock & Inventory */}
-            <Link
-              href="/restaurant/inventory"
-              className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-colors ${
-                pathname === "/restaurant/inventory"
-                  ? "bg-primary text-background font-bold shadow-md shadow-primary/20"
-                  : "text-gray-300 hover:text-white hover:bg-surface-hover"
-              }`}
-            >
-              <Package className="w-4 h-4 text-cyan-400" />
-              <span>Stock & Inventory</span>
-            </Link>
-
-            {/* Menu Studio */}
-            <Link
-              href="/restaurant/menu"
-              className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-colors ${
-                pathname.includes("/restaurant/menu")
-                  ? "bg-primary text-background font-bold shadow-md shadow-primary/20"
-                  : "text-gray-300 hover:text-white hover:bg-surface-hover"
-              }`}
-            >
-              <Sparkles className="w-4 h-4 text-amber-400" />
-              <span>Menu & AI OCR Studio</span>
-            </Link>
-
-            {/* Tables & QR Standees */}
-            <Link
-              href="/restaurant/tables"
-              className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-colors ${
-                pathname.includes("/restaurant/tables")
-                  ? "bg-primary text-background font-bold shadow-md shadow-primary/20"
-                  : "text-gray-300 hover:text-white hover:bg-surface-hover"
-              }`}
-            >
-              <QrCode className="w-4 h-4 text-primary" />
-              <span>Tables & QR Standees</span>
-            </Link>
-
-            {/* Staff */}
-            <Link
-              href="/restaurant/staff"
-              className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-colors ${
-                pathname.includes("/restaurant/staff")
-                  ? "bg-primary text-background font-bold shadow-md shadow-primary/20"
-                  : "text-gray-300 hover:text-white hover:bg-surface-hover"
-              }`}
-            >
-              <Users className="w-4 h-4" />
-              <span>Staff & Roles</span>
-            </Link>
-
-
-            {/* Settlements */}
-            <Link
-              href="/restaurant/settlements"
-              className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-colors ${
-                pathname.includes("/restaurant/settlements")
-                  ? "bg-primary text-background font-bold shadow-md shadow-primary/20"
-                  : "text-gray-300 hover:text-white hover:bg-surface-hover"
-              }`}
-            >
-              <ShieldCheck className="w-4 h-4" />
-              <span>Settlement Payouts</span>
-            </Link>
-
-            {/* Onboarding */}
-            <Link
-              href="/restaurant/onboarding"
-              className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-colors ${
-                pathname.includes("/restaurant/onboarding")
-                  ? "bg-primary text-background font-bold shadow-md shadow-primary/20"
-                  : "text-gray-300 hover:text-white hover:bg-surface-hover"
-              }`}
-            >
-              <CheckCircle2 className="w-4 h-4 text-sky-400" />
-              <span>Onboarding Pipeline</span>
-            </Link>
-
-            {/* Settings */}
-            <Link
-              href="/restaurant/settings"
-              className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-colors ${
-                pathname.includes("/restaurant/settings")
-                  ? "bg-primary text-background font-bold shadow-md shadow-primary/20"
-                  : "text-gray-300 hover:text-white hover:bg-surface-hover"
-              }`}
-            >
-              <Settings className="w-4 h-4" />
-              <span>Restaurant Settings</span>
-            </Link>
+          <nav style={{ padding: "12px", display: "flex", flexDirection: "column", gap: 2 }}>
+            {([
+              { href: "/restaurant/dashboard", label: "Executive Overview", Icon: LayoutDashboard, exact: true },
+              { href: "/restaurant/orders",    label: "Order History",       Icon: ShoppingBag,    exact: true },
+              { href: "/restaurant/analytics", label: "Analytics & P&L",    Icon: LineChart,      exact: true },
+              { href: "/restaurant/expenses",  label: "Expenses & Bills",    Icon: Wallet,         exact: true },
+              { href: "/restaurant/inventory", label: "Stock & Inventory",   Icon: Package,        exact: true },
+              { href: "/restaurant/menu",      label: "Menu & AI Studio",    Icon: Sparkles,       exact: false },
+              { href: "/restaurant/tables",    label: "Tables & QR",         Icon: QrCode,         exact: false },
+              { href: "/restaurant/staff",     label: "Staff & Roles",       Icon: Users,          exact: false },
+              { href: "/restaurant/settlements",label: "Settlements",        Icon: ShieldCheck,    exact: false },
+              { href: "/restaurant/onboarding",label: "Onboarding",          Icon: CheckCircle2,   exact: false },
+              { href: "/restaurant/settings",  label: "Settings",            Icon: Settings,       exact: false },
+            ] as const).map(({ href, label, Icon, exact }) => {
+              const active = exact ? pathname === href : pathname.startsWith(href);
+              return (
+                <Link
+                  key={href}
+                  href={href}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 9,
+                    padding: "8px 10px",
+                    borderRadius: 10,
+                    fontSize: "0.78rem",
+                    fontWeight: active ? 700 : 500,
+                    textDecoration: "none",
+                    transition: "background 0.15s, color 0.15s",
+                    color: active ? "#1b1206" : "var(--mute)",
+                    background: active ? "linear-gradient(115deg, var(--b), var(--b2))" : "transparent",
+                  }}
+                  onMouseEnter={e => { if (!active) { (e.currentTarget as HTMLElement).style.background = "rgba(244,236,221,0.05)"; (e.currentTarget as HTMLElement).style.color = "var(--ink)"; }}}
+                  onMouseLeave={e => { if (!active) { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = "var(--mute)"; }}}
+                >
+                  <Icon style={{ width: 14, height: 14, flexShrink: 0 }} />
+                  <span>{label}</span>
+                </Link>
+              );
+            })}
           </nav>
         </div>
 
         {/* Footer info & Logout */}
-        <div className="p-4 border-t border-surface-border flex items-center justify-between">
-          <div className="flex flex-col">
-            <span className="text-xs font-bold text-gray-200">{useAppSelector((state) => state.auth.userName) || "Admin"}</span>
-            <span className="text-[10px] text-gray-500 font-mono">
+        <div style={{ padding: "12px 16px", borderTop: "1px solid var(--line)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ display: "flex", flexDirection: "column" }}>
+            <span style={{ fontSize: "0.78rem", fontWeight: 700, color: "var(--ink)" }}>{useAppSelector((state) => state.auth.userName) || "Admin"}</span>
+            <span style={{ fontSize: 9, color: "var(--mute)", fontFamily: "monospace" }}>
               {useAppSelector((state) => state.auth.employeeId) || "Staff"}
             </span>
           </div>
           <button
             onClick={handleLogout}
             title="Sign out"
-            className="p-2 text-gray-400 hover:text-red-400 rounded-lg hover:bg-surface-hover"
+            style={{ padding: 7, background: "none", border: 0, color: "var(--mute)", cursor: "pointer", borderRadius: 8, transition: "color 0.2s" }}
+            onMouseEnter={e => (e.currentTarget.style.color = "var(--late)")}
+            onMouseLeave={e => (e.currentTarget.style.color = "var(--mute)")}
           >
-            <LogOut className="w-4 h-4" />
+            <LogOut style={{ width: 14, height: 14 }} />
           </button>
         </div>
       </aside>
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-y-auto">
-        <header className="px-6 py-4 glass-panel border-b border-surface-border flex items-center justify-between">
-          <div className="flex items-center gap-3">
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, overflowY: "auto" }}>
+        <header style={{ padding: "12px 24px", borderBottom: "1px solid var(--line)", display: "flex", alignItems: "center", justifyContent: "space-between", background: "rgba(20,16,12,0.7)", backdropFilter: "blur(12px)", position: "sticky", top: 0, zIndex: 10 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <Link
               href="/staff/tables"
-              className="text-xs px-3 py-1.5 rounded-lg bg-surface hover:bg-surface-hover border border-surface-border text-gray-300 flex items-center gap-1.5"
+              style={{ fontSize: "0.75rem", padding: "6px 12px", borderRadius: 8, background: "rgba(244,236,221,0.05)", border: "1px solid var(--line)", color: "var(--mute)", display: "flex", alignItems: "center", gap: 6, textDecoration: "none", transition: "color 0.2s" }}
             >
-              <Layers className="w-3.5 h-3.5 text-primary" />
-              <span>Open Floor Grid</span>
+              <Layers style={{ width: 13, height: 13, color: "var(--b)" }} />
+              <span>Floor Grid</span>
             </Link>
             <Link
               href="/kitchen/queue"
-              className="text-xs px-3 py-1.5 rounded-lg bg-surface hover:bg-surface-hover border border-surface-border text-gray-300 flex items-center gap-1.5"
+              style={{ fontSize: "0.75rem", padding: "6px 12px", borderRadius: 8, background: "rgba(244,236,221,0.05)", border: "1px solid var(--line)", color: "var(--mute)", display: "flex", alignItems: "center", gap: 6, textDecoration: "none" }}
             >
-              <span>Kitchen KDS</span>
+              Kitchen KDS
             </Link>
           </div>
 
-          <div className="flex items-center gap-3">
-            <span className="text-xs text-gray-400 font-mono hidden sm:inline">
-              API Connected
-            </span>
-            <Badge variant="success" size="sm">
-              Online
-            </Badge>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <span style={{ fontSize: "0.72rem", color: "var(--mute)", fontFamily: "monospace" }}>API Connected</span>
+            <span style={{ fontSize: 9, fontWeight: 800, padding: "3px 10px", borderRadius: 99, background: "rgba(91,214,138,0.15)", border: "1px solid rgba(91,214,138,0.4)", color: "var(--ok)" }}>Online</span>
           </div>
         </header>
 
-        <main className="p-6 max-w-7xl w-full mx-auto">{children}</main>
+        <main style={{ padding: 24, flex: 1 }}>{children}</main>
       </div>
     </div>
     </RoleGuard>
