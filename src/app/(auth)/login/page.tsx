@@ -99,6 +99,11 @@ function LoginContent() {
                 restaurantTheme: restaurantObj.theme,
               })
             );
+            if (typeof window !== "undefined") {
+              const url = new URL(window.location.href);
+              url.searchParams.set("restaurant", restaurantObj.slug || clean);
+              window.history.replaceState(null, "", url.toString());
+            }
           }
           return restaurantObj;
         } else {
@@ -122,6 +127,11 @@ function LoginContent() {
                     restaurantTheme: restaurantObj.theme,
                   })
                 );
+                if (typeof window !== "undefined") {
+                  const url = new URL(window.location.href);
+                  url.searchParams.set("restaurant", restaurantObj.slug || clean);
+                  window.history.replaceState(null, "", url.toString());
+                }
               }
               return restaurantObj;
             }
@@ -166,6 +176,11 @@ function LoginContent() {
       });
       if (storedRestaurantSlug) {
         setHandleInput(storedRestaurantSlug);
+        if (typeof window !== "undefined") {
+          const url = new URL(window.location.href);
+          url.searchParams.set("restaurant", storedRestaurantSlug);
+          window.history.replaceState(null, "", url.toString());
+        }
       }
     }
   }, [searchParams, storedRestaurantId, storedRestaurantName, storedRestaurantSlug, validateHandle]);
@@ -180,6 +195,12 @@ function LoginContent() {
     setStaffIdentifier("");
     setStaffPassword("");
     dispatch(clearRestaurant());
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      url.searchParams.delete("restaurant");
+      url.searchParams.delete("slug");
+      window.history.replaceState(null, "", url.pathname + (url.search ? url.search : ""));
+    }
   };
 
   // Step 1: Submit Restaurant Handle
@@ -196,6 +217,10 @@ function LoginContent() {
           message: `No active restaurant found for @${handleInput.trim().replace(/^@/, "")}.`,
         })
       );
+    } else if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      url.searchParams.set("restaurant", resolved.slug || handleInput.trim().replace(/^@/, ""));
+      window.history.replaceState(null, "", url.toString());
     }
   };
 
@@ -247,7 +272,8 @@ function LoginContent() {
           })
         );
 
-        router.push("/restaurant/dashboard");
+        const restSlug = verifiedRestaurant.slug || "venue";
+        router.push(`/restaurant/dashboard?restaurant=${restSlug}`);
       }
     } catch (err: any) {
       console.error("Admin sign-in failed:", err);
@@ -341,7 +367,8 @@ function LoginContent() {
           })
         );
 
-        router.push(targetPortal);
+        const restSlug = verifiedRestaurant.slug || "venue";
+        router.push(`${targetPortal}?restaurant=${restSlug}`);
       }
     } catch (err: any) {
       console.error("Staff sign-in failed:", err);

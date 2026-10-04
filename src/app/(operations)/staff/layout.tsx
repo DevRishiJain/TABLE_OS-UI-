@@ -59,13 +59,15 @@ export default function StaffOperationsLayout({
 
   const userName = useAppSelector((state) => state.auth.userName) || "Floor Staff";
   const restaurantName = useAppSelector((state) => state.auth.restaurantName) || "Restaurant";
+  const restaurantSlug = useAppSelector((state) => state.auth.restaurantSlug);
   const staffRole = useAppSelector((state) => state.auth.staffRole) || "WAITER";
   const employeeId = useAppSelector((state) => state.auth.employeeId);
   const restaurantId = useAppSelector((state) => state.auth.restaurantId) || undefined;
 
-  // Poll floor tables every 3.5s to listen for live customer waiter calls
+  // Poll floor tables every 3.5s to listen for live customer waiter calls (only when restaurant is active)
   const { data: tablesData } = useGetStaffTablesQuery(restaurantId, {
     pollingInterval: 3500,
+    skip: !restaurantId,
   });
 
   const activeAssistanceTables = (tablesData || []).filter(
@@ -150,9 +152,16 @@ export default function StaffOperationsLayout({
                 <Utensils className="w-4 h-4" />
               </div>
               <div className="flex flex-col">
-                <span className="text-xs font-bold text-gray-100 font-display">
-                  {mounted ? restaurantName : "Restaurant"}
-                </span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-bold text-gray-100 font-display">
+                    {mounted ? restaurantName : "Restaurant"}
+                  </span>
+                  {mounted && restaurantSlug && (
+                    <span className="text-[10px] text-amber-400 font-mono bg-amber-500/10 px-1.5 py-0.5 rounded-md border border-amber-500/20">
+                      @{restaurantSlug}
+                    </span>
+                  )}
+                </div>
                 <span className="text-[10px] text-gray-400 font-mono">
                   Floor Operations Suite
                 </span>

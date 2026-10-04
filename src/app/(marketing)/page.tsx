@@ -300,7 +300,7 @@ export default function LandingPage() {
             </div>
 
             <div className="lg:col-span-6">
-              <div className="bg-[#0e1117] border border-surface-border rounded-2xl p-5 shadow-xl space-y-3 font-mono text-xs">
+              <div className="terminal-display bg-[#0e1117] border border-surface-border rounded-2xl p-5 shadow-xl space-y-3 font-mono text-xs">
                 <div className="flex items-center justify-between pb-3 border-b border-surface-border text-gray-400">
                   <span>RAW MATERIAL</span>
                   <span>CATEGORY</span>
@@ -367,7 +367,7 @@ export default function LandingPage() {
             </div>
 
             <div className="lg:col-span-6">
-              <div className="bg-[#0e1117] border border-surface-border rounded-2xl p-5 shadow-xl space-y-3 font-mono text-xs">
+              <div className="terminal-display bg-[#0e1117] border border-surface-border rounded-2xl p-5 shadow-xl space-y-3 font-mono text-xs">
                 <div className="flex items-center justify-between pb-3 border-b border-surface-border text-gray-400">
                   <span>PACKAGING ITEM</span>
                   <span>UNIT</span>
@@ -429,7 +429,7 @@ export default function LandingPage() {
             </div>
 
             <div className="lg:col-span-6">
-              <div className="bg-[#0e1117] border border-surface-border rounded-2xl p-5 shadow-xl space-y-3 font-mono text-xs">
+              <div className="terminal-display bg-[#0e1117] border border-surface-border rounded-2xl p-5 shadow-xl space-y-3 font-mono text-xs">
                 <div className="flex items-center justify-between pb-3 border-b border-surface-border text-gray-400">
                   <span>WASTED ITEM</span>
                   <span>REASON</span>
@@ -499,7 +499,7 @@ export default function LandingPage() {
             </div>
 
             <div className="lg:col-span-6">
-              <div className="bg-[#0e1117] border border-surface-border rounded-2xl p-5 shadow-xl space-y-3 font-mono text-xs">
+              <div className="terminal-display bg-[#0e1117] border border-surface-border rounded-2xl p-5 shadow-xl space-y-3 font-mono text-xs">
                 <div className="flex items-center justify-between pb-3 border-b border-surface-border text-gray-400">
                   <span>DISH NAME</span>
                   <span>MENU PRICE</span>

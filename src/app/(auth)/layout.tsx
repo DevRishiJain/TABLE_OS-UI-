@@ -31,7 +31,7 @@ export default function AuthLayout({
       </main>
 
       <footer className="text-center text-xs text-gray-500 py-4 font-mono">
-        TableOS Security • Encrypted HMAC-SHA256 Token Infrastructure
+        TableOS Enterprise Hospitality Suite • Multi-Tenant Station Isolation
       </footer>
     </div>
   );

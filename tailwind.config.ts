@@ -9,12 +9,12 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        background: "#0F1115",
+        background: "var(--background)",
         surface: {
-          DEFAULT: "#16191E",
-          subtle: "#1B2027",
-          border: "#2A303C",
-          hover: "#222731",
+          DEFAULT: "rgb(var(--surface-rgb) / <alpha-value>)",
+          subtle: "rgb(var(--surface-subtle-rgb) / <alpha-value>)",
+          border: "var(--surface-border-color)",
+          hover: "rgb(var(--surface-hover-rgb) / <alpha-value>)",
         },
         primary: {
           DEFAULT: "var(--theme-primary, #E5A93C)",

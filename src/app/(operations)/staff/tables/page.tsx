@@ -45,10 +45,11 @@ export default function StaffTablesFloorPage() {
   const dispatch = useAppDispatch();
   const restaurantName = useAppSelector((state) => state.auth.restaurantName) || "Restaurant";
   const restaurantId = useAppSelector((state) => state.auth.restaurantId) || undefined;
+  const restaurantSlug = useAppSelector((state) => state.auth.restaurantSlug);
 
   const { data: liveTables, isLoading, refetch } = useGetStaffTablesQuery(
-    restaurantId,
-    { pollingInterval: 3500 }
+    restaurantId || restaurantSlug || undefined,
+    { pollingInterval: 3500, skip: !restaurantId && !restaurantSlug }
   );
 
   const [filterMode, setFilterMode] = useState<"ALL" | "AVAILABLE" | "OCCUPIED" | "BILL">("ALL");
