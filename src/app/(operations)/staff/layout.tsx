@@ -130,6 +130,10 @@ export default function StaffOperationsLayout({
     },
   ];
 
+  // If on /staff/orders or /staff/tables, Floor Final provides its own complete top bar and mobile navigation
+  const isFloorView =
+    pathname.startsWith("/staff/orders") || pathname.startsWith("/staff/tables");
+
   return (
     <RoleGuard
       allowedRoles={[
@@ -143,131 +147,134 @@ export default function StaffOperationsLayout({
       portalName="Floor Waiter & POS Operations Suite"
       fallbackRedirect="/staff/login"
     >
-      <div className="min-h-screen bg-background text-gray-100 flex flex-col">
-        {/* Staff Operational Topbar */}
-        <header className="sticky top-0 z-40 glass-panel border-b border-surface-border px-4 sm:px-6 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Link href="/staff/tables" className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-xl bg-primary/20 border border-primary/40 flex items-center justify-center text-primary shadow-glow">
-                <Utensils className="w-4 h-4" />
-              </div>
-              <div className="flex flex-col">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-xs font-bold text-gray-100 font-display">
-                    {mounted ? restaurantName : "Restaurant"}
-                  </span>
-                  {mounted && restaurantSlug && (
-                    <span className="text-[10px] text-amber-400 font-mono bg-amber-500/10 px-1.5 py-0.5 rounded-md border border-amber-500/20">
-                      @{restaurantSlug}
-                    </span>
-                  )}
-                </div>
-                <span className="text-[10px] text-gray-400 font-mono">
-                  Floor Operations Suite
-                </span>
-              </div>
-            </Link>
-            <Badge variant="amber" size="sm" suppressHydrationWarning>
-              {mounted ? staffRole : "WAITER"}
-            </Badge>
-            {mounted && employeeId && (
-              <span
-                className="hidden sm:inline px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-primary/20 text-primary border border-primary/40"
-              >
-                {employeeId}
-              </span>
-            )}
-          </div>
-
-          {/* Navigation Tabs */}
-          <nav className="hidden md:flex items-center gap-2">
-            {navLinks.map((link) => {
-              const Icon = link.icon;
-              return (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${
-                    link.active
-                      ? "bg-primary text-background font-bold shadow-md shadow-primary/20"
-                      : "text-gray-300 hover:text-gray-100 hover:bg-surface-hover"
-                  }`}
-                >
-                  <Icon className="w-4 h-4" />
-                  <span>{link.label}</span>
-                </Link>
-              );
-            })}
-          </nav>
-
-          {/* Cross-Link Tools, Live Waiter Bell & Logout */}
-          <div className="flex items-center gap-2.5">
-            {/* Live Service Call Alert Button */}
-            {serviceCallsCount > 0 && (
-              <Link
-                href="/staff/orders"
-                title="Active customer assistance requests"
-                className="px-3 py-1.5 rounded-xl bg-red-500/20 text-red-300 border border-red-500/50 text-xs font-bold flex items-center gap-1.5 animate-pulse shadow-lg shadow-red-500/20 hover:bg-red-500/30 transition-colors"
-              >
-                <Bell className="w-4 h-4 text-red-400 animate-bounce" />
-                <span className="font-mono">{serviceCallsCount} CALL{serviceCallsCount > 1 ? "S" : ""}</span>
-              </Link>
-            )}
-
-            {/* KDS Button - Only visible for Kitchen, Manager, or Admin */}
-            {(isManagerOrAdmin || isKitchen) && (
-              <Link
-                href="/kitchen/queue"
-                title="Open Kitchen KDS"
-                className="p-2 rounded-xl bg-surface-subtle hover:bg-surface-hover border border-surface-border text-amber-400 text-xs flex items-center gap-1"
-              >
-                <ChefHat className="w-4 h-4" />
-                <span className="hidden sm:inline">KDS</span>
-              </Link>
-            )}
-
-            {/* Admin Dashboard Button - Only visible for Managers and Admins */}
-            {isManagerOrAdmin && (
-              <Link
-                href="/restaurant/dashboard"
-                title="Open Admin Dashboard"
-                className="p-2 rounded-xl bg-surface-subtle hover:bg-surface-hover border border-surface-border text-gray-300 text-xs flex items-center gap-1"
-              >
-                <LayoutDashboard className="w-4 h-4" />
-                <span className="hidden sm:inline">Admin</span>
-              </Link>
-            )}
-
-            <button
-              onClick={handleLogout}
-              title="Sign out"
-              className="p-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 transition-colors"
-            >
-              <LogOut className="w-4 h-4" />
-            </button>
-          </div>
-        </header>
-
-        {/* Mobile Sub-Navigation */}
-        <div className="md:hidden glass-panel border-b border-surface-border px-4 py-2 flex items-center justify-around text-xs">
-          {navLinks.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className={`py-1 px-2.5 rounded-lg ${
-                link.active ? "bg-primary text-background font-bold" : "text-gray-400"
-              }`}
-            >
-              {link.label}
-            </Link>
-          ))}
-        </div>
-
-        {/* Main Operations Body */}
-        <main className="flex-1 p-4 sm:p-6 w-full">
+      {isFloorView ? (
+        <div className="w-full min-h-screen">
           {children}
-        </main>
-      </div>
+        </div>
+      ) : (
+        <div className="min-h-screen bg-background text-gray-100 flex flex-col">
+          {/* Staff Operational Topbar */}
+          <header className="sticky top-0 z-40 glass-panel border-b border-surface-border px-4 sm:px-6 py-3 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Link href="/staff/orders" className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-primary/20 border border-primary/40 flex items-center justify-center text-primary shadow-glow">
+                  <Utensils className="w-4 h-4" />
+                </div>
+                <div className="flex flex-col">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-bold text-gray-100 font-display">
+                      {mounted ? restaurantName : "Restaurant"}
+                    </span>
+                    {mounted && restaurantSlug && (
+                      <span className="text-[10px] text-amber-400 font-mono bg-amber-500/10 px-1.5 py-0.5 rounded-md border border-amber-500/20">
+                        @{restaurantSlug}
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-[10px] text-gray-400 font-mono">
+                    Floor Operations Suite
+                  </span>
+                </div>
+              </Link>
+              <Badge variant="amber" size="sm" suppressHydrationWarning>
+                {mounted ? staffRole : "WAITER"}
+              </Badge>
+              {mounted && employeeId && (
+                <span className="hidden sm:inline px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-primary/20 text-primary border border-primary/40">
+                  {employeeId}
+                </span>
+              )}
+            </div>
+
+            {/* Navigation Tabs */}
+            <nav className="hidden md:flex items-center gap-2">
+              {navLinks.map((link) => {
+                const Icon = link.icon;
+                return (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+                      link.active
+                        ? "bg-primary text-background font-bold shadow-md shadow-primary/20"
+                        : "text-gray-300 hover:text-gray-100 hover:bg-surface-hover"
+                    }`}
+                  >
+                    <Icon className="w-4 h-4" />
+                    <span>{link.label}</span>
+                  </Link>
+                );
+              })}
+            </nav>
+
+            {/* Cross-Link Tools, Live Waiter Bell & Logout */}
+            <div className="flex items-center gap-2.5">
+              {serviceCallsCount > 0 && (
+                <Link
+                  href="/staff/orders"
+                  title="Active customer assistance requests"
+                  className="px-3 py-1.5 rounded-xl bg-red-500/20 text-red-300 border border-red-500/50 text-xs font-bold flex items-center gap-1.5 animate-pulse shadow-lg shadow-red-500/20 hover:bg-red-500/30 transition-colors"
+                >
+                  <Bell className="w-4 h-4 text-red-400 animate-bounce" />
+                  <span className="font-mono">
+                    {serviceCallsCount} CALL{serviceCallsCount > 1 ? "S" : ""}
+                  </span>
+                </Link>
+              )}
+
+              {(isManagerOrAdmin || isKitchen) && (
+                <Link
+                  href="/kitchen/queue"
+                  title="Open Kitchen KDS"
+                  className="p-2 rounded-xl bg-surface-subtle hover:bg-surface-hover border border-surface-border text-amber-400 text-xs flex items-center gap-1"
+                >
+                  <ChefHat className="w-4 h-4" />
+                  <span className="hidden sm:inline">KDS</span>
+                </Link>
+              )}
+
+              {isManagerOrAdmin && (
+                <Link
+                  href="/restaurant/dashboard"
+                  title="Open Admin Dashboard"
+                  className="p-2 rounded-xl bg-surface-subtle hover:bg-surface-hover border border-surface-border text-gray-300 text-xs flex items-center gap-1"
+                >
+                  <LayoutDashboard className="w-4 h-4" />
+                  <span className="hidden sm:inline">Admin</span>
+                </Link>
+              )}
+
+              <button
+                onClick={handleLogout}
+                title="Sign out"
+                className="p-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 transition-colors"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            </div>
+          </header>
+
+          {/* Mobile Sub-Navigation */}
+          <div className="md:hidden glass-panel border-b border-surface-border px-4 py-2 flex items-center justify-around text-xs">
+            {navLinks.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className={`py-1 px-2.5 rounded-lg ${
+                  link.active
+                    ? "bg-primary text-background font-bold"
+                    : "text-gray-400"
+                }`}
+              >
+                {link.label}
+              </Link>
+            ))}
+          </div>
+
+          {/* Main Operations Body */}
+          <main className="flex-1 p-4 sm:p-6 w-full">{children}</main>
+        </div>
+      )}
     </RoleGuard>
   );
 }
