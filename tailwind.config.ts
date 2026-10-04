@@ -17,10 +17,10 @@ const config: Config = {
           hover: "#222731",
         },
         primary: {
-          DEFAULT: "#E5A93C",
-          hover: "#D4982E",
-          glow: "rgba(229, 169, 60, 0.15)",
-          dark: "#A3721A",
+          DEFAULT: "var(--theme-primary, #E5A93C)",
+          hover: "var(--theme-primary-hover, #D4982E)",
+          glow: "var(--theme-primary-glow, rgba(229, 169, 60, 0.15))",
+          dark: "var(--theme-primary-dark, #A3721A)",
         },
         gold: {
           400: "#FBBF24",
@@ -41,7 +41,7 @@ const config: Config = {
         display: ["Outfit", "Inter", "sans-serif"],
       },
       boxShadow: {
-        glow: "0 0 25px -5px rgba(229, 169, 60, 0.25)",
+        glow: "0 0 25px -5px var(--theme-primary-glow, rgba(229, 169, 60, 0.25))",
         card: "0 10px 30px -10px rgba(0, 0, 0, 0.5)",
       },
     },

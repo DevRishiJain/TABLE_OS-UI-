@@ -11,6 +11,7 @@ interface AuthState {
   restaurantId: string;
   restaurantName: string | null;
   restaurantSlug: string | null;
+  restaurantTheme: string | null;
   userName: string | null;
   // Customer session state
   sessionToken: string | null;
@@ -35,6 +36,7 @@ function getInitialState(): AuthState {
       restaurantId: "",
       restaurantName: null,
       restaurantSlug: null,
+      restaurantTheme: null,
       userName: null,
       sessionToken: null,
       activeSessionId: null,
@@ -53,6 +55,7 @@ function getInitialState(): AuthState {
     restaurantId: localStorage.getItem("tableos_restaurant_id") || "",
     restaurantName: localStorage.getItem("tableos_restaurant_name") || null,
     restaurantSlug: localStorage.getItem("tableos_restaurant_slug") || null,
+    restaurantTheme: localStorage.getItem("tableos_restaurant_theme") || "gold",
     userName: localStorage.getItem("tableos_user_name"),
     sessionToken: localStorage.getItem("tableos_session_token"),
     activeSessionId: localStorage.getItem("tableos_session_id"),
@@ -146,6 +149,7 @@ const authSlice = createSlice({
         restaurantId: string;
         restaurantName: string;
         restaurantSlug?: string;
+        restaurantTheme?: string;
       }>
     ) {
       state.restaurantId = action.payload.restaurantId;
@@ -153,22 +157,36 @@ const authSlice = createSlice({
       if (action.payload.restaurantSlug) {
         state.restaurantSlug = action.payload.restaurantSlug;
       }
+      if (action.payload.restaurantTheme) {
+        state.restaurantTheme = action.payload.restaurantTheme;
+      }
       if (typeof window !== "undefined") {
         localStorage.setItem("tableos_restaurant_id", action.payload.restaurantId);
         localStorage.setItem("tableos_restaurant_name", action.payload.restaurantName);
         if (action.payload.restaurantSlug) {
           localStorage.setItem("tableos_restaurant_slug", action.payload.restaurantSlug);
         }
+        if (action.payload.restaurantTheme) {
+          localStorage.setItem("tableos_restaurant_theme", action.payload.restaurantTheme);
+        }
+      }
+    },
+    setRestaurantTheme(state, action: PayloadAction<string>) {
+      state.restaurantTheme = action.payload;
+      if (typeof window !== "undefined") {
+        localStorage.setItem("tableos_restaurant_theme", action.payload);
       }
     },
     clearRestaurant(state) {
       state.restaurantId = "";
       state.restaurantName = null;
       state.restaurantSlug = null;
+      state.restaurantTheme = "gold";
       if (typeof window !== "undefined") {
         localStorage.removeItem("tableos_restaurant_id");
         localStorage.removeItem("tableos_restaurant_name");
         localStorage.removeItem("tableos_restaurant_slug");
+        localStorage.removeItem("tableos_restaurant_theme");
       }
     },
     logoutStaff(state) {
@@ -211,6 +229,7 @@ export const {
   setGuardAuth,
   setCustomerSession,
   setRestaurantInfo,
+  setRestaurantTheme,
   clearRestaurant,
   logoutStaff,
   logoutGuard,

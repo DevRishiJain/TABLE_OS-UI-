@@ -10,6 +10,57 @@
   --glass-surface: rgba(18, 22, 31, 0.65);
   --glass-border: rgba(255, 255, 255, 0.1);
   --glass-specular: rgba(255, 255, 255, 0.18);
+
+  /* Default Gold / Amber Theme */
+  --theme-primary: #E5A93C;
+  --theme-primary-hover: #D4982E;
+  --theme-primary-glow: rgba(229, 169, 60, 0.25);
+  --theme-primary-dark: #A3721A;
+  --theme-primary-rgb: 229, 169, 60;
+}
+
+[data-theme="emerald"] {
+  --theme-primary: #10B981;
+  --theme-primary-hover: #059669;
+  --theme-primary-glow: rgba(16, 185, 129, 0.25);
+  --theme-primary-dark: #047857;
+  --theme-primary-rgb: 16, 185, 129;
+}
+
+[data-theme="ruby"],
+[data-theme="crimson"] {
+  --theme-primary: #EF4444;
+  --theme-primary-hover: #DC2626;
+  --theme-primary-glow: rgba(239, 68, 68, 0.25);
+  --theme-primary-dark: #B91C1C;
+  --theme-primary-rgb: 239, 68, 68;
+}
+
+[data-theme="amethyst"],
+[data-theme="violet"] {
+  --theme-primary: #8B5CF6;
+  --theme-primary-hover: #7C3AED;
+  --theme-primary-glow: rgba(139, 92, 246, 0.25);
+  --theme-primary-dark: #6D28D9;
+  --theme-primary-rgb: 139, 92, 246;
+}
+
+[data-theme="sapphire"],
+[data-theme="cyan"] {
+  --theme-primary: #06B6D4;
+  --theme-primary-hover: #0891B2;
+  --theme-primary-glow: rgba(6, 182, 212, 0.25);
+  --theme-primary-dark: #0E7490;
+  --theme-primary-rgb: 6, 182, 212;
+}
+
+[data-theme="coral"],
+[data-theme="rose"] {
+  --theme-primary: #F43F5E;
+  --theme-primary-hover: #E11D48;
+  --theme-primary-glow: rgba(244, 63, 94, 0.25);
+  --theme-primary-dark: #BE123C;
+  --theme-primary-rgb: 244, 63, 94;
 }
 
 html, body {

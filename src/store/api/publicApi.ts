@@ -45,6 +45,7 @@ export const publicApi = baseApi.injectEndpoints({
       id: string;
       name: string;
       slug: string;
+      theme?: string;
       venue_type: string;
       status: string;
     }, string>({
@@ -60,6 +61,7 @@ export const publicApi = baseApi.injectEndpoints({
         id: string;
         name: string;
         slug: string;
+        theme?: string;
         venue_type?: string;
         status?: string;
       };

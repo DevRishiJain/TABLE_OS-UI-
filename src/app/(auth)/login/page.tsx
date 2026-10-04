@@ -31,6 +31,7 @@ interface VerifiedRestaurant {
   id: string;
   name: string;
   slug?: string;
+  theme?: string;
 }
 
 function LoginContent() {
@@ -86,6 +87,7 @@ function LoginContent() {
             id: res.restaurant.id,
             name: res.restaurant.name,
             slug: res.restaurant.slug || clean,
+            theme: res.restaurant.theme || "gold",
           };
           if (autoSelect) {
             setVerifiedRestaurant(restaurantObj);
@@ -94,6 +96,7 @@ function LoginContent() {
                 restaurantId: restaurantObj.id,
                 restaurantName: restaurantObj.name,
                 restaurantSlug: restaurantObj.slug,
+                restaurantTheme: restaurantObj.theme,
               })
             );
           }
@@ -107,6 +110,7 @@ function LoginContent() {
                 id: lookupRes.id,
                 name: lookupRes.name,
                 slug: lookupRes.slug || clean,
+                theme: lookupRes.theme || "gold",
               };
               if (autoSelect) {
                 setVerifiedRestaurant(restaurantObj);
@@ -115,6 +119,7 @@ function LoginContent() {
                     restaurantId: restaurantObj.id,
                     restaurantName: restaurantObj.name,
                     restaurantSlug: restaurantObj.slug,
+                    restaurantTheme: restaurantObj.theme,
                   })
                 );
               }

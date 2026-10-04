@@ -4,13 +4,14 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAppDispatch } from "@/store";
-import { setStaffAuth } from "@/store/slices/authSlice";
+import { setStaffAuth, setRestaurantTheme } from "@/store/slices/authSlice";
 import { useOnboardRestaurantMutation } from "@/store/api/restaurantApi";
 import { addToast } from "@/store/slices/uiSlice";
 import { StaffRole } from "@/types/enums";
 import { generateUUID } from "@/lib/idempotency";
 import { QRCodeSVG } from "qrcode.react";
 import { useLazyCheckHandleAvailabilityQuery } from "@/store/api/publicApi";
+import { THEME_OPTIONS, ThemeKey } from "@/components/providers/RestaurantThemeProvider";
 import {
   Utensils,
   Store,
@@ -105,6 +106,7 @@ export default function RestaurantSignupPage() {
   // Venue Concept / Hospitality Model
   const [venueType, setVenueType] = useState<"FINE_DINE" | "CAFE" | "HOTEL" | "DRIVE_IN">("FINE_DINE");
   const [startingRoomNumber, setStartingRoomNumber] = useState<number>(101);
+  const [selectedTheme, setSelectedTheme] = useState<ThemeKey>("gold");
 
   // Admin User
   const [adminName, setAdminName] = useState("");
@@ -263,6 +265,7 @@ export default function RestaurantSignupPage() {
           restaurant_name: restaurantName,
           venue_type: venueType,
           slug,
+          theme: selectedTheme,
           legal_name: legalName,
           gstin,
           phone,
@@ -332,10 +335,13 @@ export default function RestaurantSignupPage() {
           })
         );
 
+        dispatch(setRestaurantTheme(selectedTheme));
+
         // Save credentials list for display
         if (typeof window !== "undefined") {
           localStorage.setItem("tableos_staff_roster", JSON.stringify(staffList));
           localStorage.setItem("tableos_restaurant_name", restaurantName);
+          localStorage.setItem("tableos_restaurant_theme", selectedTheme);
           localStorage.setItem("tableos_table_count", String(tableCount));
         }
 
@@ -544,6 +550,55 @@ export default function RestaurantSignupPage() {
                         </div>
                         <p className="text-[10px] text-gray-400 leading-snug mt-1">
                           {item.desc}
+                        </p>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Brand Theme / Ambience Palette */}
+            <div>
+              <label className="text-xs font-bold text-gray-300 block mb-1.5 flex items-center justify-between">
+                <span>Select Brand Theme & Atmosphere Palette *</span>
+                <span className="text-[11px] font-mono text-gray-400">
+                  Applied to guest menu, staff terminal & kitchen
+                </span>
+              </label>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                {THEME_OPTIONS.map((theme) => {
+                  const isSelected = selectedTheme === theme.key;
+                  return (
+                    <button
+                      key={theme.key}
+                      type="button"
+                      onClick={() => setSelectedTheme(theme.key)}
+                      className={`p-3 rounded-2xl border text-left flex flex-col justify-between gap-2 transition-all relative overflow-hidden ${
+                        isSelected
+                          ? "border-primary ring-2 ring-primary/40 bg-surface shadow-glow"
+                          : "border-surface-border bg-surface-subtle hover:border-gray-500"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div
+                          className="w-6 h-6 rounded-full border border-white/20 shadow-sm flex items-center justify-center"
+                          style={{ backgroundColor: theme.primaryColor }}
+                        >
+                          {isSelected && <Check className="w-3.5 h-3.5 text-black stroke-[3]" />}
+                        </div>
+                        {isSelected && (
+                          <span className="text-[9px] font-bold uppercase tracking-wider text-primary font-mono">
+                            Active
+                          </span>
+                        )}
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-gray-100 font-display truncate">
+                          {theme.name}
+                        </div>
+                        <p className="text-[10px] text-gray-400 line-clamp-2 mt-0.5 leading-snug">
+                          {theme.description}
                         </p>
                       </div>
                     </button>

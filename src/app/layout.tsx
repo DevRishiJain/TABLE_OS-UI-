@@ -1,11 +1,12 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { ReduxProvider } from "@/components/providers/ReduxProvider";
+import { RestaurantThemeProvider } from "@/components/providers/RestaurantThemeProvider";
 
 export const metadata: Metadata = {
   title: "TableOS | Next-Gen Restaurant Dining & Operations Operating System",
   description:
-    "An AI-native, fraud-resistant restaurant dining platform connecting table QR scan, real-time KDS, automated exit passes, and transparent 1% platform fee ledger.",
+    "An all-in-one hospitality operating system for dine-in, cafes, bars, and cloud kitchens with instant QR ordering, live KDS, inventory management, and raw material sourcing.",
   icons: {
     icon: [
       { url: "/icon.svg", type: "image/svg+xml" },
@@ -31,7 +32,9 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark bg-background text-gray-100">
       <body className="min-h-screen bg-background antialiased selection:bg-primary/30 selection:text-primary">
-        <ReduxProvider>{children}</ReduxProvider>
+        <ReduxProvider>
+          <RestaurantThemeProvider>{children}</RestaurantThemeProvider>
+        </ReduxProvider>
       </body>
     </html>
   );
