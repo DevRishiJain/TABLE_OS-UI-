@@ -601,31 +601,9 @@ export default function LandingPage() {
       </section>
 
       {/* ══════════════════════════════════════════════════
-          CONTACT / DEMO
+          CONTACT / DEMO SECTION (#contact)
       ══════════════════════════════════════════════════ */}
-      <section className="contact-grid" id="contact">
-        <div>
-          <h2>Let's set up <em>your venue.</em></h2>
-          <p style={{ color: "var(--mute)", marginTop: 24, maxWidth: "44ch", fontSize: "1.1rem" }}>
-            We'll build your menu and table layout with you, then switch on two free months. No credit card needed.
-          </p>
-          <div className="contact-care">
-            <div>
-              <small>Toll-free hotline</small>
-              <b>+91 1800 890 3240</b>
-            </div>
-            <div>
-              <small>Concierge email</small>
-              <b>concierge@tableos.in</b>
-            </div>
-            <div>
-              <small>Support</small>
-              <b>24/7 priority help and on-site setup</b>
-            </div>
-          </div>
-        </div>
-        <ContactConciergeForm />
-      </section>
+      <ContactConciergeForm />
     </>
   );
 }

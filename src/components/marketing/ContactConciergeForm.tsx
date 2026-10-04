@@ -7,14 +7,8 @@ import {
   Phone,
   Mail,
   CheckCircle2,
-  Building,
-  User,
-  Shield,
-  Utensils,
-  ArrowRight,
   Clock,
   Send,
-  HelpCircle,
 } from "lucide-react";
 
 export function ContactConciergeForm() {
@@ -71,296 +65,280 @@ export function ContactConciergeForm() {
   };
 
   return (
-    <div id="contact" className="w-full scroll-mt-24">
-      <div className="rounded-3xl bg-surface border border-surface-border p-6 sm:p-10 lg:p-12 shadow-2xl relative overflow-hidden">
+    <section id="contact" className="w-full max-w-5xl mx-auto py-16 px-4 sm:px-6 lg:px-8 flex flex-col gap-10 scroll-mt-24">
+      {/* 1. TOP TITLE & SUBTITLE */}
+      <div className="flex flex-col items-start gap-4">
+        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-primary/15 border border-primary/30 text-primary text-xs font-mono font-bold">
+          <Sparkles className="w-3.5 h-3.5 fill-current" />
+          <span>2 MONTHS FREE TRIAL ONBOARDING</span>
+        </div>
+        <h2 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white tracking-tight leading-[1.15]">
+          Let&apos;s set up <em className="italic text-primary font-serif font-normal">your venue.</em>
+        </h2>
+        <p className="text-base sm:text-lg text-gray-300 max-w-2xl leading-relaxed">
+          We&apos;ll build your menu and table layout with you, then switch on two free months. No credit card needed.
+        </p>
+      </div>
+
+      {/* 2. FORM CARD DIRECTLY BELOW TITLE */}
+      <div className="rounded-3xl bg-surface/90 border border-surface-border p-6 sm:p-10 shadow-2xl relative overflow-hidden backdrop-blur-xl">
         {/* Glow accent */}
         <div className="absolute top-0 right-0 w-96 h-96 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 relative z-10">
-          {/* Left Column: Direct Info & Customer Care */}
-          <div className="lg:col-span-5 flex flex-col justify-between gap-8">
-            <div className="space-y-4">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/30 text-primary text-xs font-semibold">
-                <Sparkles className="w-3.5 h-3.5 fill-current" />
-                <span>2 Months Free Trial Onboarding</span>
-              </div>
-              <h2 className="text-3xl sm:text-4xl font-extrabold text-white font-display tracking-tight leading-tight">
-                Transform Your Venue Today.
-              </h2>
-              <p className="text-sm text-gray-300 leading-relaxed">
-                Connect with our hospitality solutions team. We’ll schedule a personalized walkthrough, configure your menu & table layout, and activate your 2-month complimentary trial.
+        {submitted ? (
+          <div className="min-h-[380px] rounded-2xl bg-surface-subtle/50 border border-emerald-500/40 p-8 flex flex-col items-center justify-center text-center space-y-5 animate-scale-up">
+            <div className="w-16 h-16 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 flex items-center justify-center shadow-lg shadow-emerald-500/10">
+              <CheckCircle2 className="w-8 h-8" />
+            </div>
+            <div className="space-y-2">
+              <h3 className="text-2xl font-bold font-display text-white">
+                Inquiry Dispatched Successfully!
+              </h3>
+              <p className="text-sm text-gray-300 max-w-md">
+                Thank you, <strong className="text-white">{name}</strong>. An email notification has been dispatched to our hospitality team at <strong className="text-primary font-mono">concierge@tableos.in</strong>.
               </p>
             </div>
 
-            {/* Customer Care Desk Contact Card */}
-            <div className="p-5 rounded-2xl bg-surface-subtle border border-surface-border space-y-4">
-              <div className="text-xs font-bold uppercase tracking-wider text-gray-400 flex items-center justify-between">
-                <span>Dedicated Customer Care Desk</span>
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              </div>
-
-              <div className="space-y-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shrink-0">
-                    <Phone className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <div className="text-xs text-gray-400">Toll-Free Hospitality Hotline</div>
-                    <a
-                      href="tel:+9118008903240"
-                      className="text-sm font-bold text-white hover:text-primary transition-colors font-mono"
-                    >
-                      +91 1800 890 3240
-                    </a>
-                    <span className="text-xs text-gray-400 ml-2">/ +91 98765 43210</span>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 shrink-0">
-                    <Mail className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <div className="text-xs text-gray-400">Direct Concierge Email</div>
-                    <a
-                      href="mailto:concierge@tableos.in"
-                      className="text-sm font-bold text-white hover:text-cyan-400 transition-colors font-mono"
-                    >
-                      concierge@tableos.in
-                    </a>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 shrink-0">
-                    <Clock className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <div className="text-xs text-gray-400">Support Hours</div>
-                    <div className="text-xs font-semibold text-gray-200">
-                      24/7 Priority Support & On-Ground Setup
-                    </div>
-                  </div>
-                </div>
-              </div>
+            <div className="p-4 rounded-xl bg-surface border border-surface-border text-left w-full max-w-md space-y-1.5 text-xs text-gray-300 font-mono">
+              <div>Reference ID: <span className="text-primary font-bold">{leadId}</span></div>
+              <div>Restaurant: <span className="text-white">{restaurantName}</span></div>
+              <div>Role: <span className="text-gray-400">{authority}</span></div>
+              <div>Venue Concept: <span className="text-gray-400">{restaurantType}</span></div>
             </div>
 
-            <div className="text-xs text-gray-400">
-              Zero credit card required • Instant trial activation • Unlimited staff seats
-            </div>
+            <p className="text-xs text-gray-400">
+              Our regional restaurant specialist will contact you at <span className="text-white font-mono">{phone}</span> within 2 hours.
+            </p>
+
+            <button
+              type="button"
+              onClick={() => {
+                setSubmitted(false);
+                setName("");
+                setRestaurantName("");
+                setMessage("");
+              }}
+              className="px-5 py-2.5 rounded-xl bg-surface-subtle border border-surface-border text-xs font-semibold text-gray-200 hover:text-white hover:bg-surface-hover transition-colors"
+            >
+              Submit Another Inquiry
+            </button>
           </div>
-
-          {/* Right Column: Contact Form */}
-          <div className="lg:col-span-7">
-            {submitted ? (
-              <div className="h-full min-h-[440px] rounded-2xl bg-surface border border-emerald-500/40 p-8 flex flex-col items-center justify-center text-center space-y-5 animate-scale-up">
-                <div className="w-16 h-16 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 flex items-center justify-center shadow-lg shadow-emerald-500/10">
-                  <CheckCircle2 className="w-8 h-8" />
-                </div>
-                <div className="space-y-2">
-                  <h3 className="text-2xl font-bold font-display text-white">
-                    Inquiry Dispatched Successfully!
-                  </h3>
-                  <p className="text-sm text-gray-300 max-w-md">
-                    Thank you, <strong className="text-white">{name}</strong>. An email notification has been dispatched to our hospitality team at <strong className="text-primary font-mono">concierge@tableos.in</strong>.
-                  </p>
-                </div>
-
-                <div className="p-4 rounded-xl bg-surface-subtle border border-surface-border text-left w-full max-w-sm space-y-1.5 text-xs text-gray-300 font-mono">
-                  <div>Reference ID: <span className="text-primary font-bold">{leadId}</span></div>
-                  <div>Restaurant: <span className="text-white">{restaurantName}</span></div>
-                  <div>Role: <span className="text-gray-400">{authority}</span></div>
-                  <div>Venue: <span className="text-gray-400">{restaurantType}</span></div>
-                </div>
-
-                <p className="text-xs text-gray-400">
-                  Our regional restaurant specialist will contact you at <span className="text-white font-mono">{phone}</span> within 2 hours.
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-6 relative z-10">
+            <div className="flex items-center justify-between pb-4 border-b border-surface-border">
+              <div>
+                <h3 className="text-xl font-bold font-display text-white">
+                  Request Demo &amp; Complimentary Onboarding
+                </h3>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  Fill in your venue details. Our regional specialist will schedule your personalized walkthrough.
                 </p>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSubmitted(false);
-                    setName("");
-                    setRestaurantName("");
-                    setMessage("");
-                  }}
-                  className="px-5 py-2.5 rounded-xl bg-surface-subtle border border-surface-border text-xs font-semibold text-gray-200 hover:text-white hover:bg-surface-hover transition-colors"
-                >
-                  Submit Another Inquiry
-                </button>
               </div>
-            ) : (
-              <form
-                onSubmit={handleSubmit}
-                className="rounded-2xl bg-surface border border-surface-border p-6 sm:p-8 space-y-5 shadow-lg"
-              >
-                <div className="flex items-center justify-between pb-3 border-b border-surface-border">
-                  <h3 className="text-lg font-bold font-display text-white">
-                    Request Demo & Complimentary Onboarding
-                  </h3>
-                  <span className="text-[11px] font-mono text-primary font-bold">
-                    2 MONTHS FREE
-                  </span>
-                </div>
+              <span className="px-3 py-1 rounded-full text-xs font-mono text-primary font-bold bg-primary/15 border border-primary/30 shrink-0">
+                2 MONTHS FREE
+              </span>
+            </div>
 
-                {errorMsg && (
-                  <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs">
-                    {errorMsg}
-                  </div>
-                )}
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {/* Your Name */}
-                  <div>
-                    <label className="text-xs font-bold text-gray-300 block mb-1">
-                      Your Full Name *
-                    </label>
-                    <div className="relative">
-                      <input
-                        type="text"
-                        required
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        placeholder="e.g. Vikramaditya Singhania"
-                        className="w-full px-3.5 py-2.5 rounded-xl bg-surface-subtle border border-surface-border text-sm text-gray-100 focus:outline-none focus:border-primary placeholder:text-gray-500"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Restaurant Name */}
-                  <div>
-                    <label className="text-xs font-bold text-gray-300 block mb-1">
-                      Restaurant / Brand Name *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={restaurantName}
-                      onChange={(e) => setRestaurantName(e.target.value)}
-                      placeholder="e.g. Spice Route Bistro"
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-surface-subtle border border-surface-border text-sm text-gray-100 focus:outline-none focus:border-primary placeholder:text-gray-500"
-                    />
-                  </div>
-
-                  {/* Authority / Designation */}
-                  <div>
-                    <label className="text-xs font-bold text-gray-300 block mb-1">
-                      Your Role / Authority *
-                    </label>
-                    <select
-                      value={authority}
-                      onChange={(e) => setAuthority(e.target.value)}
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-surface-subtle border border-surface-border text-sm text-gray-100 focus:outline-none focus:border-primary"
-                    >
-                      <option value="Owner">Owner / Managing Partner</option>
-                      <option value="General Manager">General Manager / Director</option>
-                      <option value="Floor Manager">Floor Manager</option>
-                      <option value="Executive Chef">Executive Chef / Head Chef</option>
-                      <option value="Operations Staff">Operations / Service Staff</option>
-                    </select>
-                  </div>
-
-                  {/* Restaurant Type */}
-                  <div>
-                    <label className="text-xs font-bold text-gray-300 block mb-1">
-                      Restaurant Concept / Type *
-                    </label>
-                    <select
-                      value={restaurantType}
-                      onChange={(e) => setRestaurantType(e.target.value)}
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-surface-subtle border border-surface-border text-sm text-gray-100 focus:outline-none focus:border-primary"
-                    >
-                      <option value="Fine Dine Restaurant">Fine Dine Restaurant</option>
-                      <option value="Cafe & Bakery">Cafe & Bakery</option>
-                      <option value="Drive-In / Car-O-Bar">Drive-In / Car-O-Bar</option>
-                      <option value="Hotel & Banquets">Hotel & Banquets / Room Service</option>
-                      <option value="Cloud Kitchen / QSR">Cloud Kitchen / QSR</option>
-                    </select>
-                  </div>
-
-                  {/* Email */}
-                  <div>
-                    <label className="text-xs font-bold text-gray-300 block mb-1">
-                      Work Email *
-                    </label>
-                    <input
-                      type="email"
-                      required
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="owner@spiceroute.com"
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-surface-subtle border border-surface-border text-sm text-gray-100 focus:outline-none focus:border-primary placeholder:text-gray-500"
-                    />
-                  </div>
-
-                  {/* Phone */}
-                  <div>
-                    <label className="text-xs font-bold text-gray-300 block mb-1">
-                      Phone Number *
-                    </label>
-                    <input
-                      type="tel"
-                      required
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      placeholder="+91 98765 43210"
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-surface-subtle border border-surface-border text-sm text-gray-100 focus:outline-none focus:border-primary placeholder:text-gray-500"
-                    />
-                  </div>
-                </div>
-
-                {/* Additional Notes */}
-                <div>
-                  <label className="text-xs font-bold text-gray-300 block mb-1">
-                    Special Requirements / Current Challenges (Optional)
-                  </label>
-                  <textarea
-                    rows={3}
-                    value={message}
-                    onChange={(e) => setMessage(e.target.value)}
-                    placeholder="e.g. Need raw material sourcing, packaging consumables, wastage calculator & KDS for 18 tables..."
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-surface-subtle border border-surface-border text-sm text-gray-100 focus:outline-none focus:border-primary placeholder:text-gray-500 resize-none"
-                  />
-                </div>
-
-                <div className="flex flex-col sm:flex-row gap-3 pt-2">
-                  <button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="flex-1 py-3.5 px-4 rounded-xl bg-primary text-black font-bold text-sm hover:bg-primary-hover transition-all flex items-center justify-center gap-2 shadow-lg shadow-primary/20 disabled:opacity-50"
-                  >
-                    {isSubmitting ? (
-                      <span>Notifying Concierge Team...</span>
-                    ) : (
-                      <>
-                        <span>Book my demo and start free</span>
-                        <Send className="w-4 h-4" />
-                      </>
-                    )}
-                  </button>
-                  <Link
-                    href="/signup"
-                    className="btn-signup"
-                    style={{
-                      padding: "12px 24px",
-                      borderRadius: "12px",
-                      fontSize: "0.88rem",
-                      fontWeight: 800,
-                      textAlign: "center",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    Sign up
-                  </Link>
-                </div>
-              </form>
+            {errorMsg && (
+              <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs font-medium">
+                {errorMsg}
+              </div>
             )}
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              {/* Your Full Name */}
+              <div>
+                <label className="text-xs font-bold text-gray-300 block mb-1.5">
+                  Your Full Name *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="e.g. Vikramaditya Singhania"
+                  className="w-full px-4 py-3 rounded-xl bg-surface-subtle border border-surface-border text-sm text-gray-100 focus:outline-none focus:border-primary placeholder:text-gray-500 transition-colors"
+                />
+              </div>
+
+              {/* Restaurant Name */}
+              <div>
+                <label className="text-xs font-bold text-gray-300 block mb-1.5">
+                  Restaurant / Brand Name *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={restaurantName}
+                  onChange={(e) => setRestaurantName(e.target.value)}
+                  placeholder="e.g. Spice Route Bistro"
+                  className="w-full px-4 py-3 rounded-xl bg-surface-subtle border border-surface-border text-sm text-gray-100 focus:outline-none focus:border-primary placeholder:text-gray-500 transition-colors"
+                />
+              </div>
+
+              {/* Authority / Designation */}
+              <div>
+                <label className="text-xs font-bold text-gray-300 block mb-1.5">
+                  Your Role / Authority *
+                </label>
+                <select
+                  value={authority}
+                  onChange={(e) => setAuthority(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl bg-surface-subtle border border-surface-border text-sm text-gray-100 focus:outline-none focus:border-primary transition-colors cursor-pointer"
+                >
+                  <option value="Owner">Owner / Managing Partner</option>
+                  <option value="General Manager">General Manager / Director</option>
+                  <option value="Floor Manager">Floor Manager</option>
+                  <option value="Executive Chef">Executive Chef / Head Chef</option>
+                  <option value="Operations Staff">Operations / Service Staff</option>
+                </select>
+              </div>
+
+              {/* Restaurant Type */}
+              <div>
+                <label className="text-xs font-bold text-gray-300 block mb-1.5">
+                  Restaurant Concept / Type *
+                </label>
+                <select
+                  value={restaurantType}
+                  onChange={(e) => setRestaurantType(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl bg-surface-subtle border border-surface-border text-sm text-gray-100 focus:outline-none focus:border-primary transition-colors cursor-pointer"
+                >
+                  <option value="Fine Dine Restaurant">Fine Dine Restaurant</option>
+                  <option value="Cafe & Bakery">Cafe &amp; Bakery</option>
+                  <option value="Drive-In / Car-O-Bar">Drive-In / Car-O-Bar</option>
+                  <option value="Hotel & Banquets">Hotel &amp; Banquets / Room Service</option>
+                  <option value="Cloud Kitchen / QSR">Cloud Kitchen / QSR</option>
+                </select>
+              </div>
+
+              {/* Email */}
+              <div>
+                <label className="text-xs font-bold text-gray-300 block mb-1.5">
+                  Work Email *
+                </label>
+                <input
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="owner@spiceroute.com"
+                  className="w-full px-4 py-3 rounded-xl bg-surface-subtle border border-surface-border text-sm text-gray-100 focus:outline-none focus:border-primary placeholder:text-gray-500 transition-colors"
+                />
+              </div>
+
+              {/* Phone */}
+              <div>
+                <label className="text-xs font-bold text-gray-300 block mb-1.5">
+                  Phone Number *
+                </label>
+                <input
+                  type="tel"
+                  required
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="+91 98765 43210"
+                  className="w-full px-4 py-3 rounded-xl bg-surface-subtle border border-surface-border text-sm text-gray-100 focus:outline-none focus:border-primary placeholder:text-gray-500 transition-colors"
+                />
+              </div>
+            </div>
+
+            {/* Additional Notes */}
+            <div>
+              <label className="text-xs font-bold text-gray-300 block mb-1.5">
+                Special Requirements / Current Challenges (Optional)
+              </label>
+              <textarea
+                rows={3}
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                placeholder="e.g. Need raw material sourcing, packaging consumables, wastage calculator & KDS for 18 tables..."
+                className="w-full px-4 py-3 rounded-xl bg-surface-subtle border border-surface-border text-sm text-gray-100 focus:outline-none focus:border-primary placeholder:text-gray-500 resize-none transition-colors"
+              />
+            </div>
+
+            {/* Buttons */}
+            <div className="flex flex-col sm:flex-row gap-3 pt-2">
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="flex-1 py-3.5 px-6 rounded-xl bg-primary text-black font-bold text-sm hover:bg-primary-hover transition-all flex items-center justify-center gap-2 shadow-lg shadow-primary/25 disabled:opacity-50 cursor-pointer"
+              >
+                {isSubmitting ? (
+                  <span>Notifying Concierge Team...</span>
+                ) : (
+                  <>
+                    <span>Book my demo and start free</span>
+                    <Send className="w-4 h-4" />
+                  </>
+                )}
+              </button>
+              <Link
+                href="/signup"
+                className="px-6 py-3.5 rounded-xl bg-surface-subtle hover:bg-surface-hover border border-surface-border text-sm font-bold text-gray-200 hover:text-white transition-all text-center flex items-center justify-center font-mono"
+              >
+                Sign up
+              </Link>
+            </div>
+          </form>
+        )}
+      </div>
+
+      {/* 3. CONTACT & EMAIL INFO DIRECTLY BELOW FORM */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Hotline Card */}
+        <div className="p-5 rounded-2xl bg-surface/80 border border-surface-border flex items-center gap-4 shadow-sm hover:border-primary/40 transition-colors">
+          <div className="w-12 h-12 rounded-xl bg-primary/10 border border-primary/25 flex items-center justify-center text-primary shrink-0">
+            <Phone className="w-5 h-5" />
+          </div>
+          <div className="min-w-0">
+            <div className="text-xs text-gray-400 font-medium">Toll-free hotline</div>
+            <a
+              href="tel:+9118008903240"
+              className="text-base font-bold text-white hover:text-primary transition-colors font-mono block truncate mt-0.5"
+            >
+              +91 1800 890 3240
+            </a>
+            <span className="text-xs text-gray-500 font-mono">+91 98765 43210</span>
+          </div>
+        </div>
+
+        {/* Email Card */}
+        <div className="p-5 rounded-2xl bg-surface/80 border border-surface-border flex items-center gap-4 shadow-sm hover:border-primary/40 transition-colors">
+          <div className="w-12 h-12 rounded-xl bg-cyan-500/10 border border-cyan-500/25 flex items-center justify-center text-cyan-400 shrink-0">
+            <Mail className="w-5 h-5" />
+          </div>
+          <div className="min-w-0">
+            <div className="text-xs text-gray-400 font-medium">Concierge email</div>
+            <a
+              href="mailto:concierge@tableos.in"
+              className="text-base font-bold text-white hover:text-primary transition-colors font-mono block truncate mt-0.5"
+            >
+              concierge@tableos.in
+            </a>
+            <span className="text-xs text-emerald-400 font-medium flex items-center gap-1.5 mt-0.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block animate-pulse" />
+              Under 2-hour response
+            </span>
+          </div>
+        </div>
+
+        {/* Support Card */}
+        <div className="p-5 rounded-2xl bg-surface/80 border border-surface-border flex items-center gap-4 shadow-sm hover:border-primary/40 transition-colors">
+          <div className="w-12 h-12 rounded-xl bg-purple-500/10 border border-purple-500/25 flex items-center justify-center text-purple-400 shrink-0">
+            <Clock className="w-5 h-5" />
+          </div>
+          <div className="min-w-0">
+            <div className="text-xs text-gray-400 font-medium">Support</div>
+            <div className="text-base font-bold text-white mt-0.5">24/7 priority help</div>
+            <span className="text-xs text-gray-400">On-site setup &amp; training</span>
           </div>
         </div>
       </div>
-    </div>
+
+      <p className="text-center text-xs text-gray-400 -mt-2">
+        Zero credit card required • Instant trial activation • Unlimited staff seats
+      </p>
+    </section>
   );
 }
