@@ -179,7 +179,7 @@ export default function RestaurantTablesQRPage() {
             typeof window !== "undefined"
               ? window.location.origin
               : "http://localhost:3000";
-          const orderUrl = `${baseUrl}/order/${restaurantSlug}/${t.tableNumber}`;
+          const orderUrl = `${baseUrl}/t/${t.token}`;
 
           return (
             <div
@@ -318,7 +318,7 @@ export default function RestaurantTablesQRPage() {
           <div className="standee-sub">Seats {printingTable.capacity} Guests · Direct Ordering</div>
           <div className="standee-qr-box">
             <QRCodeCanvas
-              value={`${typeof window !== "undefined" ? window.location.origin : "http://localhost:3000"}/order/${restaurantSlug}/${printingTable.tableNumber}`}
+              value={`${typeof window !== "undefined" ? window.location.origin : "http://localhost:3000"}/t/${printingTable.token}`}
               size={180}
               level="H"
               includeMargin={true}
@@ -344,7 +344,7 @@ export default function RestaurantTablesQRPage() {
               <div className="standee-sub">Seats {tbl.capacity} Guests · Direct Ordering</div>
               <div className="standee-qr-box">
                 <QRCodeCanvas
-                  value={`${typeof window !== "undefined" ? window.location.origin : "http://localhost:3000"}/order/${restaurantSlug}/${tbl.tableNumber}`}
+                  value={`${typeof window !== "undefined" ? window.location.origin : "http://localhost:3000"}/t/${tbl.token}`}
                   size={180}
                   level="H"
                   includeMargin={true}

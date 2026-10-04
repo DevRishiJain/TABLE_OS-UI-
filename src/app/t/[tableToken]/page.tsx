@@ -38,6 +38,28 @@ export default function TableQREntryPage() {
   const [guestCount, setGuestCount] = useState<number>(2);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  const SKINS = [
+    { id: "paper", n: "Paper white", pp: "#FFFFFF", ac: "#8C6A2E" },
+    { id: "cream", n: "Warm cream", pp: "#FBF8F0", ac: "#A9772A" },
+    { id: "sage", n: "Sage", pp: "#FFFFFF", ac: "#3F7A55" },
+    { id: "night", n: "Midnight", pp: "#1C1812", ac: "#D2A252" },
+  ];
+  const [currentSkin, setCurrentSkin] = useState<string>("paper");
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const savedSkin = localStorage.getItem("tableos_customer_skin") || "paper";
+      setCurrentSkin(savedSkin);
+    }
+  }, []);
+
+  const handleSetSkin = (skinId: string) => {
+    setCurrentSkin(skinId);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("tableos_customer_skin", skinId);
+    }
+  };
+
   // Determine venue concept and labels from table token
   const tokenLower = tableToken.toLowerCase();
   const isTokenDriveIn = tokenLower.includes("drive") || tokenLower.includes("car");
@@ -110,7 +132,12 @@ export default function TableQREntryPage() {
   };
 
   const loc = getLocationDetails();
-  const HeaderIcon = loc.icon;
+  const restaurantInitials = loc.title
+    .split(" ")
+    .map((w) => w[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase() || "SR";
 
   const handleStartDining = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -159,8 +186,8 @@ export default function TableQREntryPage() {
       );
 
       const welcomeMsg = vehicle
-        ? `Delivery to Car ${vehicle} confirmed for ${guests} guests. Explore our handcrafted menu below!`
-        : `Party of ${guests} confirmed. Explore our handcrafted menu below.`;
+        ? `Delivery to Car ${vehicle} confirmed for ${guests} guests. Explore our handcrafted menu!`
+        : `Party of ${guests} confirmed. Explore our handcrafted menu!`;
 
       dispatch(
         addToast({
@@ -181,173 +208,87 @@ export default function TableQREntryPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
-      <div className="w-full max-w-md rounded-3xl glass-card border border-surface-border p-6 sm:p-8 flex flex-col items-center text-center shadow-2xl animate-in zoom-in-95 duration-200 relative overflow-hidden">
-        {/* Ambient glow */}
-        <div className="absolute top-0 right-0 w-36 h-36 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
-
-        {/* Brand Icon */}
-        <div className={`w-16 h-16 rounded-2xl flex items-center justify-center border shadow-glow mb-4 ${loc.accentColor}`}>
-          <HeaderIcon className="w-8 h-8" />
+    <div className="customer-app min-h-screen flex flex-col justify-center" data-skin={currentSkin}>
+      <div className="w">
+        <div className="wl">
+        <div>
+          <div className="lg" style={{ width: 56, height: 56, marginBottom: 18 }}>
+            {restaurantInitials}
+          </div>
+          <h1>
+            Welcome to<br />
+            {loc.title}
+          </h1>
+          <p className="mu" style={{ margin: "10px 0 0" }}>
+            {loc.badge} · Dine-in. Order from your seat, no app needed.
+          </p>
         </div>
-
-        <h1 className="text-2xl font-black text-gray-100 font-display">
-          {loc.title}
-        </h1>
-        <div className="flex items-center gap-2 mt-1.5">
-          <span className={`text-xs px-3 py-1 rounded-full border font-bold font-mono tracking-wider uppercase ${loc.accentColor}`}>
-            {loc.badge}
-          </span>
-        </div>
-
-        <p className="text-xs text-gray-400 mt-2.5 max-w-xs leading-relaxed">
-          {loc.subtext}
-        </p>
 
         {/* Error Alert */}
         {errorMessage && (
-          <div className="mt-4 p-3.5 rounded-xl bg-red-500/10 border border-red-500/30 flex items-start gap-2.5 text-xs text-red-400 text-left w-full animate-shake">
-            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+          <div className="say" style={{ background: "color-mix(in srgb, var(--er) 15%, var(--pp))", color: "var(--er)", border: "1px solid color-mix(in srgb, var(--er) 30%, transparent)" }}>
+            <AlertCircle style={{ width: 18, height: 18, flexShrink: 0 }} />
             <span>{errorMessage}</span>
           </div>
         )}
 
-        {/* Guest Details Form */}
-        <form onSubmit={handleStartDining} className="mt-5 w-full flex flex-col gap-4 text-left">
-          {/* Vehicle Plate Input (Prominent for Drive-In or optional for Dine-In) */}
-          {(isDriveInMode || isTokenDriveIn) ? (
-            <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/40 shadow-inner">
-              <label className="text-xs font-bold text-amber-300 block mb-1.5 flex items-center justify-between">
-                <span className="flex items-center gap-1.5">
-                  <Car className="w-4 h-4 text-amber-400" />
-                  <span>Car / Vehicle Plate Number <span className="text-red-400">*</span></span>
-                </span>
-                <span className="text-[10px] font-mono font-bold text-amber-400 bg-amber-500/20 px-2 py-0.5 rounded-md">
-                  Required for Car Delivery
-                </span>
-              </label>
-              <Input
-                value={vehicleNumber}
-                onChange={(e) => setVehicleNumber(e.target.value.toUpperCase())}
-                placeholder="e.g. DL 01 AB 1234 or HR 26 DQ 5555"
-                className="w-full text-base font-mono tracking-wider font-extrabold uppercase bg-background border-amber-500/50 text-amber-300 placeholder:text-gray-600"
-                autoFocus
-              />
-              <p className="text-[11px] text-amber-400/80 mt-1.5 leading-snug font-medium">
-                🚗 Waiters will locate your vehicle and deliver food straight to your window.
-              </p>
-            </div>
-          ) : (
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="text-xs font-bold text-gray-300 flex items-center gap-1.5">
-                  <Car className="w-3.5 h-3.5 text-gray-400" />
-                  <span>Car / Drive-In Parking?</span>
-                </label>
-                {!isDriveInMode && (
-                  <button
-                    type="button"
-                    onClick={() => setIsDriveInMode(true)}
-                    className="text-[11px] font-mono text-amber-400 hover:underline flex items-center gap-1"
-                  >
-                    + Add Vehicle Number
-                  </button>
-                )}
-              </div>
-              {isDriveInMode && (
-                <div className="p-3 rounded-xl bg-surface-subtle border border-surface-border mb-2">
-                  <Input
-                    value={vehicleNumber}
-                    onChange={(e) => setVehicleNumber(e.target.value.toUpperCase())}
-                    placeholder="e.g. DL 01 AB 1234 (Vehicle Plate)"
-                    className="w-full text-xs font-mono font-bold uppercase"
-                  />
-                  <span className="text-[10px] text-gray-500 mt-1 block font-mono">
-                    Car hops will deliver directly to this vehicle.
-                  </span>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Customer Name */}
+        {/* Guest Details Form Card */}
+        <form onSubmit={handleStartDining} className="cd g">
           <div>
-            <label className="text-xs font-bold text-gray-300 block mb-1.5 flex items-center gap-1.5">
-              <User className="w-3.5 h-3.5 text-primary" />
-              <span>Full Name</span>
-            </label>
-            <Input
+            <label htmlFor="nm">Your name</label>
+            <input
+              id="nm"
+              className="in"
+              placeholder="e.g. Raj"
+              autoComplete="given-name"
               value={customerName}
               onChange={(e) => setCustomerName(e.target.value)}
-              placeholder="e.g. Dev Rishi Jain"
-              className="w-full text-sm"
             />
           </div>
 
-          {/* Phone Number */}
           <div>
-            <label className="text-xs font-bold text-gray-300 block mb-1.5 flex items-center justify-between">
-              <span className="flex items-center gap-1.5">
-                <Phone className="w-3.5 h-3.5 text-primary" />
-                <span>Mobile Number</span>
-              </span>
-              <span className="text-[10px] font-mono text-gray-500">No OTP Required</span>
+            <label htmlFor="ph">
+              Mobile <span className="mu" style={{ fontWeight: 500 }}>(optional, for order updates)</span>
             </label>
-            <Input
+            <input
+              id="ph"
+              className="in"
               type="tel"
+              inputMode="tel"
+              placeholder="+91"
               value={customerPhone}
               onChange={(e) => setCustomerPhone(e.target.value)}
-              placeholder="e.g. 9876543210"
-              className="w-full text-sm font-mono"
             />
           </div>
 
-          {/* Number of Guests */}
           <div>
-            <label className="text-xs font-bold text-gray-300 block mb-1.5 flex items-center justify-between">
-              <span className="flex items-center gap-1.5">
-                <Users className="w-3.5 h-3.5 text-primary" />
-                <span>Number of Guests in Party</span>
-              </span>
-              <span className="text-[10px] font-mono text-gray-400">
-                Helps kitchen portioning
-              </span>
-            </label>
+            <label>Guests at your table</label>
+            <div className="px">
+              <button
+                type="button"
+                className="b i"
+                onClick={() => setGuestCount((g) => Math.max(1, g - 1))}
+                aria-label="Fewer guests"
+              >
+                <Minus style={{ width: 18, height: 18 }} />
+              </button>
+              <b>{guestCount}</b>
+              <button
+                type="button"
+                className="b i"
+                onClick={() => setGuestCount((g) => Math.min(20, g + 1))}
+                aria-label="More guests"
+              >
+                <Plus style={{ width: 18, height: 18 }} />
+              </button>
 
-            {/* Stepper & Chips */}
-            <div className="flex items-center justify-between gap-3 p-2.5 rounded-xl bg-surface-subtle border border-surface-border">
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setGuestCount((g) => Math.max(1, g - 1))}
-                  className="w-8 h-8 rounded-lg bg-surface border border-surface-border flex items-center justify-center text-gray-300 hover:text-white active:scale-95"
-                >
-                  <Minus className="w-4 h-4" />
-                </button>
-                <span className="w-14 text-center text-base font-black font-mono text-primary">
-                  {guestCount} {guestCount === 1 ? "Guest" : "Guests"}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setGuestCount((g) => Math.min(20, g + 1))}
-                  className="w-8 h-8 rounded-lg bg-primary text-background font-bold flex items-center justify-center active:scale-95"
-                >
-                  <Plus className="w-4 h-4" />
-                </button>
-              </div>
-
-              {/* Quick Select Buttons */}
-              <div className="flex items-center gap-1">
+              <div className="qk">
                 {[1, 2, 4, 6].map((num) => (
                   <button
                     key={num}
                     type="button"
                     onClick={() => setGuestCount(num)}
-                    className={`w-7 h-7 rounded-lg text-xs font-mono font-bold transition-all ${
-                      guestCount === num
-                        ? "bg-primary text-background shadow-md shadow-primary/20"
-                        : "bg-surface text-gray-400 border border-surface-border hover:text-white"
-                    }`}
+                    className={guestCount === num ? "on" : ""}
                   >
                     {num}
                   </button>
@@ -356,24 +297,71 @@ export default function TableQREntryPage() {
             </div>
           </div>
 
-          {/* Submit Button */}
-          <Button
+          <div>
+            <button
+              type="button"
+              className="sw"
+              onClick={() => setIsDriveInMode(!isDriveInMode)}
+              aria-pressed={isDriveInMode || isTokenDriveIn}
+            >
+              <span style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                <Car style={{ width: 20, height: 20 }} />
+                Parked outside in a car?
+              </span>
+              <i />
+            </button>
+
+            {(isDriveInMode || isTokenDriveIn) && (
+              <input
+                className="in"
+                style={{ marginTop: 8 }}
+                placeholder="Vehicle plate number (e.g. DL 01 AB 1234) *"
+                aria-label="Vehicle number"
+                value={vehicleNumber}
+                onChange={(e) => setVehicleNumber(e.target.value.toUpperCase())}
+                autoFocus
+              />
+            )}
+          </div>
+
+          <button
             type="submit"
-            variant="gold"
-            size="lg"
-            isLoading={isLoading}
-            className="w-full mt-2 font-bold shadow-xl shadow-amber-500/20"
-            rightIcon={<ArrowRight className="w-4 h-4" />}
+            className="b p"
+            disabled={isLoading}
           >
-            {isLoading ? "Opening Session..." : (isDriveInMode || isTokenDriveIn) ? "Place Car Order & View Menu" : "Start Dining & View Menu"}
-          </Button>
+            {isLoading ? "Starting..." : "Start dining"}
+          </button>
         </form>
 
-        <div className="pt-4 mt-5 border-t border-surface-border/50 w-full text-[11px] text-gray-500 font-mono flex items-center justify-between">
-          <span>TableOS Dining Engine</span>
-          <span className="truncate max-w-[150px]">Token: {tableToken}</span>
+        {/* Restaurant Theme Switcher matching sample UI */}
+        <div className="sk">
+          <span className="mu sm">Restaurant theme (demo)</span>
+          <div>
+            {SKINS.map((sk) => (
+              <button
+                key={sk.id}
+                type="button"
+                aria-pressed={currentSkin === sk.id}
+                aria-label={`${sk.n} theme`}
+                title={sk.n}
+                style={
+                  {
+                    "--c1": sk.pp,
+                    "--c2": sk.ac,
+                  } as React.CSSProperties
+                }
+                onClick={() => handleSetSkin(sk.id)}
+              />
+            ))}
+          </div>
+        </div>
+
+        <div className="ft" style={{ fontSize: "1.1rem" }}>
+          TableOS Dining Engine · Token: {tableToken.slice(0, 16)}...
         </div>
       </div>
     </div>
+  </div>
   );
 }
+

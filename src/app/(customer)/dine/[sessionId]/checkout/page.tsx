@@ -95,67 +95,67 @@ export default function CustomerCheckoutPage() {
 
   if (cartItems.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] px-6 text-center">
-        <div className="w-16 h-16 rounded-2xl bg-surface-subtle border border-surface-border flex items-center justify-center text-gray-400 mb-4">
-          <ShoppingBag className="w-8 h-8" />
+      <div style={{ paddingTop: 6 }}>
+        <div className="bk">
+          <Link
+            href={`/dine/${sessionId}/menu`}
+            className="b i"
+            aria-label="Back to menu"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ width: "1.2rem", height: "1.2rem" }}>
+              <path d="M19 12H5M12 5l-7 7 7 7" />
+            </svg>
+          </Link>
+          <h2>Review order</h2>
         </div>
-        <h3 className="text-lg font-bold text-gray-100 font-display">
-          Your Cart is Empty
-        </h3>
-        <p className="text-xs text-gray-400 max-w-xs mt-1 mb-6">
-          Explore delicious dishes from the menu to build your meal.
-        </p>
-        <Link href={`/dine/${sessionId}/menu`}>
-          <Button variant="primary" leftIcon={<ArrowLeft className="w-4 h-4" />}>
-            Back to Menu
-          </Button>
-        </Link>
+        <div className="em">
+          <b>Your order is empty</b>
+          Add a few dishes first.
+          <div style={{ marginTop: 18 }}>
+            <Link href={`/dine/${sessionId}/menu`} className="b p">
+              Browse the menu
+            </Link>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col gap-5 px-4 pt-4">
-      {/* Top Header */}
-      <div className="flex items-center gap-3">
+    <div style={{ paddingTop: 6 }}>
+      {/* Header */}
+      <div className="bk">
         <Link
           href={`/dine/${sessionId}/menu`}
-          className="p-2 rounded-xl bg-surface hover:bg-surface-hover border border-surface-border text-gray-300"
+          className="b i"
+          aria-label="Back to menu"
         >
-          <ArrowLeft className="w-4 h-4" />
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ width: "1.2rem", height: "1.2rem" }}>
+            <path d="M19 12H5M12 5l-7 7 7 7" />
+          </svg>
         </Link>
         <div>
-          <h1 className="text-lg font-bold text-gray-100 font-display">
-            Review Your Order
-          </h1>
-          <p className="text-[11px] text-gray-400">
-            Table T1 • Instant Kitchen Transmission
-          </p>
+          <h2>Review order</h2>
+          <span className="mu sm">Goes straight to the kitchen</span>
         </div>
       </div>
 
       {/* Cart Items List */}
-      <div className="flex flex-col gap-3">
+      <div className="g" style={{ marginTop: 12 }}>
         {cartItems.map((item) => (
-          <Card key={item.menuItem.id} className="p-4 flex flex-col gap-3">
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex-1">
-                <h4 className="text-sm font-bold text-gray-100 font-display">
-                  {item.menuItem.name}
-                </h4>
-                <div className="text-xs text-primary font-bold font-mono mt-0.5">
-                  {formatMoney(
-                    item.menuItem.price.amount_minor_units * item.quantity
-                  )}
-                  <span className="text-gray-500 font-normal text-[11px] ml-1.5">
-                    ({formatMoney(item.menuItem.price.amount_minor_units)} each)
-                  </span>
+          <div key={item.menuItem.id} className="cd" style={{ padding: 16 }}>
+            <div className="px">
+              <div>
+                <b style={{ fontSize: "1.05rem" }}>{item.menuItem.name}</b>
+                <div className="pr" style={{ marginTop: 2, color: "var(--ac)" }}>
+                  {formatMoney(item.menuItem.price.amount_minor_units * item.quantity)}
                 </div>
               </div>
 
-              {/* Quantity controls */}
-              <div className="flex items-center gap-2 bg-surface-subtle border border-surface-border rounded-xl px-2 py-1">
+              {/* Stepper */}
+              <div className="sp2">
                 <button
+                  type="button"
                   onClick={() =>
                     dispatch(
                       updateQuantity({
@@ -164,14 +164,15 @@ export default function CustomerCheckoutPage() {
                       })
                     )
                   }
-                  className="w-5 h-5 rounded flex items-center justify-center text-gray-400 hover:text-white"
+                  aria-label="Decrease quantity"
                 >
-                  <Minus className="w-3.5 h-3.5" />
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: "1.1rem", height: "1.1rem" }}>
+                    <path d="M5 12h14" />
+                  </svg>
                 </button>
-                <span className="text-xs font-bold font-mono px-1">
-                  {item.quantity}
-                </span>
+                <span>{item.quantity}</span>
                 <button
+                  type="button"
                   onClick={() =>
                     dispatch(
                       updateQuantity({
@@ -180,22 +181,21 @@ export default function CustomerCheckoutPage() {
                       })
                     )
                   }
-                  className="w-5 h-5 rounded bg-primary text-background flex items-center justify-center font-bold"
+                  aria-label="Increase quantity"
                 >
-                  <Plus className="w-3.5 h-3.5" />
-                </button>
-                <button
-                  onClick={() => dispatch(removeItem(item.menuItem.id))}
-                  className="ml-1 text-gray-500 hover:text-red-400"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: "1.1rem", height: "1.1rem" }}>
+                    <path d="M12 5v14M5 12h14" />
+                  </svg>
                 </button>
               </div>
             </div>
 
-            {/* Item Instructions */}
+            {/* Cooking note input */}
             <input
-              type="text"
+              className="in"
+              style={{ marginTop: 12, height: 48 }}
+              placeholder="Cooking note, e.g. extra spicy, crispy"
+              aria-label={`Note for ${item.menuItem.name}`}
               value={item.specialInstructions || ""}
               onChange={(e) =>
                 dispatch(
@@ -205,64 +205,48 @@ export default function CustomerCheckoutPage() {
                   })
                 )
               }
-              placeholder="Add cooking note (e.g. extra spicy, crispy)..."
-              className="w-full text-xs px-3 py-1.5 rounded-lg bg-surface-subtle border border-surface-border/60 text-gray-200 placeholder-gray-500 focus:outline-none focus:border-primary"
             />
-          </Card>
+          </div>
         ))}
-      </div>
 
-      {/* Customer Info Card */}
-      <Card className="p-4 flex flex-col gap-3">
-        <h4 className="text-xs font-bold uppercase tracking-wider text-gray-300">
-          Diner Details
-        </h4>
-        <Input
-          label="Your Name"
-          value={customerName}
-          onChange={(e) => setCustomerName(e.target.value)}
-          placeholder="Name for order callout"
-        />
-        <Input
-          label="Phone Number (For SMS Updates & OTP)"
-          value={customerPhone}
-          onChange={(e) => setCustomerPhone(e.target.value)}
-          placeholder="+91 98765 43210"
-        />
-      </Card>
+        {/* Add more dishes */}
+        <Link href={`/dine/${sessionId}/menu`} className="b o">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: "1.1rem", height: "1.1rem" }}>
+            <path d="M12 5v14M5 12h14" />
+          </svg>
+          Add more dishes
+        </Link>
 
-      {/* Bill Estimation Note */}
-      <div className="p-3.5 rounded-2xl bg-surface-subtle border border-surface-border text-xs flex flex-col gap-2">
-        <div className="flex items-center justify-between text-gray-300">
-          <span>Estimated Items Subtotal:</span>
-          <span className="font-bold font-mono text-gray-100">
-            {formatMoney(cartSubtotalMinor)}
-          </span>
+        {/* Subtotal summary card */}
+        <div className="cd">
+          <div className="it">
+            <span className="mu">Subtotal</span>
+            <b style={{ fontSize: "1.2rem", fontFamily: "var(--se)", color: "var(--ac)" }}>
+              {formatMoney(cartSubtotalMinor)}
+            </b>
+          </div>
+          <div className="mu sm" style={{ marginTop: 6 }}>
+            GST 5% (2.5% CGST + 2.5% SGST) is added to your bill upon order confirmation.
+          </div>
         </div>
-        <p className="text-[11px] text-gray-400 leading-tight">
-          * Applicable taxes (2.5% CGST + 2.5% SGST) will be added upon order placement.
-        </p>
-      </div>
 
-      {/* Error Message */}
-      {errorMessage && (
-        <div className="p-3.5 rounded-xl bg-red-500/10 border border-red-500/30 flex items-start gap-2 text-xs text-red-400">
-          <ShieldAlert className="w-4 h-4 shrink-0 mt-0.5" />
-          <span>{errorMessage}</span>
-        </div>
-      )}
+        {/* Error message */}
+        {errorMessage && (
+          <div className="say" style={{ background: "color-mix(in srgb, var(--er) 15%, var(--pp))", color: "var(--er)", border: "1px solid color-mix(in srgb, var(--er) 30%, transparent)" }}>
+            <ShieldAlert style={{ width: 18, height: 18, flexShrink: 0 }} />
+            <span>{errorMessage}</span>
+          </div>
+        )}
 
-      {/* Place Order CTA Button */}
-      <div className="pt-2 pb-6">
-        <Button
+        {/* Place Order CTA */}
+        <button
+          type="button"
+          className="b p"
+          disabled={isLoading}
           onClick={handlePlaceOrder}
-          isLoading={isLoading}
-          variant="gold"
-          size="lg"
-          className="w-full font-bold shadow-xl shadow-amber-500/20"
         >
-          Place Order • {formatMoney(cartSubtotalMinor)}
-        </Button>
+          {isLoading ? "Sending to kitchen..." : `Place order · ${formatMoney(cartSubtotalMinor)}`}
+        </button>
       </div>
     </div>
   );

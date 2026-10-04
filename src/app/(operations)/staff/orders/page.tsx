@@ -7,6 +7,7 @@ import {
   useGetPendingOrdersQuery,
   usePlaceStaffOrderMutation,
   useAcceptOrderMutation,
+  useCancelStaffOrderMutation,
   useConfirmPaymentMutation,
   useForceCloseSessionMutation,
   useStaffVerifyExitMutation,
@@ -18,7 +19,10 @@ import {
   useGetKitchenQueueQuery,
   useUpdateKitchenStatusMutation,
 } from "@/store/api/kitchenApi";
-import { useGetPublicMenuItemsQuery } from "@/store/api/publicApi";
+import {
+  useGetPublicMenuItemsQuery,
+  useGetPublicMenuCategoriesQuery,
+} from "@/store/api/publicApi";
 import { useAppDispatch, useAppSelector } from "@/store";
 import { addToast } from "@/store/slices/uiSlice";
 import { logoutStaff } from "@/store/slices/authSlice";
@@ -57,8 +61,12 @@ const SVGIcon = ({ name }: { name: string }) => {
   );
 };
 
-// Seating arrangements for 4 & 6 seat tables
+// Seating arrangements for 2, 4, 6 & 8 seat tables
 const SEAT: Record<number, number[][]> = {
+  2: [
+    [50, 11],
+    [50, 89],
+  ],
   4: [
     [50, 11],
     [89, 50],
@@ -72,6 +80,16 @@ const SEAT: Record<number, number[][]> = {
     [28, 88],
     [50, 88],
     [72, 88],
+  ],
+  8: [
+    [20, 12],
+    [40, 12],
+    [60, 12],
+    [80, 12],
+    [20, 88],
+    [40, 88],
+    [60, 88],
+    [80, 88],
   ],
 };
 
@@ -160,9 +178,13 @@ export default function WaiterFloorScreenPage() {
   const { data: kitchenQueue, refetch: refetchKitchen } =
     useGetKitchenQueueQuery(restaurantId, { pollingInterval: 3500 });
   const { data: menuItemsData } = useGetPublicMenuItemsQuery({ restaurantId });
+  const { data: menuCategoriesData } = useGetPublicMenuCategoriesQuery({
+    restaurantId,
+  });
 
   // Mutations
   const [acceptOrder] = useAcceptOrderMutation();
+  const [cancelStaffOrder] = useCancelStaffOrderMutation();
   const [updateKitchenStatus] = useUpdateKitchenStatusMutation();
   const [placeStaffOrder, { isLoading: isPlacingOrder }] =
     usePlaceStaffOrderMutation();
@@ -181,7 +203,7 @@ export default function WaiterFloorScreenPage() {
   const [floorFilter, setFloorFilter] = useState<FloorFilterMode>("ALL");
   const [zone, setZone] = useState<"dine" | "car">("dine");
   const [activeSheet, setActiveSheet] = useState<
-    "table" | "order" | "pick" | "settle" | "gate" | null
+    "table" | "order" | "pick" | "settle" | "gate" | "guest" | null
   >(null);
   const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -305,11 +327,7 @@ export default function WaiterFloorScreenPage() {
             let s: TableModel["orders"][0]["s"] = "kitchen";
             if (statusLower === "ready") s = "ready";
             else if (statusLower === "served") s = "served";
-            else if (
-              statusLower === "placed_unverified" ||
-              statusLower === "placed_verified"
-            )
-              s = "new";
+            else if (statusLower === "placed_unverified") s = "new";
 
             const itemsMap: [string, number, number][] = (ko.items || []).map(
               (it) => [
@@ -341,7 +359,7 @@ export default function WaiterFloorScreenPage() {
         rawNumber: t.table_number,
         tableId: t.table_id,
         kind: isCar ? "car" : "table",
-        cap: (t as any).capacity || 4,
+        cap: t.capacity || (t as any).table?.capacity || 4,
         guest: guestName,
         pax: paxCount,
         st: isOccupied ? "dining" : "free",
@@ -550,34 +568,151 @@ export default function WaiterFloorScreenPage() {
     0
   );
 
-  // Menu items list formatted for order sheet
+  // Category Formatter
+  const formatCategoryName = (name: string): string => {
+    const upper = name.trim().toUpperCase();
+    if (
+      upper === "APPETIZERS" ||
+      upper === "APPETIZER" ||
+      upper === "STARTER" ||
+      upper === "STARTERS"
+    ) {
+      return "Starters";
+    }
+    if (
+      upper === "MAIN COURSE" ||
+      upper === "MAIN COURSES" ||
+      upper === "MAINS" ||
+      upper === "MAIN"
+    ) {
+      return "Mains";
+    }
+    if (upper === "BREADS" || upper === "BREAD") {
+      return "Breads";
+    }
+    if (upper === "DESSERTS" || upper === "DESSERT") {
+      return "Desserts";
+    }
+    if (upper === "BEVERAGES" || upper === "BEVERAGE" || upper === "DRINKS") {
+      return "Beverages";
+    }
+    return name
+      .toLowerCase()
+      .split(" ")
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+      .join(" ");
+  };
+
+  const categoryMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    (menuCategoriesData || []).forEach((c) => {
+      map[c.id] = formatCategoryName(c.name);
+    });
+    return map;
+  }, [menuCategoriesData]);
+
+  // Menu items list formatted for order sheet (deduplicated)
   const availableMenuDishes = useMemo(() => {
     const raw = menuItemsData || [];
-    return raw.map((item) => ({
-      id: item.id,
-      name: item.name,
-      price: (item.price?.amount_minor_units || 0) / 100,
-      category: item.category_name || "Mains",
-      isVeg: Boolean(
-        (item as any).is_vegetarian ??
-          !(
-            item.name.toLowerCase().includes("chicken") ||
-            item.name.toLowerCase().includes("mutton") ||
-            item.name.toLowerCase().includes("meat") ||
-            item.name.toLowerCase().includes("fish") ||
-            item.name.toLowerCase().includes("egg")
-          )
-      ),
-    }));
-  }, [menuItemsData]);
+    const seenNames = new Set<string>();
+    const dishes: Array<{
+      id: string;
+      name: string;
+      price: number;
+      category: string;
+      categoryId?: string;
+      isVeg: boolean;
+    }> = [];
+
+    for (const item of raw) {
+      const normalizedName = (item.name || "").trim().toLowerCase();
+      if (!normalizedName || seenNames.has(normalizedName)) {
+        continue;
+      }
+      seenNames.add(normalizedName);
+
+      let cat =
+        (item.category_id && categoryMap[item.category_id]) ||
+        (item.category_name && formatCategoryName(item.category_name));
+
+      if (!cat) {
+        const lower = normalizedName;
+        if (
+          lower.includes("tikka") ||
+          lower.includes("corn") ||
+          lower.includes("starter") ||
+          lower.includes("kebab") ||
+          lower.includes("fry") ||
+          lower.includes("roll")
+        ) {
+          cat = "Starters";
+        } else if (
+          lower.includes("roti") ||
+          lower.includes("naan") ||
+          lower.includes("bread") ||
+          lower.includes("paratha")
+        ) {
+          cat = "Breads";
+        } else if (
+          lower.includes("jamun") ||
+          lower.includes("dessert") ||
+          lower.includes("halwa") ||
+          lower.includes("sweet") ||
+          lower.includes("ice cream")
+        ) {
+          cat = "Desserts";
+        } else if (
+          lower.includes("drink") ||
+          lower.includes("beverage") ||
+          lower.includes("water") ||
+          lower.includes("soda") ||
+          lower.includes("cola")
+        ) {
+          cat = "Beverages";
+        } else {
+          cat = "Mains";
+        }
+      }
+
+      dishes.push({
+        id: item.id,
+        name: item.name.trim(),
+        price: (item.price?.amount_minor_units || 0) / 100,
+        category: cat,
+        categoryId: item.category_id,
+        isVeg: Boolean(
+          (item as any).is_vegetarian ??
+            !(
+              normalizedName.includes("chicken") ||
+              normalizedName.includes("mutton") ||
+              normalizedName.includes("meat") ||
+              normalizedName.includes("fish") ||
+              normalizedName.includes("egg")
+            )
+        ),
+      });
+    }
+
+    return dishes;
+  }, [menuItemsData, categoryMap]);
 
   const menuCategories = useMemo(() => {
-    const cats = new Set<string>(["All"]);
-    availableMenuDishes.forEach((d) => {
-      if (d.category) cats.add(d.category);
+    const list = ["All"];
+    (menuCategoriesData || []).forEach((c) => {
+      const formatted = formatCategoryName(c.name);
+      if (!list.includes(formatted)) {
+        list.push(formatted);
+      }
     });
-    return Array.from(cats);
-  }, [availableMenuDishes]);
+
+    availableMenuDishes.forEach((d) => {
+      if (d.category && !list.includes(d.category)) {
+        list.push(d.category);
+      }
+    });
+
+    return list;
+  }, [menuCategoriesData, availableMenuDishes]);
 
   const filteredDishes = useMemo(() => {
     const q = menuSearch.toLowerCase().trim();
@@ -598,7 +733,7 @@ export default function WaiterFloorScreenPage() {
 
   // SVG Table Graphics Generator
   const renderTableGraphic = (t: TableModel) => {
-    const n = t.cap === 6 ? 6 : 4;
+    const n = t.cap === 2 ? 2 : t.cap === 6 ? 6 : t.cap === 8 ? 8 : 4;
     const p = SEAT[n] || SEAT[4];
     const o = t.st === "free" ? 0 : Math.min(t.pax || 2, n);
 
@@ -620,7 +755,7 @@ export default function WaiterFloorScreenPage() {
             />
           );
         })}
-        {n === 6 ? (
+        {n === 6 || n === 8 ? (
           <rect x="18" y="27" width="64" height="46" rx="16" className="tp" />
         ) : (
           <circle cx="50" cy="50" r="25" className="tp" />
@@ -680,6 +815,17 @@ export default function WaiterFloorScreenPage() {
 
   // ACTION HANDLERS
   const handleOpenTableSheet = (tableId: string) => {
+    const t = tablesList.find(
+      (item) => item.id === tableId || item.rawNumber === tableId
+    );
+    if (t && t.st === "free") {
+      setSeatingGuestName("");
+      setSeatingPax(Math.min(2, t.cap || 4));
+      setSeatingPhone("");
+      setCarPlateInput("");
+      handleOpenOrderPad(t.id);
+      return;
+    }
     setSelectedTableId(tableId);
     setActiveSheet("table");
   };
@@ -698,6 +844,33 @@ export default function WaiterFloorScreenPage() {
     setSelectedCategory("All");
     setMenuSearch("");
     setActiveSheet("order");
+  };
+
+  const handleSelectTableForNewOrder = (t: TableModel) => {
+    setSelectedTableId(t.id);
+    if (t.st === "free") {
+      setSeatingGuestName("");
+      setSeatingPax(Math.min(2, t.cap || 4));
+      setSeatingPhone("");
+      setCarPlateInput("");
+      handleOpenOrderPad(t.id);
+    } else {
+      setSeatingGuestName(t.guest || "");
+      setSeatingPax(t.pax || Math.min(2, t.cap || 4));
+      handleOpenOrderPad(t.id);
+    }
+  };
+
+  const handleConfirmGuestAndOpenOrder = () => {
+    if (!selectedTableId || !currentTable) return;
+    const maxCap = currentTable.cap || 4;
+    if (seatingPax > maxCap) {
+      showToast(
+        `Cannot seat ${seatingPax} guests. Maximum capacity for ${getTableDisplayName(currentTable)} is ${maxCap} seats.`
+      );
+      return;
+    }
+    handleOpenOrderPad(selectedTableId);
   };
 
   const handleAttendCall = async (t: TableModel) => {
@@ -720,6 +893,31 @@ export default function WaiterFloorScreenPage() {
       refetchTables();
     } catch (err) {
       showToast(translateBackendError(err) || "Failed to accept order");
+    }
+  };
+
+  const handleCancelOrderAction = async (
+    t: TableModel,
+    orderId: string,
+    status: "new" | "kitchen" | "ready" | "served"
+  ) => {
+    try {
+      const isCookingOrReady = status === "kitchen" || status === "ready";
+      const reason = isCookingOrReady
+        ? `Force-closed by staff (${status === "ready" ? "Prepared" : "Cooking"} item - Food Wastage)`
+        : "Cancelled by staff before cooking started (Kitchen notified)";
+
+      await cancelStaffOrder({ orderId, reason }).unwrap();
+      showToast(
+        isCookingOrReady
+          ? "Item force-closed and recorded as food wastage (kitchen notified)"
+          : "Order cancelled before cooking started (kitchen notified)"
+      );
+      refetchPending();
+      refetchKitchen();
+      refetchTables();
+    } catch (err) {
+      showToast(translateBackendError(err) || "Failed to cancel order");
     }
   };
 
@@ -758,6 +956,11 @@ export default function WaiterFloorScreenPage() {
           ? currentTable.runningTotalMinor
           : Math.round(totalTable(currentTable) * 100);
 
+      const activeOrders = currentTable.orders || [];
+      const uncookedOrders = activeOrders.filter((o) => o.s === "new");
+      const inCookingOrders = activeOrders.filter((o) => o.s === "kitchen");
+      const preparedOrders = activeOrders.filter((o) => o.s === "ready");
+
       await confirmPayment({
         data: {
           session_id: currentTable.sessionId,
@@ -767,11 +970,37 @@ export default function WaiterFloorScreenPage() {
         idempotencyKey: generateUUID(),
       }).unwrap();
 
+      // Ensure all unserved orders are cancelled/force-closed immediately on the client side too
+      await Promise.allSettled(
+        activeOrders
+          .filter((o) => o.s !== "served")
+          .map((o) => {
+            const isCooking = o.s === "kitchen";
+            const isReady = o.s === "ready";
+            const reason =
+              isCooking || isReady
+                ? `Bill settled: force-closed ${isReady ? "prepared" : "cooking"} item (food wastage)`
+                : "Bill settled: cancelled unstarted order (kitchen notified)";
+            return cancelStaffOrder({ orderId: o.rawId, reason }).unwrap();
+          })
+      );
+
+      let orderSummaryNote = "";
+      if (uncookedOrders.length > 0) {
+        orderSummaryNote += ` · ${uncookedOrders.length} unstarted cancelled (kitchen notified)`;
+      }
+      if (inCookingOrders.length > 0 || preparedOrders.length > 0) {
+        const wasteCount = inCookingOrders.length + preparedOrders.length;
+        orderSummaryNote += ` · ${wasteCount} force-closed as food wastage`;
+      }
+
       showToast(
-        `Bill settled · ${R(amountMinor / 100)} (${paymentMethod}). Exit pass generated.`
+        `Bill settled · ${R(amountMinor / 100)} (${paymentMethod}). Exit pass generated${orderSummaryNote}.`
       );
       setActiveSheet(null);
       refetchTables();
+      refetchPending();
+      refetchKitchen();
     } catch (err) {
       console.error("Payment settlement error:", err);
       showToast(translateBackendError(err) || "Failed to settle payment");
@@ -877,15 +1106,22 @@ export default function WaiterFloorScreenPage() {
 
     try {
       let activeSession = currentTable.sessionId;
-      // If table is free, seat it first
+      // If table is free, seat it first with the collected guest name and pax
       if (!activeSession) {
+        const guestName =
+          seatingGuestName.trim() ||
+          (isCarTable(currentTable) ? "Car Guest" : "Guest Diner");
+        const guestPax = seatingPax || 2;
+        const phone = seatingPhone.trim() || undefined;
+        const plate = carPlateInput.trim() || undefined;
+
         const sess = await startStaffSession({
           table_number: currentTable.rawNumber,
           table_id: currentTable.tableId,
-          customer_name: isCarTable(currentTable)
-            ? "Car Guest"
-            : "Walk-in Diner",
-          guest_count: 2,
+          customer_name: guestName,
+          customer_phone: phone,
+          guest_count: guestPax,
+          vehicle_number: plate,
         }).unwrap();
         activeSession = (sess as any).session_id || (sess as any).id;
       }
@@ -895,13 +1131,29 @@ export default function WaiterFloorScreenPage() {
         return;
       }
 
-      await placeStaffOrder({
+      const res = await placeStaffOrder({
         sessionId: activeSession,
         items: itemsToSend,
       }).unwrap();
 
-      showToast(`Order sent for ${getTableDisplayName(currentTable)}`);
+      const createdOrderId =
+        (res as any)?.order?.id ||
+        (res as any)?.id ||
+        (res as any)?.data?.order?.id;
+
+      if (createdOrderId) {
+        try {
+          await acceptOrder({ orderId: createdOrderId }).unwrap();
+        } catch (_) {
+          // If already auto-accepted by backend, safely ignore
+        }
+      }
+
+      showToast(`Order sent directly to kitchen for ${getTableDisplayName(currentTable)}`);
       setCart({});
+      setSeatingGuestName("");
+      setSeatingPhone("");
+      setSeatingPax(2);
       setActiveSheet("table");
       refetchTables();
       refetchPending();
@@ -1207,6 +1459,19 @@ export default function WaiterFloorScreenPage() {
                   >
                     <div className="hd">
                       <span className="id">{t.id}</span>
+                      <span
+                        style={{
+                          fontSize: "0.72rem",
+                          color: "var(--muted)",
+                          fontWeight: 700,
+                          background: "var(--paper)",
+                          padding: "2px 6px",
+                          borderRadius: 6,
+                          border: "1px solid var(--line)",
+                        }}
+                      >
+                        {t.cap} {t.cap === 1 ? "seat" : "seats"}
+                      </span>
                       <span className="pill">{statusLabel}</span>
                     </div>
 
@@ -1220,7 +1485,7 @@ export default function WaiterFloorScreenPage() {
                       <div className="who">
                         {isCarTable(t)
                           ? "Tap when a car arrives"
-                          : "Tap to seat guests"}
+                          : `Capacity: ${t.cap} · Tap to seat`}
                       </div>
                     ) : (
                       <>
@@ -1229,7 +1494,7 @@ export default function WaiterFloorScreenPage() {
                         </div>
                         <div className="sub">
                           {isCarTable(t) && t.plate ? `${t.plate} · ` : ""}
-                          {t.pax} guests
+                          {t.pax}/{t.cap} guests
                         </div>
                         <div className="ft">
                           <span>{R0(totalTable(t))}</span>
@@ -1435,11 +1700,11 @@ export default function WaiterFloorScreenPage() {
                     ? isCarTable(currentTable)
                       ? `${currentTable.vehicle || "Car"} · ${
                           currentTable.plate ? currentTable.plate + " · " : ""
-                        }${currentTable.pax} guests · in car`
-                      : `${currentTable.pax} guests · dining`
+                        }${currentTable.pax}/${currentTable.cap} guests · in car`
+                      : `${currentTable.pax}/${currentTable.cap} guests · dining (Capacity: ${currentTable.cap})`
                     : isCarTable(currentTable)
-                    ? "Waiting for a car"
-                    : "Ready to seat"}
+                    ? `Capacity: ${currentTable.cap} guests · Waiting for a car`
+                    : `Capacity: ${currentTable.cap} guests · Ready to seat`}
                 </small>
               </div>
               <button
@@ -1636,7 +1901,7 @@ export default function WaiterFloorScreenPage() {
                     : o.s === "kitchen"
                     ? "--blu"
                     : o.s === "served"
-                    ? "--mute"
+                    ? "--grn"
                     : "--b";
 
                 return (
@@ -1654,25 +1919,81 @@ export default function WaiterFloorScreenPage() {
                         {o.s.toUpperCase()}
                       </span>
                       {o.s === "new" ? (
+                        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                          <button
+                            className="go"
+                            onClick={() =>
+                              handleAcceptOrderAction(currentTable, o.rawId)
+                            }
+                          >
+                            Accept
+                          </button>
+                          <button
+                            type="button"
+                            className="ib"
+                            style={{
+                              padding: "4px 8px",
+                              fontSize: "0.75rem",
+                              borderRadius: 8,
+                              color: "var(--crimson)",
+                              border: "1px solid var(--line)",
+                            }}
+                            title="Cancel order before cooking starts (kitchen notified)"
+                            onClick={() =>
+                              handleCancelOrderAction(currentTable, o.rawId, o.s)
+                            }
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      ) : o.s === "kitchen" ? (
                         <button
-                          className="go"
+                          type="button"
+                          className="ib"
+                          style={{
+                            padding: "4px 8px",
+                            fontSize: "0.75rem",
+                            borderRadius: 8,
+                            color: "var(--crimson)",
+                            border: "1px solid var(--line)",
+                          }}
+                          title="Force close cooking item and record as food wastage (kitchen notified)"
                           onClick={() =>
-                            handleAcceptOrderAction(currentTable, o.rawId)
+                            handleCancelOrderAction(currentTable, o.rawId, o.s)
                           }
                         >
-                          Accept
+                          Force close (Waste)
                         </button>
                       ) : o.s === "ready" ? (
-                        <button
-                          className="go"
-                          onClick={() =>
-                            handleServeOrderAction(currentTable, o.rawId)
-                          }
-                        >
-                          {isCarTable(currentTable)
-                            ? "Deliver to car"
-                            : "Mark served"}
-                        </button>
+                        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                          <button
+                            className="go"
+                            onClick={() =>
+                              handleServeOrderAction(currentTable, o.rawId)
+                            }
+                          >
+                            {isCarTable(currentTable)
+                              ? "Deliver to car"
+                              : "Mark served"}
+                          </button>
+                          <button
+                            type="button"
+                            className="ib"
+                            style={{
+                              padding: "4px 8px",
+                              fontSize: "0.75rem",
+                              borderRadius: 8,
+                              color: "var(--crimson)",
+                              border: "1px solid var(--line)",
+                            }}
+                            title="Force close prepared item and record as food wastage (kitchen notified)"
+                            onClick={() =>
+                              handleCancelOrderAction(currentTable, o.rawId, o.s)
+                            }
+                          >
+                            Waste
+                          </button>
+                        </div>
                       ) : null}
                     </div>
 
@@ -1722,7 +2043,13 @@ export default function WaiterFloorScreenPage() {
               </button>
               <button
                 className="pb"
-                onClick={() => handleOpenOrderPad(currentTable.id)}
+                onClick={() => {
+                  if (currentTable.st === "free" && !seatingGuestName.trim()) {
+                    setActiveSheet("guest");
+                  } else {
+                    handleOpenOrderPad(currentTable.id);
+                  }
+                }}
               >
                 <SVGIcon name="plus" />
                 Take order
@@ -1848,9 +2175,26 @@ export default function WaiterFloorScreenPage() {
           <div className="sh wide" id="sh">
             <div className="sheh">
               <div className="code">{currentTable.id}</div>
-              <div>
-                <h3>Take order</h3>
-                <small>{currentTable.guest || "New guests"}</small>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <h3 style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  Take order
+                  <span
+                    style={{
+                      fontSize: "0.82rem",
+                      fontWeight: 700,
+                      padding: "2px 8px",
+                      borderRadius: 8,
+                      background: "var(--s2)",
+                      border: "1px solid var(--line)",
+                      color: "var(--ink)",
+                    }}
+                  >
+                    {seatingPax || currentTable.pax || 2} pax
+                  </span>
+                </h3>
+                <small style={{ display: "block", textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }}>
+                  {seatingGuestName.trim() || currentTable.guest || "Guest Diner"}
+                </small>
               </div>
               <button
                 className="ib x"
@@ -2014,6 +2358,118 @@ export default function WaiterFloorScreenPage() {
                   <SVGIcon name="up" />
                 </button>
 
+                {currentTable.st === "free" && (
+                  <div
+                    style={{
+                      padding: "10px 14px",
+                      background: "var(--paper)",
+                      borderBottom: "1px solid var(--line)",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 8,
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                      }}
+                    >
+                      <span
+                        style={{
+                          fontSize: "0.78rem",
+                          fontWeight: 700,
+                          color: "var(--ink)",
+                        }}
+                      >
+                        Guest & Seating
+                      </span>
+                      <span
+                        style={{
+                          fontSize: "0.72rem",
+                          color: "var(--muted)",
+                          fontWeight: 600,
+                        }}
+                      >
+                        Capacity: {currentTable.cap || 4} seats
+                      </span>
+                    </div>
+                    <input
+                      className="pli"
+                      placeholder="Guest name (optional)"
+                      value={seatingGuestName}
+                      onChange={(e) => setSeatingGuestName(e.target.value)}
+                      style={{
+                        height: 36,
+                        fontSize: "0.82rem",
+                        padding: "0 10px",
+                        width: "100%",
+                      }}
+                    />
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                      }}
+                    >
+                      <span
+                        style={{
+                          fontSize: "0.78rem",
+                          fontWeight: 600,
+                          color: "var(--ink)",
+                        }}
+                      >
+                        Party: <b>{seatingPax}</b> / {currentTable.cap || 4} guests
+                      </span>
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 6,
+                        }}
+                      >
+                        <button
+                          type="button"
+                          className="ib"
+                          style={{ width: 28, height: 28, borderRadius: 6 }}
+                          onClick={() =>
+                            setSeatingPax((p) => Math.max(1, p - 1))
+                          }
+                          aria-label="Decrease pax"
+                        >
+                          <SVGIcon name="min" />
+                        </button>
+                        <button
+                          type="button"
+                          className="ib"
+                          style={{
+                            width: 28,
+                            height: 28,
+                            borderRadius: 6,
+                            opacity:
+                              seatingPax >= (currentTable.cap || 4) ? 0.35 : 1,
+                            cursor:
+                              seatingPax >= (currentTable.cap || 4)
+                                ? "not-allowed"
+                                : "pointer",
+                          }}
+                          disabled={seatingPax >= (currentTable.cap || 4)}
+                          onClick={() =>
+                            setSeatingPax((p) =>
+                              Math.min(currentTable.cap || 4, p + 1)
+                            )
+                          }
+                          aria-label="Increase pax"
+                        >
+                          <SVGIcon name="plus" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <div className="cl" id="cl">
                   {cartEntries.length === 0 ? (
                     <p>Tap dishes to add them to the order.</p>
@@ -2078,7 +2534,7 @@ export default function WaiterFloorScreenPage() {
                   <button
                     key={t.id}
                     className={t.st === "dining" ? "u" : ""}
-                    onClick={() => handleOpenOrderPad(t.id)}
+                    onClick={() => handleSelectTableForNewOrder(t)}
                   >
                     <b>{t.id}</b>
                     <small>{t.st === "dining" ? t.guest : "Free"}</small>
@@ -2087,12 +2543,246 @@ export default function WaiterFloorScreenPage() {
             </div>
           </div>
         )}
+
+        {/* NEW ORDER GUEST DETAILS MODAL */}
+        {activeSheet === "guest" && currentTable && (
+          <div className="sh" id="sh">
+            <div className="sheh">
+              <div className="code">{currentTable.id}</div>
+              <div style={{ flex: 1 }}>
+                <h3 style={{ font: "400 1.6rem var(--serif)" }}>
+                  New order for {getTableDisplayName(currentTable)}
+                </h3>
+                <small>Guest details & party size</small>
+              </div>
+              <button
+                className="ib x"
+                onClick={handleCloseSheet}
+                aria-label="Close"
+              >
+                <SVGIcon name="x" />
+              </button>
+            </div>
+
+            <form
+              className="sbody"
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleConfirmGuestAndOpenOrder();
+              }}
+            >
+              <div>
+                <label
+                  htmlFor="guest-name-input"
+                  style={{
+                    display: "block",
+                    fontWeight: 700,
+                    fontSize: "0.85rem",
+                    marginBottom: 6,
+                    color: "var(--ink)",
+                  }}
+                >
+                  Guest Name <span style={{ color: "var(--b)" }}>*</span>
+                </label>
+                <input
+                  id="guest-name-input"
+                  className="pli"
+                  placeholder="e.g. Rahul Sharma or Verma Family"
+                  autoFocus
+                  required
+                  value={seatingGuestName}
+                  onChange={(e) => setSeatingGuestName(e.target.value)}
+                  style={{ width: "100%" }}
+                />
+              </div>
+
+              <div>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "baseline",
+                    marginBottom: 6,
+                  }}
+                >
+                  <label
+                    style={{
+                      fontWeight: 700,
+                      fontSize: "0.85rem",
+                      color: "var(--ink)",
+                    }}
+                  >
+                    Number of Guests (Pax) <span style={{ color: "var(--b)" }}>*</span>
+                  </label>
+                  <span
+                    style={{
+                      fontSize: "0.8rem",
+                      color: "var(--muted)",
+                      fontWeight: 600,
+                    }}
+                  >
+                    Table Capacity: <b>{currentTable.cap || 4} seats</b>
+                  </span>
+                </div>
+                <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+                  {[1, 2, 3, 4, 5, 6, 8]
+                    .filter((num) => num <= (currentTable.cap || 4))
+                    .map((num) => (
+                      <button
+                        key={num}
+                        type="button"
+                        onClick={() => setSeatingPax(num)}
+                        style={{
+                          flex: 1,
+                          height: 44,
+                          borderRadius: 12,
+                          border: "1px solid var(--line)",
+                          background:
+                            seatingPax === num ? "var(--ink)" : "var(--paper)",
+                          color:
+                            seatingPax === num ? "var(--paper)" : "var(--ink)",
+                          fontWeight: 800,
+                          fontSize: "0.95rem",
+                          transition: "all 0.15s ease",
+                        }}
+                      >
+                        {num}
+                      </button>
+                    ))}
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <button
+                    type="button"
+                    className="ib"
+                    onClick={() => setSeatingPax((p) => Math.max(1, p - 1))}
+                    style={{ width: 40, height: 40, borderRadius: 10 }}
+                    aria-label="Decrease guests"
+                  >
+                    <SVGIcon name="min" />
+                  </button>
+                  <span
+                    style={{
+                      font: "800 1.1rem var(--mono)",
+                      minWidth: 90,
+                      textAlign: "center",
+                    }}
+                  >
+                    {seatingPax} / {currentTable.cap || 4}{" "}
+                    {seatingPax === 1 ? "guest" : "guests"}
+                  </span>
+                  <button
+                    type="button"
+                    className="ib"
+                    disabled={seatingPax >= (currentTable.cap || 4)}
+                    onClick={() =>
+                      setSeatingPax((p) => Math.min(currentTable.cap || 4, p + 1))
+                    }
+                    style={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: 10,
+                      opacity: seatingPax >= (currentTable.cap || 4) ? 0.35 : 1,
+                      cursor:
+                        seatingPax >= (currentTable.cap || 4)
+                          ? "not-allowed"
+                          : "pointer",
+                    }}
+                    aria-label="Increase guests"
+                  >
+                    <SVGIcon name="plus" />
+                  </button>
+                </div>
+                {seatingPax >= (currentTable.cap || 4) && (
+                  <p
+                    style={{
+                      margin: "6px 0 0",
+                      fontSize: "0.75rem",
+                      color: "var(--crimson)",
+                      fontWeight: 600,
+                    }}
+                  >
+                    Maximum seating capacity reached for this table ({currentTable.cap || 4} seats)
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label
+                  htmlFor="guest-phone-input"
+                  style={{
+                    display: "block",
+                    fontWeight: 700,
+                    fontSize: "0.85rem",
+                    marginBottom: 6,
+                    color: "var(--ink)",
+                  }}
+                >
+                  Mobile Number <small style={{ color: "var(--mute)", fontWeight: 500 }}>(optional)</small>
+                </label>
+                <input
+                  id="guest-phone-input"
+                  className="pli"
+                  type="tel"
+                  placeholder="+91 98765 43210"
+                  value={seatingPhone}
+                  onChange={(e) => setSeatingPhone(e.target.value)}
+                  style={{ width: "100%" }}
+                />
+              </div>
+
+              {isCarTable(currentTable) && (
+                <div>
+                  <label
+                    htmlFor="guest-plate-input"
+                    style={{
+                      display: "block",
+                      fontWeight: 700,
+                      fontSize: "0.85rem",
+                      marginBottom: 6,
+                      color: "var(--ink)",
+                    }}
+                  >
+                    Vehicle Plate Number
+                  </label>
+                  <input
+                    id="guest-plate-input"
+                    className="pli"
+                    placeholder="e.g. DL 01 AB 1234"
+                    value={carPlateInput}
+                    onChange={(e) => setCarPlateInput(e.target.value.toUpperCase())}
+                    style={{ width: "100%" }}
+                  />
+                </div>
+              )}
+
+              <button
+                type="submit"
+                className="pb"
+                style={{
+                  height: 52,
+                  marginTop: 8,
+                  fontSize: "1rem",
+                  fontWeight: 800,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 10,
+                }}
+              >
+                <span>Take Order</span>
+                <SVGIcon name="send" />
+              </button>
+            </form>
+          </div>
+        )}
       </div>
 
       {/* FLOATING TOAST NOTIFICATION */}
-      <div className={`toast ${toastMessage ? "on" : ""}`} role="status">
-        {toastMessage}
-      </div>
+      {toastMessage && (
+        <div className="toast on" role="status">
+          {toastMessage}
+        </div>
+      )}
     </div>
   );
 }

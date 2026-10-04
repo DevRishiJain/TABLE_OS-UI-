@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
+import Link from "next/link";
 import { useParams } from "next/navigation";
 import {
   useGetPublicMenuCategoriesQuery,
@@ -56,24 +57,83 @@ export default function CustomerMenuPage() {
 
   const [activeCategoryId, setActiveCategoryId] = useState<string>("ALL");
   const [searchQuery, setSearchQuery] = useState("");
+  const [vegOnly, setVegOnly] = useState(false);
   const [selectedDish, setSelectedDish] = useState<MenuItem | null>(null);
   const [dishInstructions, setDishInstructions] = useState("");
+  const [dishModalQty, setDishModalQty] = useState(1);
   const [highlightedDishId, setHighlightedDishId] = useState<string | null>(null);
+
+  const customerName =
+    useAppSelector((state) => state.auth.customerName) ||
+    sessionDetail?.session?.customer_name ||
+    "";
+
+  // Check for active order round
+  const activeOrder = (sessionDetail?.orders || []).find(
+    (o) => o.status !== "SERVED" && o.status !== "CANCELLED"
+  );
+  const activeOrderText = activeOrder
+    ? activeOrder.status === "PREPARING"
+      ? "Chefs are cooking your order"
+      : activeOrder.status === "READY"
+      ? "Order is ready at pass"
+      : "Order received in kitchen"
+    : null;
+
+  const isDishVeg = (dish: MenuItem) => {
+    const text = (dish.name + " " + (dish.description || "")).toLowerCase();
+    const nonVegKeywords = ["chicken", "mutton", "lamb", "fish", "prawn", "egg", "beef", "pork", "meat", "tikka chicken"];
+    if (nonVegKeywords.some((k) => text.includes(k))) return false;
+    return (
+      text.includes("paneer") ||
+      text.includes("corn") ||
+      text.includes("dal") ||
+      text.includes("naan") ||
+      text.includes("roti") ||
+      text.includes("veg") ||
+      text.includes("jamun") ||
+      text.includes("kebab") ||
+      text.includes("sabzi") ||
+      text.includes("palak") ||
+      text.includes("aloo") ||
+      text.includes("chaat") ||
+      true
+    );
+  };
+
+  const isDishSpicy = (dish: MenuItem) => {
+    const text = (dish.name + " " + (dish.description || "")).toLowerCase();
+    return text.includes("tikka") || text.includes("crispy") || text.includes("spicy") || text.includes("chilli") || text.includes("mirch") || text.includes("masala");
+  };
 
   // Filter items
   const filteredItems = useMemo(() => {
     if (!items) return [];
     return items.filter((item) => {
       const matchesCategory =
-        activeCategoryId === "ALL" || item.category_id === activeCategoryId;
+        activeCategoryId === "ALL"
+          ? true
+          : activeCategoryId === "POPULAR"
+          ? item.name.toLowerCase().includes("crispy") || item.name.toLowerCase().includes("butter") || item.name.toLowerCase().includes("tikka") || item.name.toLowerCase().includes("naan")
+          : item.category_id === activeCategoryId;
+
+      const matchesVeg = !vegOnly || isDishVeg(item);
+
       const matchesSearch =
         !searchQuery ||
         item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (item.description &&
           item.description.toLowerCase().includes(searchQuery.toLowerCase()));
-      return matchesCategory && matchesSearch;
+
+      return matchesCategory && matchesVeg && matchesSearch;
     });
-  }, [items, activeCategoryId, searchQuery]);
+  }, [items, activeCategoryId, vegOnly, searchQuery]);
+
+  // Chef's picks for horizontal carousel
+  const chefsPicks = useMemo(() => {
+    if (!items) return [];
+    return items.slice(0, 5);
+  }, [items]);
 
   // Group items by category when ALL is selected and no active search
   const categorizedGroups = useMemo(() => {
@@ -90,7 +150,7 @@ export default function CustomerMenuPage() {
     const knownCatIds = new Set(categories.map((c) => c.id));
     const others = filteredItems.filter((dish) => !dish.category_id || !knownCatIds.has(dish.category_id));
     if (others.length > 0) {
-      groups.push({ categoryName: "Chef Specials & Recommendations", categoryId: "others", items: others });
+      groups.push({ categoryName: "Chef Specials & Mains", categoryId: "others", items: others });
     }
     return groups.length > 0 ? groups : null;
   }, [categories, filteredItems, activeCategoryId, searchQuery]);
@@ -104,149 +164,160 @@ export default function CustomerMenuPage() {
     return map;
   }, [cartItems]);
 
-  const handleAddDish = (dish: MenuItem) => {
+  const handleAddDish = (dish: MenuItem, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
     dispatch(addItem({ menuItem: dish, quantity: 1 }));
     dispatch(
       addToast({
         type: "success",
-        message: `Added ${dish.name} to cart`,
+        message: `${dish.name} added to order`,
         durationMs: 2000,
       })
     );
   };
 
+  const handleUpdateQty = (dishId: string, newQty: number, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    dispatch(updateQuantity({ menuItemId: dishId, quantity: newQty }));
+  };
+
   const handleOpenDishModal = (dish: MenuItem) => {
     setSelectedDish(dish);
-    setDishInstructions("");
+    const existing = cartItems.find((ci) => ci.menuItem.id === dish.id);
+    setDishInstructions(existing?.specialInstructions || "");
+    setDishModalQty(existing?.quantity || 1);
   };
 
   const handleConfirmCustomDish = () => {
     if (selectedDish) {
-      dispatch(
-        addItem({
-          menuItem: selectedDish,
-          quantity: 1,
-          specialInstructions: dishInstructions.trim() || undefined,
-        })
-      );
-      dispatch(
-        addToast({
-          type: "success",
-          message: `Added ${selectedDish.name} with custom instructions`,
-          durationMs: 2000,
-        })
-      );
+      if (dishModalQty <= 0) {
+        dispatch(updateQuantity({ menuItemId: selectedDish.id, quantity: 0 }));
+      } else {
+        dispatch(
+          addItem({
+            menuItem: selectedDish,
+            quantity: dishModalQty,
+            specialInstructions: dishInstructions.trim() || undefined,
+          })
+        );
+        dispatch(
+          addToast({
+            type: "success",
+            message: `${selectedDish.name} updated`,
+            durationMs: 2000,
+          })
+        );
+      }
       setSelectedDish(null);
     }
   };
 
-  const renderDishCard = (dish: MenuItem) => {
+  const getDishHue = (categoryName?: string) => {
+    const cat = (categoryName || "").toLowerCase();
+    if (cat.includes("starter") || cat.includes("appetizer")) return "#C98A3D";
+    if (cat.includes("main") || cat.includes("curry") || cat.includes("gravy")) return "#B5654A";
+    if (cat.includes("bread") || cat.includes("roti") || cat.includes("rice")) return "#B59A62";
+    if (cat.includes("dessert") || cat.includes("sweet") || cat.includes("drink")) return "#B0607A";
+    return "var(--ac)";
+  };
+
+  const getDishIcon = (categoryName?: string) => {
+    const cat = (categoryName || "").toLowerCase();
+    if (cat.includes("starter") || cat.includes("appetizer")) {
+      return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ width: "1.75rem", height: "1.75rem" }}>
+          <path d="M12 3c1 4 5 5 5 10a5 5 0 0 1-10 0c0-2 1-3 2-4 0 2 1 3 2 3 0-3-1-5 1-9z" />
+        </svg>
+      );
+    }
+    if (cat.includes("main") || cat.includes("curry")) {
+      return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ width: "1.75rem", height: "1.75rem" }}>
+          <path d="M6 14a4 4 0 1 1 2-7 4 4 0 0 1 8 0 4 4 0 1 1 2 7v6H6z" />
+        </svg>
+      );
+    }
+    if (cat.includes("bread") || cat.includes("roti")) {
+      return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ width: "1.75rem", height: "1.75rem" }}>
+          <path d="M4 15a8 6 0 0 1 16 0v3H4zM9 11l-1 3M13 10l-1 4M17 11l-1 3" />
+        </svg>
+      );
+    }
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ width: "1.75rem", height: "1.75rem" }}>
+        <path d="M12 3l2 5 5 2-5 2-2 5-2-5-5-2 5-2z" />
+      </svg>
+    );
+  };
+
+  const renderDishRow = (dish: MenuItem, categoryName?: string) => {
     const qty = cartQuantityMap[dish.id] || 0;
-    const isHighlighted = highlightedDishId === dish.id;
-
-    const isVeg =
-      dish.name.toLowerCase().includes("paneer") ||
-      dish.name.toLowerCase().includes("corn") ||
-      dish.name.toLowerCase().includes("dal") ||
-      dish.name.toLowerCase().includes("naan") ||
-      dish.name.toLowerCase().includes("roti") ||
-      dish.name.toLowerCase().includes("jamun");
-
-    const isSpicy =
-      dish.name.toLowerCase().includes("tikka") ||
-      dish.name.toLowerCase().includes("crispy");
+    const isVeg = isDishVeg(dish);
+    const isSpicy = isDishSpicy(dish);
+    const hue = getDishHue(categoryName);
 
     return (
-      <div
-        key={dish.id}
-        className={`p-4 rounded-2xl bg-surface border transition-all duration-300 flex items-start justify-between gap-3 ${
-          isHighlighted
-            ? "border-primary shadow-glow bg-primary/5"
-            : "border-surface-border hover:border-surface-border/80"
-        }`}
-      >
-        <div
-          className="flex-1 flex flex-col cursor-pointer min-w-0"
+      <div key={dish.id} className={`mi ${qty > 0 ? "has" : ""}`}>
+        <button
+          className="mo"
+          type="button"
           onClick={() => handleOpenDishModal(dish)}
+          aria-label={`${dish.name}, see details`}
         >
-          <div className="flex items-center gap-1.5 mb-1">
-            {isVeg ? (
-              <span className="p-0.5 rounded border border-emerald-500/50 text-emerald-400 inline-block">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 block" />
-              </span>
-            ) : (
-              <span className="p-0.5 rounded border border-red-500/50 text-red-400 inline-block">
-                <span className="w-1.5 h-1.5 rounded-full bg-red-400 block" />
-              </span>
-            )}
-
-            {isSpicy && (
-              <Badge variant="amber" size="sm">
-                <Flame className="w-3 h-3 text-amber-400 inline mr-0.5" />
-                Spicy
-              </Badge>
-            )}
-          </div>
-
-          <h3 className="text-sm font-bold text-gray-100 font-display">
-            {dish.name}
-          </h3>
-
-          <span className="text-sm font-extrabold text-primary font-mono mt-1">
-            {formatMoney(dish.price.amount_minor_units)}
+          <span className="pt" style={{ "--h": hue } as React.CSSProperties}>
+            {getDishIcon(categoryName)}
           </span>
+          <span className="mt">
+            <span className="nm">
+              <i
+                className={`vg ${isVeg ? "" : "n"}`}
+                title={isVeg ? "Vegetarian" : "Non-vegetarian"}
+              />
+              {dish.name}
+            </span>
+            {dish.description && <small>{dish.description}</small>}
+          </span>
+        </button>
 
-          {dish.description && (
-            <p className="text-xs text-gray-400 mt-1 line-clamp-2 leading-relaxed">
-              {dish.description}
-            </p>
-          )}
-        </div>
+        <div className="mr">
+          <span className="pr">{formatMoney(dish.price.amount_minor_units)}</span>
+          {isSpicy && <span className="sp">Spicy</span>}
+          <span className="sx" />
 
-        {/* Add or Quantity Controls */}
-        <div className="shrink-0 flex items-center">
-          {qty === 0 ? (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => handleAddDish(dish)}
-              className="font-bold border-primary/40 text-primary hover:bg-primary/10"
-              leftIcon={<Plus className="w-3.5 h-3.5" />}
-            >
-              Add
-            </Button>
-          ) : (
-            <div className="flex items-center gap-2 bg-surface-subtle border border-primary/40 rounded-xl px-1.5 py-1">
+          {qty > 0 ? (
+            <div className="sp2">
               <button
-                onClick={() =>
-                  dispatch(
-                    updateQuantity({
-                      menuItemId: dish.id,
-                      quantity: qty - 1,
-                    })
-                  )
-                }
-                className="w-6 h-6 rounded-lg bg-surface flex items-center justify-center text-gray-300 hover:text-white"
+                type="button"
+                onClick={(e) => handleUpdateQty(dish.id, qty - 1, e)}
+                aria-label={`Remove one ${dish.name}`}
               >
-                <Minus className="w-3.5 h-3.5" />
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: "1.1rem", height: "1.1rem" }}>
+                  <path d="M5 12h14" />
+                </svg>
               </button>
-              <span className="text-xs font-bold font-mono px-1">
-                {qty}
-              </span>
+              <span>{qty}</span>
               <button
-                onClick={() =>
-                  dispatch(
-                    updateQuantity({
-                      menuItemId: dish.id,
-                      quantity: qty + 1,
-                    })
-                  )
-                }
-                className="w-6 h-6 rounded-lg bg-primary text-background font-bold flex items-center justify-center"
+                type="button"
+                onClick={(e) => handleUpdateQty(dish.id, qty + 1, e)}
+                aria-label={`Add one ${dish.name}`}
               >
-                <Plus className="w-3.5 h-3.5" />
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: "1.1rem", height: "1.1rem" }}>
+                  <path d="M12 5v14M5 12h14" />
+                </svg>
               </button>
             </div>
+          ) : (
+            <button
+              type="button"
+              className="ad"
+              onClick={(e) => handleAddDish(dish, e)}
+              aria-label={`Add ${dish.name}`}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: "1.2rem", height: "1.2rem" }}>
+                <path d="M12 5v14M5 12h14" />
+              </svg>
+            </button>
           )}
         </div>
       </div>
@@ -254,178 +325,305 @@ export default function CustomerMenuPage() {
   };
 
   return (
-    <div className="flex flex-col gap-4 px-4 pt-4 w-full overflow-x-hidden">
-      {/* AI Dining Prompt Hero Card */}
-      <div
-        onClick={() => dispatch(setAiDrawerOpen(true))}
-        className="p-3.5 rounded-2xl bg-gradient-to-r from-amber-500/15 via-primary/10 to-amber-500/5 border border-primary/30 hover:border-primary/60 cursor-pointer transition-all flex items-center justify-between gap-3 shadow-sm group active:scale-[0.99]"
-      >
-        <div className="flex items-center gap-2.5 min-w-0">
-          <div className="w-8 h-8 rounded-xl bg-primary/20 text-primary flex items-center justify-center shrink-0 border border-primary/30 group-hover:scale-105 transition-transform">
-            <Sparkles className="w-4 h-4" />
-          </div>
-          <div className="flex flex-col min-w-0">
-            <span className="text-xs font-bold text-gray-100 flex items-center gap-1.5">
-              <span>Ask AI Dining Concierge</span>
-              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/20 text-primary font-mono font-semibold">
-                Instant
-              </span>
-            </span>
-            <p className="text-[11px] text-gray-400 truncate mt-0.5">
-              "What's special?", "Diabetic sweets?", "Meal under ₹1000"
-            </p>
-          </div>
-        </div>
-        <span className="text-xs font-bold text-primary flex items-center gap-0.5 shrink-0 group-hover:translate-x-0.5 transition-transform">
-          Ask AI <ChevronRight className="w-3.5 h-3.5" />
-        </span>
+    <div style={{ paddingTop: 6 }}>
+      {/* Greeting Header */}
+      <div>
+        <h2>{customerName ? `Namaste, ${customerName}` : "Namaste"}</h2>
+        <p className="mu" style={{ margin: "4px 0 0" }}>
+          What would you like today?
+        </p>
       </div>
 
-      {/* Search and AI Action Bar */}
-      <div className="flex items-center gap-2">
-        <div className="relative flex-1">
-          <Input
+      {/* Live Order Banner */}
+      {activeOrder && (
+        <Link
+          href={`/dine/${sessionId}/orders`}
+          className="nl live"
+          style={{ textDecoration: "none" }}
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ width: "1.35rem", height: "1.35rem", color: "var(--ok)" }}>
+            <path d="M6 14a4 4 0 1 1 2-7 4 4 0 0 1 8 0 4 4 0 1 1 2 7v6H6z" />
+          </svg>
+          <span>
+            <b>{activeOrderText}</b>
+            <small>Round active · Tap to track food live</small>
+          </span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: "1.1rem", height: "1.1rem", color: "var(--mu)" }}>
+            <path d="M9 6l6 6-6 6" />
+          </svg>
+        </Link>
+      )}
+
+      {/* AI Menu Helper Banner */}
+      <button
+        className="nl"
+        type="button"
+        onClick={() => dispatch(setAiDrawerOpen(true))}
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ width: "1.35rem", height: "1.35rem", color: "var(--ac)" }}>
+          <path d="M12 3l2 5 5 2-5 2-2 5-2-5-5-2 5-2z" />
+        </svg>
+        <span>
+          <b>Not sure what to order?</b>
+          <small>Ask the menu helper</small>
+        </span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: "1.1rem", height: "1.1rem", color: "var(--mu)" }}>
+          <path d="M9 6l6 6-6 6" />
+        </svg>
+      </button>
+
+      {/* Sticky Search & Category Bar */}
+      <div className="st">
+        <div className="sr">
+          <input
+            id="q"
+            className="in"
+            type="search"
+            placeholder="Search dishes"
+            aria-label="Search dishes"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search appetizers, curries, breads..."
-            leftIcon={<Search className="w-4 h-4 text-gray-400" />}
-            className="text-xs py-2 bg-surface"
           />
-        </div>
-        <Button
-          variant="gold"
-          size="sm"
-          onClick={() => dispatch(setAiDrawerOpen(true))}
-          className="shrink-0 font-bold"
-          leftIcon={<Sparkles className="w-4 h-4" />}
-        >
-          Ask AI
-        </Button>
-      </div>
-
-      {/* Categories Purely Vertical Wrapping Bar - Zero Horizontal Scroll */}
-      <div className="flex flex-col gap-2 w-full">
-        <div className="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-gray-400 px-0.5">
-          <span>Categories ({categories?.length ? categories.length + 1 : 1})</span>
-          {activeCategoryId !== "ALL" && (
-            <button
-              onClick={() => setActiveCategoryId("ALL")}
-              className="text-primary hover:underline text-[10px] font-bold"
-            >
-              Show All Dishes
-            </button>
-          )}
-        </div>
-
-        <div className="flex flex-wrap items-center gap-1.5 w-full">
           <button
-            onClick={() => setActiveCategoryId("ALL")}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-              activeCategoryId === "ALL"
-                ? "bg-primary text-background shadow-md shadow-primary/20 scale-[1.02]"
-                : "bg-surface text-gray-300 border border-surface-border hover:border-gray-500"
-            }`}
+            type="button"
+            className="vt"
+            aria-pressed={vegOnly}
+            onClick={() => setVegOnly(!vegOnly)}
+            aria-label="Vegetarian only"
           >
-            All Dishes
+            <i />
+            Veg
           </button>
+        </div>
 
-          {isCategoriesLoading
-            ? Array.from({ length: 4 }).map((_, i) => (
-                <Skeleton key={i} className="w-20 h-7 rounded-xl" />
-              ))
-            : categories?.map((cat) => (
-                <button
-                  key={cat.id}
-                  onClick={() => setActiveCategoryId(cat.id)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                    activeCategoryId === cat.id
-                      ? "bg-primary text-background shadow-md shadow-primary/20 scale-[1.02]"
-                      : "bg-surface text-gray-300 border border-surface-border hover:border-gray-500"
-                  }`}
-                >
-                  {cat.name}
-                </button>
-              ))}
+        <div className="tabs">
+          <button
+            type="button"
+            className="tab"
+            aria-pressed={activeCategoryId === "ALL"}
+            onClick={() => setActiveCategoryId("ALL")}
+          >
+            All
+          </button>
+          <button
+            type="button"
+            className="tab"
+            aria-pressed={activeCategoryId === "POPULAR"}
+            onClick={() => setActiveCategoryId("POPULAR")}
+          >
+            Popular
+          </button>
+          {categories?.map((c) => (
+            <button
+              key={c.id}
+              type="button"
+              className="tab"
+              aria-pressed={activeCategoryId === c.id}
+              onClick={() => setActiveCategoryId(c.id)}
+            >
+              {c.name}
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* Menu Dishes List */}
-      <div className="flex flex-col gap-3.5">
+      {/* Chef's Picks Carousel (When on ALL and no query) */}
+      {activeCategoryId === "ALL" && !searchQuery && chefsPicks.length > 0 && (
+        <>
+          <div className="sec">Chef's picks</div>
+          <div className="hs">
+            {chefsPicks.map((m) => {
+              const qty = cartQuantityMap[m.id] || 0;
+              const hue = getDishHue(m.name);
+              return (
+                <div key={m.id} className="pk">
+                  <button
+                    className="mo"
+                    type="button"
+                    onClick={() => handleOpenDishModal(m)}
+                    aria-label={`${m.name}, see details`}
+                  >
+                    <span className="pt lg" style={{ "--h": hue } as React.CSSProperties}>
+                      {getDishIcon(m.name)}
+                    </span>
+                    <b>{m.name}</b>
+                  </button>
+                  <div className="mr" style={{ padding: "0 2px" }}>
+                    <span className="pr">{formatMoney(m.price.amount_minor_units)}</span>
+                    <span className="sx" />
+                    {qty > 0 ? (
+                      <div className="sp2">
+                        <button
+                          type="button"
+                          onClick={(e) => handleUpdateQty(m.id, qty - 1, e)}
+                        >
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: "1rem", height: "1rem" }}>
+                            <path d="M5 12h14" />
+                          </svg>
+                        </button>
+                        <span>{qty}</span>
+                        <button
+                          type="button"
+                          onClick={(e) => handleUpdateQty(m.id, qty + 1, e)}
+                        >
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: "1rem", height: "1rem" }}>
+                            <path d="M12 5v14M5 12h14" />
+                          </svg>
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        className="ad"
+                        onClick={(e) => handleAddDish(m, e)}
+                      >
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: "1.2rem", height: "1.2rem" }}>
+                          <path d="M12 5v14M5 12h14" />
+                        </svg>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
+
+      {/* Dish List */}
+      <div id="dl">
         {isItemsLoading ? (
-          Array.from({ length: 6 }).map((_, i) => (
-            <div
-              key={i}
-              className="p-4 rounded-2xl bg-surface border border-surface-border flex gap-4"
-            >
-              <div className="flex-1 flex flex-col gap-2">
-                <Skeleton className="w-32 h-5 rounded-md" />
-                <Skeleton className="w-20 h-4 rounded-md" />
-                <Skeleton className="w-48 h-3 rounded-md mt-2" />
-              </div>
-              <Skeleton className="w-20 h-20 rounded-xl shrink-0" />
-            </div>
-          ))
+          <div className="g" style={{ marginTop: 14 }}>
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="cd" style={{ height: 100, opacity: 0.5 }} />
+            ))}
+          </div>
         ) : filteredItems.length === 0 ? (
-          <div className="py-16 flex flex-col items-center justify-center text-center p-6 bg-surface rounded-2xl border border-surface-border">
-            <Utensils className="w-10 h-10 text-gray-500 mb-2" />
-            <h4 className="text-sm font-bold text-gray-200">No dishes found</h4>
-            <p className="text-xs text-gray-400 mt-1">
-              Try adjusting your category filter or search query.
-            </p>
+          <div className="em">
+            <b>No dishes found</b>
+            Try another word or ask the menu helper.
           </div>
         ) : categorizedGroups && categorizedGroups.length > 0 ? (
           categorizedGroups.map((group) => (
-            <section key={group.categoryId} className="flex flex-col gap-3">
-              <div className="sticky top-14 z-20 glass-panel py-2 px-3 rounded-xl flex items-center justify-between border border-surface-border/60 shadow-sm">
-                <h3 className="text-xs font-black uppercase tracking-wider text-amber-400 font-display flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-primary" />
-                  {group.categoryName}
-                </h3>
-                <span className="text-[10px] font-mono text-gray-400">
-                  {group.items.length} {group.items.length === 1 ? "dish" : "dishes"}
-                </span>
-              </div>
-              <div className="flex flex-col gap-3">
-                {group.items.map(renderDishCard)}
-              </div>
-            </section>
+            <div key={group.categoryId}>
+              <div className="sec">{group.categoryName}</div>
+              {group.items.map((dish) => renderDishRow(dish, group.categoryName))}
+            </div>
           ))
         ) : (
-          <div className="flex flex-col gap-3">
-            {filteredItems.map(renderDishCard)}
-          </div>
+          filteredItems.map((dish) => renderDishRow(dish, categories?.find((c) => c.id === dish.category_id)?.name))
         )}
       </div>
 
-      {/* Dish Customization Modal */}
+      {/* Dish Detail Bottom Sheet */}
       {selectedDish && (
-        <Modal
-          isOpen={!!selectedDish}
-          onClose={() => setSelectedDish(null)}
-          title={selectedDish.name}
-          description={formatMoney(selectedDish.price.amount_minor_units)}
+        <div
+          className="ov"
+          role="dialog"
+          aria-modal="true"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setSelectedDish(null);
+          }}
         >
-          <div className="flex flex-col gap-4">
-            <Input
-              label="Special Cooking Instructions"
-              value={dishInstructions}
-              onChange={(e) => setDishInstructions(e.target.value)}
-              placeholder="e.g. Less spicy, extra butter, well done"
-            />
+          <div className="sh">
+            <div className="shb" style={{ padding: "0 0 8px", gap: 0 }}>
+              {/* Hero Banner */}
+              <div className="hero" style={{ "--h": getDishHue(selectedDish.name) } as React.CSSProperties}>
+                {getDishIcon(selectedDish.name)}
+                <button
+                  type="button"
+                  className="b i"
+                  onClick={() => setSelectedDish(null)}
+                  aria-label="Close"
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ width: "1.2rem", height: "1.2rem" }}>
+                    <path d="M6 6l12 12M18 6L6 18" />
+                  </svg>
+                </button>
+              </div>
 
-            <div className="flex items-center justify-end gap-2 pt-2">
-              <Button
-                variant="ghost"
-                onClick={() => setSelectedDish(null)}
+              {/* Dish info */}
+              <div style={{ padding: "18px 20px 0", display: "grid", gap: 14 }}>
+                <div className="px">
+                  <h2>{selectedDish.name}</h2>
+                  <span className="pr" style={{ fontSize: "1.8rem" }}>
+                    {formatMoney(selectedDish.price.amount_minor_units)}
+                  </span>
+                </div>
+
+                <div className="tags">
+                  <span className="tag">
+                    <i
+                      className={`vg ${isDishVeg(selectedDish) ? "" : "n"}`}
+                      style={{ marginRight: 4 }}
+                    />
+                    {isDishVeg(selectedDish) ? "Vegetarian" : "Non-vegetarian"}
+                  </span>
+                  <span className="tag">
+                    {isDishSpicy(selectedDish) ? "Spicy" : "Mild"}
+                  </span>
+                  <span className="tag">Chef Special</span>
+                </div>
+
+                {selectedDish.description && (
+                  <p className="mu" style={{ margin: 0 }}>
+                    {selectedDish.description}
+                  </p>
+                )}
+
+                <div>
+                  <label htmlFor="dish-note" style={{ fontSize: "0.85rem", color: "var(--mu)" }}>
+                    Cooking instructions
+                  </label>
+                  <input
+                    id="dish-note"
+                    className="in"
+                    placeholder="Cooking note, e.g. less spicy, extra butter"
+                    aria-label="Cooking note"
+                    value={dishInstructions}
+                    onChange={(e) => setDishInstructions(e.target.value)}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="shf">
+              <div className="sp2">
+                <button
+                  type="button"
+                  onClick={() => setDishModalQty((q) => Math.max(0, q - 1))}
+                  aria-label="One less"
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: "1.1rem", height: "1.1rem" }}>
+                    <path d="M5 12h14" />
+                  </svg>
+                </button>
+                <span>{dishModalQty}</span>
+                <button
+                  type="button"
+                  onClick={() => setDishModalQty((q) => q + 1)}
+                  aria-label="One more"
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: "1.1rem", height: "1.1rem" }}>
+                    <path d="M12 5v14M5 12h14" />
+                  </svg>
+                </button>
+              </div>
+
+              <button
+                type="button"
+                className="b p"
+                onClick={handleConfirmCustomDish}
               >
-                Cancel
-              </Button>
-              <Button variant="primary" onClick={handleConfirmCustomDish}>
-                Add to Cart • {formatMoney(selectedDish.price.amount_minor_units)}
-              </Button>
+                {dishModalQty === 0
+                  ? "Remove from order"
+                  : cartQuantityMap[selectedDish.id]
+                  ? `Update order · ${formatMoney(selectedDish.price.amount_minor_units * dishModalQty)}`
+                  : `Add to order · ${formatMoney(selectedDish.price.amount_minor_units * dishModalQty)}`}
+              </button>
             </div>
           </div>
-        </Modal>
+        </div>
       )}
 
       {/* AI Dining Search Concierge Drawer */}
@@ -435,9 +633,11 @@ export default function CustomerMenuPage() {
         restaurantId={restaurantId}
         onSelectHighlightItem={(dish) => {
           setHighlightedDishId(dish.id);
+          setSelectedDish(dish);
           setTimeout(() => setHighlightedDishId(null), 4000);
         }}
       />
     </div>
   );
 }
+

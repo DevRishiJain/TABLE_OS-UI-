@@ -264,10 +264,11 @@ export default function CustomerOrdersPage() {
     typeof window !== "undefined"
       ? sessionStorage.getItem(`table_os_otp_${sessionId}`)
       : null;
-  const displayOtp =
+  const displayOtp: string | null =
     storedOtp ||
-    (session as any)?.first_order_otp ||
-    (orders[0] as any)?.verification_otp;
+    ((session as any)?.first_order_otp as string) ||
+    ((orders[0] as any)?.verification_otp as string) ||
+    null;
 
   if (isLoading) {
     return (
@@ -279,633 +280,283 @@ export default function CustomerOrdersPage() {
   }
 
   return (
-    <div className="flex flex-col gap-5 px-4 pt-4 pb-12 max-w-2xl mx-auto w-full">
+    <div style={{ paddingTop: 6 }}>
       {/* Top Header */}
-      <div className="flex items-center justify-between">
+      <div style={{ padding: "8px 0 4px", display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
         <div>
-          <h1 className="text-2xl font-black text-gray-100 font-display flex items-center gap-2">
-            Live Order & Bill
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping inline-block" />
-          </h1>
-          <p className="text-xs text-gray-400">
-            Table #{(session as any)?.table_number || ""} • {orders.length} {orders.length === 1 ? "round" : "rounds"} placed
+          <h2>Your orders</h2>
+          <p className="mu" style={{ margin: "4px 0 0" }}>
+            {orders.length
+              ? `${orders.length} ${orders.length === 1 ? "round" : "rounds"} placed · Follow your food live`
+              : "Follow your food live"}
           </p>
         </div>
         <button
           onClick={() => refetch()}
-          className="text-xs text-primary hover:underline font-mono px-3 py-1.5 rounded-xl bg-surface-subtle border border-surface-border flex items-center gap-1.5"
+          className="b i"
+          style={{ width: 40, height: 40, minHeight: 40 }}
+          aria-label="Refresh orders"
+          title="Refresh orders"
         >
-          <Sparkles className="w-3.5 h-3.5 text-primary" />
-          Sync
+          <Sparkles style={{ width: 16, height: 16 }} />
         </button>
       </div>
 
       {/* Session Has Closed Banner */}
       {sessionStatus === SessionState.COMPLETED && (
-        <div className="p-4 rounded-3xl bg-emerald-500/15 border-2 border-emerald-500/60 shadow-glow flex items-center justify-between gap-3 animate-fadeIn">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-500/30">
-              <CheckCircle2 className="w-5 h-5 text-emerald-400" />
-            </div>
-            <div>
-              <span className="inline-block px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-mono text-[10px] font-bold uppercase tracking-wider mb-0.5 border border-emerald-500/30">
-                SESSION CLOSED 🚪✨
-              </span>
-              <h4 className="text-xs font-bold text-emerald-300">
-                Exit Approved with Gate Pass
-              </h4>
-              <p className="text-[11px] text-gray-300">
-                Session has concluded and exit pass was verified.
-              </p>
-            </div>
-          </div>
-          <Link href={`/dine/${sessionId}/exit`}>
-            <Button size="sm" variant="primary" className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shrink-0">
-              Exit Pass 🎟️
-            </Button>
+        <div className="nl live" style={{ borderColor: "var(--ok)", marginTop: 12 }}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: "1.35rem", height: "1.35rem", color: "var(--ok)" }}>
+            <path d="M5 12l5 5 9-10" />
+          </svg>
+          <span>
+            <b>Session Closed · Exit Approved</b>
+            <small>Show exit pass to door staff</small>
+          </span>
+          <Link href={`/dine/${sessionId}/exit`} className="tag" style={{ background: "var(--ok)", color: "#12100C", border: 0 }}>
+            Exit Pass
           </Link>
         </div>
       )}
 
       {/* Prominent First-Order OTP Banner */}
-      {isFirstOrderUnverified ? (
-        <div className="p-6 rounded-3xl bg-gradient-to-br from-amber-500/25 via-[#1a1c24] to-[#12141a] border-2 border-amber-500/70 shadow-glow flex flex-col gap-3">
-          <div className="flex items-center justify-between">
-            <Badge variant="gold" dot>
-              Table Verification Required
-            </Badge>
-            <span className="text-[11px] font-mono text-amber-300">
-              Session #{sessionId.substring(0, 8)}
-            </span>
-          </div>
-
-          <div className="flex flex-col items-center justify-center text-center py-2">
-            <span className="text-xs text-gray-300 font-medium uppercase tracking-wider">
-              Show This Code to Server
-            </span>
-            {displayOtp ? (
-              <div className="my-3 px-8 py-3 rounded-2xl bg-black/70 border-2 border-amber-500/50 text-4xl sm:text-5xl font-black font-mono tracking-widest text-primary shadow-inner">
-                {displayOtp}
-              </div>
-            ) : (
-              <div className="my-2 px-4 py-2 text-sm text-amber-300 bg-amber-500/10 rounded-xl border border-amber-500/30">
-                Awaiting server to confirm table order
-              </div>
-            )}
-            <p className="text-xs text-gray-300 max-w-sm mt-1 leading-relaxed">
-              Your server will punch this 4-digit code into their terminal to confirm you are seated at this table and release the ticket to the kitchen.
-            </p>
-          </div>
-        </div>
-      ) : isAwaitingPayment ? (
-        <div className="p-4 rounded-3xl bg-gradient-to-r from-amber-500/20 via-surface to-surface border-2 border-amber-500/60 shadow-glow flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0 border border-amber-500/30">
-              <Bell className="w-5 h-5 animate-bounce" />
-            </div>
-            <div>
-              <h4 className="text-xs font-bold text-amber-300 uppercase tracking-wider">
-                Server Alerted to Bring Bill
-              </h4>
-              <p className="text-[11px] text-gray-300">
-                Your waiter is on the way with your consolidated bill and card machine.
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <Link href={`/dine/${sessionId}/menu`}>
-              <Button size="sm" variant="secondary" className="text-xs">
-                + Add More
-              </Button>
-            </Link>
-            <Link href={`/dine/${sessionId}/bill`}>
-              <Button size="sm" variant="gold" className="font-bold text-xs">
-                Pay Online →
-              </Button>
-            </Link>
-          </div>
-        </div>
-      ) : null}
-
-      {/* SWIGGY / ZOMATO STYLE LIVE ORDER STAGE TRACKER (Prominent Top Card) */}
-      {orders.length > 0 && (
-        <Card className="p-5 sm:p-6 rounded-3xl border-primary/30 bg-gradient-to-br from-[#1b1e27] via-[#14161f] to-[#101218] shadow-2xl flex flex-col gap-5 relative overflow-hidden">
-          {/* Background Ambient Glow */}
-          <div className="absolute -top-16 -right-16 w-44 h-44 rounded-full bg-primary/10 blur-3xl pointer-events-none" />
-
-          {/* Tracker Header */}
-          <div className="flex items-center justify-between border-b border-surface-border/50 pb-3">
-            <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-2xl bg-primary/20 text-primary flex items-center justify-center border border-primary/30">
-                <Flame className="w-5 h-5 text-primary animate-pulse" />
-              </div>
-              <div>
-                <span className="text-[10px] font-mono uppercase tracking-widest text-primary font-bold">
-                  LIVE KITCHEN TRACKER
-                </span>
-                <h3 className="text-base font-black text-gray-100 font-display">
-                  {overallTrackerStage.title}
-                </h3>
-              </div>
-            </div>
-            <div className="text-right">
-              <span className="inline-block px-2.5 py-1 rounded-full text-xs font-mono font-bold bg-primary/20 text-primary border border-primary/30">
-                {overallTrackerStage.eta}
-              </span>
-            </div>
-          </div>
-
-          {/* ZOMATO / SWIGGY 4-STAGE MILESTONE BAR */}
-          <div className="relative pt-2 pb-1">
-            {/* Background connecting rail */}
-            <div className="absolute top-6 left-6 right-6 h-1 bg-surface-border rounded-full -translate-y-1/2 z-0" />
-            {/* Active filled rail */}
-            <div
-              className="absolute top-6 left-6 h-1 bg-gradient-to-r from-primary via-amber-400 to-emerald-400 rounded-full -translate-y-1/2 z-0 transition-all duration-700 ease-out"
-              style={{
-                width: `${Math.min(
-                  100,
-                  Math.max(
-                    0,
-                    overallTrackerStage.step === 1
-                      ? 5
-                      : overallTrackerStage.step === 2
-                      ? 33
-                      : overallTrackerStage.step === 3
-                      ? 66
-                      : overallTrackerStage.step >= 4
-                      ? 100
-                      : 0
-                  )
-                )}%`,
-              }}
-            />
-
-            {/* Stage Indicators */}
-            <div className="relative z-10 grid grid-cols-4 gap-1 text-center">
-              {/* Step 1: Confirmed */}
-              <div className="flex flex-col items-center gap-1.5">
-                <div
-                  className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-all ${
-                    overallTrackerStage.step >= 1
-                      ? "bg-primary text-black font-black shadow-glow ring-2 ring-primary/40"
-                      : "bg-[#1c1f2a] text-gray-500 border border-surface-border"
-                  }`}
-                >
-                  <Receipt className="w-4 h-4" />
-                </div>
-                <span className="text-[11px] font-bold text-gray-200">
-                  Confirmed
-                </span>
-                <span className="text-[9px] text-gray-400 hidden sm:inline">
-                  Order Received
-                </span>
-              </div>
-
-              {/* Step 2: In Kitchen */}
-              <div className="flex flex-col items-center gap-1.5">
-                <div
-                  className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-all ${
-                    overallTrackerStage.step >= 2
-                      ? "bg-sky-500 text-black font-black shadow-glow ring-2 ring-sky-400/40"
-                      : "bg-[#1c1f2a] text-gray-500 border border-surface-border"
-                  }`}
-                >
-                  <ChefHat className="w-4 h-4" />
-                </div>
-                <span className="text-[11px] font-bold text-gray-200">
-                  Kitchen
-                </span>
-                <span className="text-[9px] text-gray-400 hidden sm:inline">
-                  Queue & Prep
-                </span>
-              </div>
-
-              {/* Step 3: Cooking */}
-              <div className="flex flex-col items-center gap-1.5">
-                <div
-                  className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-all ${
-                    overallTrackerStage.step >= 3
-                      ? "bg-amber-500 text-black font-black shadow-glow ring-2 ring-amber-400/40 animate-pulse"
-                      : "bg-[#1c1f2a] text-gray-500 border border-surface-border"
-                  }`}
-                >
-                  <Flame className="w-4 h-4" />
-                </div>
-                <span className="text-[11px] font-bold text-gray-200">
-                  Cooking
-                </span>
-                <span className="text-[9px] text-gray-400 hidden sm:inline">
-                  On the Stove
-                </span>
-              </div>
-
-              {/* Step 4: Ready & Served */}
-              <div className="flex flex-col items-center gap-1.5">
-                <div
-                  className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-all ${
-                    overallTrackerStage.step >= 4
-                      ? "bg-emerald-500 text-black font-black shadow-glow ring-2 ring-emerald-400/40"
-                      : "bg-[#1c1f2a] text-gray-500 border border-surface-border"
-                  }`}
-                >
-                  <Utensils className="w-4 h-4" />
-                </div>
-                <span className="text-[11px] font-bold text-gray-200">
-                  {overallTrackerStage.step === 5 ? "Served" : "Ready"}
-                </span>
-                <span className="text-[9px] text-gray-400 hidden sm:inline">
-                  {overallTrackerStage.step === 5 ? "At Table" : "At the Pass"}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <p className="text-xs text-gray-300 text-center bg-black/30 p-2.5 rounded-2xl border border-surface-border/40">
-            {overallTrackerStage.desc}
+      {isFirstOrderUnverified && (
+        <div className="cd" style={{ marginTop: 12, textAlign: "center", border: "1.5px solid var(--ac)" }}>
+          <span className="tag" style={{ background: "color-mix(in srgb, var(--ac) 18%, transparent)", color: "var(--ac)", borderColor: "var(--ac)" }}>
+            Table Verification Required
+          </span>
+          <p className="mu sm" style={{ margin: "10px 0 6px" }}>
+            Show this 4-digit code to your server to release your order to the kitchen:
           </p>
-        </Card>
+          {displayOtp ? (
+            <div className="cn" style={{ margin: "12px 0" }}>
+              {displayOtp.split("").map((c, i) => (
+                <span key={i}>{c}</span>
+              ))}
+            </div>
+          ) : (
+            <div className="say" style={{ justifyContent: "center" }}>
+              Awaiting server verification
+            </div>
+          )}
+        </div>
       )}
 
-      {/* VIEW TOGGLE: "ONE UNITED BIG BILL" VS "LIVE TRACKER & ROUNDS" */}
+      {/* Awaiting Payment Banner */}
+      {isAwaitingPayment && (
+        <div className="say" style={{ marginTop: 12, background: "color-mix(in srgb, var(--ac) 15%, var(--pp))", color: "var(--ac)", borderColor: "var(--ac)" }}>
+          <Bell style={{ width: 18, height: 18, flexShrink: 0 }} />
+          <span>Waiter alerted to bring bill to Table {(session as any)?.table_number || ""}</span>
+        </div>
+      )}
+
+      {/* View Toggle (Batches vs United Bill) */}
       {orders.length > 0 && (
-        <div className="p-1 rounded-2xl bg-[#141720] border border-surface-border flex items-center gap-1">
+        <div className="tabs" style={{ margin: "14px 0 10px" }}>
           <button
+            type="button"
+            className="tab"
+            aria-pressed={activeView === "tracker"}
             onClick={() => setActiveView("tracker")}
-            className={`flex-1 py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all ${
-              activeView === "tracker"
-                ? "bg-primary text-black shadow-glow"
-                : "text-gray-400 hover:text-gray-200"
-            }`}
           >
-            <Clock className="w-4 h-4" />
-            <span>Order Rounds & Batches ({orders.length})</span>
+            Order rounds ({orders.length})
           </button>
           <button
+            type="button"
+            className="tab"
+            aria-pressed={activeView === "unified_bill"}
             onClick={() => setActiveView("unified_bill")}
-            className={`flex-1 py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all ${
-              activeView === "unified_bill"
-                ? "bg-primary text-black shadow-glow"
-                : "text-gray-400 hover:text-gray-200"
-            }`}
           >
-            <Receipt className="w-4 h-4" />
-            <span>One United Big Bill ({formatMoney(unifiedTotalMinor)})</span>
+            Unified bill ({formatMoney(unifiedTotalMinor)})
           </button>
         </div>
       )}
 
-      {/* SECTION 1: ONE UNITED BIG BILL VIEW */}
+      {/* SECTION 1: UNIFIED BILL VIEW */}
       {activeView === "unified_bill" ? (
-        <Card className="p-6 rounded-3xl border-primary/40 bg-gradient-to-br from-[#191b24] via-[#14161f] to-[#0f1118] shadow-2xl flex flex-col gap-5 animate-fadeIn">
-          {/* Bill Header */}
-          <div className="flex items-center justify-between border-b border-surface-border/60 pb-4">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-2xl bg-primary/20 text-primary flex items-center justify-center border border-primary/30">
-                <Receipt className="w-6 h-6" />
-              </div>
-              <div>
-                <span className="text-[10px] font-mono uppercase tracking-widest text-primary font-bold">
-                  CONSOLIDATED RUNNING BILL
-                </span>
-                <h3 className="text-lg font-black text-gray-100 font-display">
-                  All Items Ordered Till Now
-                </h3>
-              </div>
+        <div className="g" style={{ marginTop: 10 }}>
+          <div className="rp">
+            <div className="px" style={{ marginBottom: 12 }}>
+              <h3>Master Bill</h3>
+              <span className="tag">All Rounds</span>
             </div>
-            <div className="text-right">
-              <span className="text-xs text-gray-400 font-mono block">Grand Total</span>
-              <span className="text-xl font-black font-mono text-primary">
-                {formatMoney(unifiedTotalMinor)}
-              </span>
-            </div>
-          </div>
-
-          <p className="text-xs text-gray-300">
-            Every item you or your companions have ordered across all rounds is unified below into one combined master receipt.
-          </p>
-
-          {/* Consolidated Items Table */}
-          <div className="flex flex-col divide-y divide-surface-border/40">
             {consolidatedItems.map((item) => (
-              <div key={item.id} className="py-3 flex items-start justify-between gap-3">
-                <div className="flex flex-col gap-1">
-                  <div className="flex items-center gap-2">
-                    <span className="px-2 py-0.5 rounded-lg bg-primary/20 text-primary font-black font-mono text-xs">
-                      {item.quantity}x
-                    </span>
-                    <span className="text-sm font-bold text-gray-100">
-                      {item.name}
-                    </span>
-                  </div>
-
-                  {/* Status pills per item */}
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    {item.statuses.map((st, i) => (
-                      <span
-                        key={i}
-                        className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-surface-subtle text-gray-300 border border-surface-border"
-                      >
-                        {st.qty} {st.status === OrderState.SERVED ? "🍽️ Served" : st.status === OrderState.PREPARING ? "🔥 Cooking" : "📋 Queued"}
-                      </span>
-                    ))}
-                    {item.specialInstructions.length > 0 && (
-                      <span className="text-[10px] text-amber-300 italic">
-                        Note: {item.specialInstructions.join(", ")}
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                <div className="text-right shrink-0">
-                  <span className="text-xs font-mono text-gray-400 block">
-                    @{formatMoney(item.unitPriceMinor)}
-                  </span>
-                  <span className="text-sm font-black font-mono text-gray-100">
-                    {formatMoney(item.totalMinor)}
-                  </span>
-                </div>
+              <div key={item.id} className="it">
+                <span>
+                  {item.quantity}× {item.name}
+                  {item.specialInstructions.length > 0 && (
+                    <small className="mu" style={{ display: "block" }}>
+                      Note: {item.specialInstructions.join(", ")}
+                    </small>
+                  )}
+                </span>
+                <b>{formatMoney(item.totalMinor)}</b>
               </div>
             ))}
-          </div>
-
-          {/* Total Breakdown Summary */}
-          <div className="pt-4 border-t-2 border-surface-border/60 flex flex-col gap-2">
-            <div className="flex items-center justify-between text-xs text-gray-400">
-              <span>Items Subtotal:</span>
-              <span className="font-mono text-gray-200">
-                {formatMoney(unifiedSubtotalMinor)}
-              </span>
+            <div className="it ln">
+              <span className="mu">Subtotal</span>
+              <span>{formatMoney(unifiedSubtotalMinor)}</span>
             </div>
-            <div className="flex items-center justify-between text-xs text-gray-400">
-              <span>GST (CGST 2.5% + SGST 2.5%):</span>
-              <span className="font-mono text-gray-200">
-                {formatMoney(unifiedTaxMinor)}
-              </span>
+            <div className="it">
+              <span className="mu">CGST 2.5%</span>
+              <span>{formatMoney(unifiedTaxMinor / 2)}</span>
             </div>
-            <div className="flex items-center justify-between text-base font-black text-gray-100 pt-2 border-t border-surface-border/40">
-              <span className="flex items-center gap-1.5">
-                <Receipt className="w-4 h-4 text-primary" />
-                United Grand Total:
-              </span>
-              <span className="font-mono text-2xl text-primary">
-                {formatMoney(unifiedTotalMinor)}
-              </span>
+            <div className="it">
+              <span className="mu">SGST 2.5%</span>
+              <span>{formatMoney(unifiedTaxMinor / 2)}</span>
+            </div>
+            <div className="tot">
+              <span style={{ fontWeight: 700 }}>Grand total</span>
+              <b>{formatMoney(unifiedTotalMinor)}</b>
             </div>
           </div>
 
-          {/* Payment & Reorder Actions */}
-          <div className="flex flex-col sm:flex-row items-center gap-3 pt-2">
-            <Link href={`/dine/${sessionId}/menu`} className="w-full sm:flex-1">
-              <Button variant="secondary" size="lg" className="w-full">
-                + Order More Dishes
-              </Button>
+          <div className="g">
+            <Link href={`/dine/${sessionId}/bill`} className="b p">
+              Proceed to payment · {formatMoney(unifiedTotalMinor)}
             </Link>
-
-            {!isAwaitingPayment && (
-              <Button
-                variant="gold"
-                size="lg"
-                onClick={() => setShowBillModal(true)}
-                className="w-full sm:flex-1 font-bold shadow-glow"
-                leftIcon={<Bell className="w-5 h-5 text-black" />}
-              >
-                Request Waiter to Settle
-              </Button>
-            )}
-
-            <Link href={`/dine/${sessionId}/bill`} className="w-full sm:flex-1">
-              <Button
-                variant="primary"
-                size="lg"
-                className="w-full font-bold bg-emerald-600 hover:bg-emerald-500"
-                rightIcon={<CreditCard className="w-5 h-5" />}
-              >
-                Pay Online
-              </Button>
+            <Link href={`/dine/${sessionId}/menu`} className="b o">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: "1.1rem", height: "1.1rem" }}>
+                <path d="M12 5v14M5 12h14" />
+              </svg>
+              Order more dishes
             </Link>
           </div>
-        </Card>
+        </div>
       ) : (
-        /* SECTION 2: BATCH / ROUND-BY-ROUND TRACKER VIEW */
-        <div className="flex flex-col gap-4 animate-fadeIn">
+        /* SECTION 2: ROUND-BY-ROUND VIEW */
+        <div className="g" style={{ marginTop: 10 }}>
           {orders.length === 0 ? (
-            <div className="py-16 flex flex-col items-center justify-center text-center p-6 bg-surface rounded-3xl border border-surface-border">
-              <Utensils className="w-10 h-10 text-gray-500 mb-2" />
-              <h4 className="text-sm font-bold text-gray-200">
-                No orders placed yet
-              </h4>
-              <p className="text-xs text-gray-400 mt-1 mb-4">
-                Browse our menu and submit your first round of dishes.
-              </p>
-              <Link href={`/dine/${sessionId}/menu`}>
-                <Button size="sm">Browse Menu</Button>
-              </Link>
+            <div className="em">
+              <b>Nothing ordered yet</b>
+              Your orders will appear here.
+              <div style={{ marginTop: 16 }}>
+                <Link href={`/dine/${sessionId}/menu`} className="b p">
+                  Browse the menu
+                </Link>
+              </div>
             </div>
           ) : (
             orders.map((order, idx) => {
-              const stage = getStageBadge(order.status);
-              const StageIcon = stage.icon;
-              const isExpanded = expandedRounds[order.id] ?? true;
+              const orderStatusIdx =
+                order.status === OrderState.PLACED_UNVERIFIED
+                  ? 0
+                  : order.status === OrderState.PLACED_VERIFIED || order.status === OrderState.ACCEPTED
+                  ? 0
+                  : order.status === OrderState.PREPARING
+                  ? 1
+                  : order.status === OrderState.READY
+                  ? 2
+                  : 3;
+
+              const statusLabels = [
+                "Kitchen has your order",
+                "Chefs are cooking it now · about 15 min",
+                "Ready. Your waiter is bringing it to your table",
+                "Served. Enjoy your meal!",
+              ];
 
               return (
-                <Card
-                  key={order.id}
-                  className="p-5 rounded-3xl flex flex-col gap-3.5 border-surface-border/70 hover:border-surface-border transition-all"
-                >
-                  {/* Round Header */}
-                  <div className="flex items-center justify-between border-b border-surface-border/50 pb-3">
-                    <div className="flex items-center gap-2.5">
-                      <span className="w-8 h-8 rounded-xl bg-surface-subtle border border-surface-border flex items-center justify-center text-xs font-black text-primary font-mono">
-                        #{idx + 1}
-                      </span>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <h4 className="text-xs font-bold text-gray-200">
-                            {idx === 0 ? "Round 1 (Initial Order)" : `Round ${idx + 1} (Re-order)`}
-                          </h4>
-                        </div>
-                        <span className="text-[11px] text-gray-400 font-mono">
-                          Placed at {new Date(order.placed_at).toLocaleTimeString([], {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <Badge variant={stage.badge} size="sm">
-                        <StageIcon className="w-3 h-3 mr-1 inline" />
-                        {stage.label}
-                      </Badge>
-                      <button
-                        onClick={() => toggleRound(order.id)}
-                        className="text-gray-400 hover:text-gray-200 p-1"
-                      >
-                        {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                      </button>
-                    </div>
+                <div key={order.id} className="cd">
+                  <div className="px">
+                    <h3>Round {idx + 1}</h3>
+                    <span className="tag">
+                      {order.status === OrderState.SERVED
+                        ? "Served"
+                        : order.status === OrderState.CANCELLED
+                        ? "Cancelled"
+                        : "In progress"}
+                    </span>
                   </div>
 
-                  {/* Micro Progress Bar for this Batch */}
-                  <div className="flex items-center gap-1.5 py-0.5">
-                    {[1, 2, 3, 4].map((step) => {
-                      const stepActive =
-                        (step === 1 && order.status !== OrderState.CANCELLED) ||
-                        (step === 2 && [OrderState.PLACED_VERIFIED, OrderState.ACCEPTED, OrderState.PREPARING, OrderState.READY, OrderState.SERVED].includes(order.status)) ||
-                        (step === 3 && [OrderState.PREPARING, OrderState.READY, OrderState.SERVED].includes(order.status)) ||
-                        (step === 4 && [OrderState.READY, OrderState.SERVED].includes(order.status));
+                  {/* 4-step progress stepper matching sample */}
+                  <div className="stp">
+                    {[
+                      { label: "Received", icon: "rec" },
+                      { label: "Cooking", icon: "fire" },
+                      { label: "Ready", icon: "pot" },
+                      { label: "Served", icon: "ok" },
+                    ].map((step, sIdx) => (
+                      <div
+                        key={sIdx}
+                        className={`s1 ${sIdx <= orderStatusIdx ? "on" : ""}`}
+                      >
+                        <i>
+                          {step.icon === "rec" ? (
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ width: "1.1rem", height: "1.1rem" }}>
+                              <path d="M5 3h14v18l-3-2-2 2-2-2-2 2-2-2-3 2zM9 8h6M9 12h6" />
+                            </svg>
+                          ) : step.icon === "fire" ? (
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ width: "1.1rem", height: "1.1rem" }}>
+                              <path d="M12 3c1 4 5 5 5 10a5 5 0 0 1-10 0c0-2 1-3 2-4 0 2 1 3 2 3 0-3-1-5 1-9z" />
+                            </svg>
+                          ) : step.icon === "pot" ? (
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ width: "1.1rem", height: "1.1rem" }}>
+                              <path d="M6 14a4 4 0 1 1 2-7 4 4 0 0 1 8 0 4 4 0 1 1 2 7v6H6z" />
+                            </svg>
+                          ) : (
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: "1.1rem", height: "1.1rem" }}>
+                              <path d="M5 12l5 5 9-10" />
+                            </svg>
+                          )}
+                        </i>
+                        {step.label}
+                      </div>
+                    ))}
+                  </div>
 
-                      return (
-                        <div
-                          key={step}
-                          className={`h-1.5 flex-1 rounded-full transition-colors ${
-                            stepActive ? "bg-primary shadow-glow" : "bg-surface-border/60"
-                          }`}
-                        />
-                      );
-                    })}
+                  {/* Status Banner */}
+                  <div className="say">
+                    {statusLabels[orderStatusIdx]}
                   </div>
 
                   {/* Item lines */}
-                  {isExpanded && (
-                    <div className="flex flex-col gap-2 pt-1">
-                      {order.items.map((item) => (
-                        <div
-                          key={item.id}
-                          className="flex items-start justify-between text-xs py-1"
-                        >
-                          <div className="flex items-center gap-2">
-                            <span className="font-mono font-black text-primary text-xs">
-                              {item.quantity}x
-                            </span>
-                            <span className="text-gray-200 font-medium">
-                              {item.item_name_snapshot}
-                            </span>
-                            {item.special_instructions && (
-                              <span className="text-[10px] text-gray-400 italic">
-                                ({item.special_instructions})
-                              </span>
-                            )}
-                          </div>
-                          <span className="font-mono font-bold text-gray-300">
+                  <div style={{ marginTop: 10 }}>
+                    {order.items.map((item) => (
+                      <div key={item.id}>
+                        <div className="it">
+                          <span>
+                            {item.quantity}× {item.item_name_snapshot}
+                          </span>
+                          <span>
                             {formatMoney(item.line_total.amount_minor_units)}
                           </span>
                         </div>
-                      ))}
-
-                      {/* Batch subtotal */}
-                      <div className="pt-2 border-t border-surface-border/40 flex items-center justify-between text-xs text-gray-400">
-                        <span>Round Total (with Tax):</span>
-                        <span className="font-mono font-bold text-gray-200">
-                          {formatMoney(order.total?.amount_minor_units || 0)}
-                        </span>
+                        {item.special_instructions && (
+                          <div className="mu sm" style={{ marginTop: -4, marginBottom: 4 }}>
+                            Note: {item.special_instructions}
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  )}
-                </Card>
+                    ))}
+                  </div>
+
+                  <div className="it ln">
+                    <span className="mu">Round Total</span>
+                    <b>{formatMoney(order.total?.amount_minor_units || 0)}</b>
+                  </div>
+                </div>
               );
             })
           )}
 
-          {/* Quick Running Total Card below batches */}
+          {/* Bottom Actions */}
           {orders.length > 0 && (
-            <div className="p-4 rounded-3xl bg-surface border border-surface-border flex items-center justify-between">
-              <div>
-                <span className="text-[10px] font-mono text-gray-400 uppercase tracking-wider block">
-                  Combined Running Total
-                </span>
-                <span className="text-lg font-black font-mono text-primary">
-                  {formatMoney(unifiedTotalMinor)}
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Link href={`/dine/${sessionId}/menu`}>
-                  <Button size="sm" variant="secondary">
-                    + Re-order
-                  </Button>
-                </Link>
-                <Button
-                  size="sm"
-                  variant="gold"
-                  onClick={() => setActiveView("unified_bill")}
-                  rightIcon={<Receipt className="w-3.5 h-3.5" />}
-                >
-                  View United Bill
-                </Button>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
+            <div className="g" style={{ marginTop: 6 }}>
+              <Link href={`/dine/${sessionId}/menu`} className="b o">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: "1.1rem", height: "1.1rem" }}>
+                  <path d="M12 5v14M5 12h14" />
+                </svg>
+                Order more dishes
+              </Link>
 
-      {/* Request Bill Modal */}
-      {showBillModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
-          <Card className="w-full max-w-md p-6 flex flex-col gap-4 border-amber-500/50 bg-[#161922] shadow-2xl rounded-3xl">
-            <div className="flex items-center justify-between border-b border-surface-border pb-3">
-              <div className="flex items-center gap-2.5">
-                <div className="w-10 h-10 rounded-2xl bg-amber-500/20 text-amber-400 flex items-center justify-center border border-amber-500/30">
-                  <Bell className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-base font-bold text-gray-100 font-display">
-                    Request Bill & Settle
-                  </h3>
-                  <p className="text-[11px] text-gray-400">
-                    Grand Total: {formatMoney(unifiedTotalMinor)}
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => setShowBillModal(false)}
-                className="text-gray-400 hover:text-gray-200 text-sm font-bold"
-              >
-                ✕
-              </button>
-            </div>
-
-            <p className="text-xs text-gray-300 leading-relaxed">
-              How would you like your server to bring your consolidated final bill?
-            </p>
-
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                onClick={() => handleRequestBill(PaymentMethod.CASH)}
-                disabled={isRequestingBill}
-                className="p-4 rounded-2xl border border-emerald-500/40 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 flex flex-col items-center gap-2 transition-all font-bold text-xs"
-              >
-                <Banknote className="w-6 h-6" />
-                <span>Pay with Cash</span>
-              </button>
-              <button
-                onClick={() => handleRequestBill(PaymentMethod.RESTAURANT_POS)}
-                disabled={isRequestingBill}
-                className="p-4 rounded-2xl border border-sky-500/40 bg-sky-500/10 hover:bg-sky-500/20 text-sky-300 flex flex-col items-center gap-2 transition-all font-bold text-xs"
-              >
-                <Receipt className="w-6 h-6" />
-                <span>Card / POS Swipe</span>
-              </button>
-            </div>
-
-            <div className="flex items-center justify-between pt-2 border-t border-surface-border">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowBillModal(false)}
-              >
-                Cancel
-              </Button>
-              <Link href={`/dine/${sessionId}/bill`}>
-                <Button variant="gold" size="sm">
-                  Pay Online (UPI / Card) →
-                </Button>
+              <Link href={`/dine/${sessionId}/bill`} className="b p">
+                View Bill & Settle
               </Link>
             </div>
-          </Card>
+          )}
         </div>
       )}
     </div>
   );
 }
+

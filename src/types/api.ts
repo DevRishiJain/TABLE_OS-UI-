@@ -72,6 +72,7 @@ export interface StaffTableSummary {
   customer_name?: string;
   customer_phone?: string;
   guest_count?: number;
+  capacity?: number;
   assistance_reason?: string;
   assistance_requested_at?: string;
 }

@@ -89,6 +89,24 @@ export const staffApi = baseApi.injectEndpoints({
       ],
     }),
 
+    cancelStaffOrder: builder.mutation<
+      Order,
+      { orderId: string; reason?: string }
+    >({
+      query: ({ orderId, reason }) => ({
+        url: `/api/v1/staff/orders/${orderId}/cancel`,
+        method: "POST",
+        body: { reason },
+      }),
+      invalidatesTags: (result, error, { orderId }) => [
+        { type: "Order", id: orderId },
+        "KitchenQueue",
+        "Table",
+        "Session",
+        "Ledger",
+      ],
+    }),
+
     confirmPayment: builder.mutation<
       Payment,
       { paymentId?: string; data: ConfirmPaymentRequest; idempotencyKey?: string }
@@ -194,6 +212,7 @@ export const {
   useStaffLoginMutation,
   useVerifyFirstOrderMutation,
   useAcceptOrderMutation,
+  useCancelStaffOrderMutation,
   useConfirmPaymentMutation,
   useForceCloseSessionMutation,
   useStaffVerifyExitMutation,

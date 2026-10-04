@@ -1,122 +1,16 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { QRCodeSVG } from "qrcode.react";
 import { useGetExitPassQuery, useGetSessionQuery } from "@/store/api/customerApi";
 import { useAppSelector } from "@/store";
 import { formatMoney } from "@/lib/money";
-import { Button } from "@/components/ui/Button";
-import { Badge } from "@/components/ui/Badge";
-import { Skeleton } from "@/components/ui/Skeleton";
-import {
-  ShieldCheck,
-  CheckCircle2,
-  AlertTriangle,
-  ArrowLeft,
-  Utensils,
-  Lock,
-  Download,
-} from "lucide-react";
-
-
-function NamasteMascotAnimation({ isCompleted, customerName }: { isCompleted: boolean; customerName?: string }) {
-  return (
-    <div className="flex flex-col items-center text-center my-3 relative w-full">
-      {/* Ambient Glow */}
-      <div className="absolute top-0 w-36 h-36 bg-amber-500/15 rounded-full blur-2xl pointer-events-none animate-pulse" />
-
-      {/* Animated Cartoon Chef with Folded Hands (Namaste) */}
-      <div className="relative w-28 h-28 flex items-center justify-center animate-bounce-subtle select-none">
-        <svg
-          viewBox="0 0 120 120"
-          className="w-full h-full drop-shadow-[0_10px_20px_rgba(229,169,60,0.25)]"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          {/* Chef Hat Puffs */}
-          <path
-            d="M45 35 C40 18, 55 12, 60 20 C65 12, 80 18, 75 35 Z"
-            fill="#FFFFFF"
-            stroke="#E5A93C"
-            strokeWidth="2.5"
-          />
-          {/* Hat Band */}
-          <path
-            d="M42 35 C42 33, 78 33, 78 35 C78 39, 42 39, 42 35 Z"
-            fill="#E5A93C"
-          />
-          
-          {/* Face */}
-          <circle cx="60" cy="55" r="23" fill="#FFDFBA" stroke="#D49A6A" strokeWidth="2" />
-          
-          {/* Rosy Cheeks */}
-          <circle cx="48" cy="60" r="3.5" fill="#FF8A8A" opacity="0.6" />
-          <circle cx="72" cy="60" r="3.5" fill="#FF8A8A" opacity="0.6" />
-          
-          {/* Happy Eyes */}
-          <path d="M47 51 Q51 46 55 51" stroke="#3D2612" strokeWidth="2.5" strokeLinecap="round" fill="none" />
-          <path d="M65 51 Q69 46 73 51" stroke="#3D2612" strokeWidth="2.5" strokeLinecap="round" fill="none" />
-          
-          {/* Smiling Mouth */}
-          <path d="M53 62 Q60 69 67 62" stroke="#3D2612" strokeWidth="2.5" strokeLinecap="round" fill="#FFF" />
-          
-          {/* Yellow Scarf */}
-          <path d="M54 75 L60 82 L66 75 Z" fill="#E5A93C" />
-          
-          {/* Chef Coat */}
-          <path
-            d="M42 78 C35 88, 32 110, 32 115 L88 115 C88 110, 85 88, 78 78 Z"
-            fill="#FFFFFF"
-            stroke="#CBD5E1"
-            strokeWidth="2"
-          />
-          <circle cx="60" cy="90" r="1.5" fill="#E5A93C" />
-          <circle cx="60" cy="97" r="1.5" fill="#E5A93C" />
-          
-          {/* Left & Right Sleeves reaching center */}
-          <path d="M38 82 Q46 92 56 89" stroke="#E2E8F0" strokeWidth="7" strokeLinecap="round" />
-          <path d="M82 82 Q74 92 64 89" stroke="#E2E8F0" strokeWidth="7" strokeLinecap="round" />
-          
-          {/* Folded Palms Together in Namaste (🙏) */}
-          <path
-            d="M58 80 C57 84, 57 93, 60 96 C63 93, 63 84, 62 80 Z"
-            fill="#FFDFBA"
-            stroke="#D49A6A"
-            strokeWidth="1.5"
-          />
-          <path d="M60 81 L60 92" stroke="#D49A6A" strokeWidth="1" strokeLinecap="round" />
-        </svg>
-
-        {/* Floating animated sparkles & namaste emojis */}
-        <span className="absolute -top-1 -right-1 text-base animate-bounce delay-100">✨</span>
-        <span className="absolute top-3 -left-2 text-sm animate-bounce delay-300">🙏</span>
-        <span className="absolute -bottom-1 -right-2 text-sm text-amber-400 animate-pulse">💛</span>
-      </div>
-
-      {/* Hospitality Heading */}
-      <div className="mt-2.5">
-        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 font-mono text-[11px] font-bold uppercase tracking-wider mb-1.5 shadow-sm">
-          <span>🙏</span>
-          <span>Atithi Devo Bhava</span>
-          <span>🙏</span>
-        </div>
-        <h3 className="text-lg font-black font-display text-gray-100 tracking-tight">
-          Thank You, {customerName || "Guest"}!
-        </h3>
-        <p className="text-xs text-gray-300 mt-1 max-w-xs leading-relaxed mx-auto">
-          We loved hosting you. Have a safe journey and see you again soon!
-        </p>
-      </div>
-    </div>
-  );
-}
 
 export default function CustomerExitPassPage() {
   const params = useParams();
   const sessionId = params.sessionId as string;
-
 
   const { data: sessionData, error: sessionError } = useGetSessionQuery(sessionId, {
     pollingInterval: 2500,
@@ -135,10 +29,12 @@ export default function CustomerExitPassPage() {
   const customerName =
     useAppSelector((state) => state.auth.customerName) ||
     session?.customer_name ||
-    "Guest Diner";
+    "";
   const restaurantName =
     useAppSelector((state) => state.auth.restaurantName) ||
-    "TableOS Restaurant";
+    (session as any)?.restaurant_name ||
+    "The Spice Route";
+
   const isCompleted =
     isSessionGone ||
     session?.status === "COMPLETED" ||
@@ -152,9 +48,10 @@ export default function CustomerExitPassPage() {
     (session as any)?.exit_otp ||
     "";
 
-  const [exitCode, setExitCode] = React.useState<string>("");
+  const [exitCode, setExitCode] = useState<string>("");
+  const [showPassReceipt, setShowPassReceipt] = useState<boolean>(false);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (backendOtp) {
       setExitCode(backendOtp);
       if (typeof window !== "undefined") {
@@ -166,8 +63,8 @@ export default function CustomerExitPassPage() {
     }
   }, [backendOtp, sessionId]);
 
-  // QR Payload (stabilized without unstable timestamps)
-  const qrPayload = React.useMemo(() => {
+  // QR Payload
+  const qrPayload = useMemo(() => {
     return JSON.stringify({
       session_id: sessionId,
       otp: exitCode,
@@ -178,158 +75,178 @@ export default function CustomerExitPassPage() {
     });
   }, [sessionId, exitCode, session?.restaurant_id]);
 
+  const tableNumber = (session as any)?.table_number || "4";
+  const guestCount = (session as any)?.guest_count || 2;
+  const vehicleNumber = (session as any)?.vehicle_number || (session as any)?.car_number || "";
+  const finalTotalMinor = session?.final_total?.amount_minor_units || 0;
+
+  const restaurantInitials = restaurantName
+    .split(" ")
+    .map((w: string) => w[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase() || "SR";
+
   if (isLoading) {
     return (
-      <div className="p-6 flex flex-col items-center gap-4">
-        <Skeleton className="w-full h-96 rounded-3xl" />
+      <div style={{ paddingTop: 6 }}>
+        <div className="bk">
+          <Link href={`/dine/${sessionId}/bill`} className="b i" aria-label="Back">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ width: "1.2rem", height: "1.2rem" }}>
+              <path d="M19 12H5M12 5l-7 7 7 7" />
+            </svg>
+          </Link>
+          <h2>Exit pass</h2>
+        </div>
+        <div className="cd" style={{ height: 350, opacity: 0.5, marginTop: 12 }} />
       </div>
     );
   }
 
+  // If completed/approved and not explicitly viewing the receipt pass: show thanks view matching reference HTML
+  if (isCompleted && !showPassReceipt) {
+    return (
+      <div className="wl ct g" style={{ alignContent: "center", minHeight: "80vh", padding: "20px 0" }}>
+        <div className="ck">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ width: "2.2rem", height: "2.2rem" }}>
+            <path d="M5 12l5 5 9-10" />
+          </svg>
+        </div>
+        <div>
+          <span className="tag">Session closed · exit approved</span>
+          <h1 style={{ marginTop: 14 }}>
+            Thank you{customerName ? `, ${customerName}` : ""}
+          </h1>
+          <p className="mu" style={{ margin: "12px auto 0" }}>
+            We loved hosting you. Have a safe journey and see you again soon.
+          </p>
+        </div>
+        <div className="ft">Atithi Devo Bhava</div>
+        <div className="cd" style={{ textAlign: "left" }}>
+          <div className="it">
+            <span className="mu">Table</span>
+            <b>{tableNumber}</b>
+          </div>
+          <div className="it">
+            <span className="mu">Paid in full</span>
+            <b>{formatMoney(finalTotalMinor)}</b>
+          </div>
+          <div className="it">
+            <span className="mu">Exit code</span>
+            <b>{exitCode || "----"}</b>
+          </div>
+        </div>
+
+        <Link href={`/dine/${sessionId}/menu`} className="b p">
+          Start a new visit
+        </Link>
+        <button
+          type="button"
+          className="b o"
+          onClick={() => setShowPassReceipt(true)}
+        >
+          View exit pass receipt
+        </button>
+      </div>
+    );
+  }
+
+  // Active / Pass View matching reference HTML
   return (
-    <div className="flex flex-col gap-5 px-4 pt-4 pb-8">
-      <div className="flex items-center justify-between">
+    <div style={{ paddingTop: 6 }}>
+      {/* Top Header */}
+      <div className="bk">
         <Link
           href={`/dine/${sessionId}/bill`}
-          className="p-2 rounded-xl glass-pill hover:bg-white/10 text-gray-200 flex items-center gap-1.5 text-xs shadow-sm transition-all"
+          className="b i"
+          aria-label="Back"
         >
-          <ArrowLeft className="w-4 h-4" />
-          <span>Back to Bill</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ width: "1.2rem", height: "1.2rem" }}>
+            <path d="M19 12H5M12 5l-7 7 7 7" />
+          </svg>
         </Link>
-        <Badge variant={isCompleted ? "success" : "gold"} size="sm">
-          {isCompleted ? "Session Has Closed ✅" : "Cryptographically Verified"}
-        </Badge>
+        <h2>Exit pass</h2>
       </div>
 
-      {/* Spatial Boarding Pass Container */}
-      <div className={`w-full rounded-3xl glass-spatial specular-rim border ${isCompleted ? "border-emerald-500/50 shadow-2xl shadow-emerald-500/10" : "border-white/15 shadow-2xl"} overflow-hidden flex flex-col relative`}>
-        {/* Top Header Ticket Band */}
-        <div className={`${isCompleted ? "bg-gradient-to-r from-emerald-600/90 to-emerald-500/90 text-white border-b border-emerald-400/30" : "bg-gradient-to-r from-primary to-amber-500 text-background border-b border-amber-400/30"} px-6 py-4 flex items-center justify-between backdrop-blur-xl`}>
-          <div className="flex items-center gap-2">
-            <ShieldCheck className="w-6 h-6 drop-shadow-sm" />
-            <span className="font-extrabold text-base tracking-tight font-display drop-shadow-sm">
-              {isCompleted ? "SESSION HAS CLOSED • EXIT APPROVED" : "OFFICIAL EXIT PASS"}
-            </span>
-          </div>
-          <span className="font-mono text-xs font-black uppercase tracking-widest px-2.5 py-0.5 rounded-full bg-black/20 backdrop-blur-md border border-white/10">
-            Table T1
-          </span>
+      {/* Perforated Receipt Card */}
+      <div className="rp ct" style={{ marginTop: 10 }}>
+        <div className="lg" style={{ margin: "0 auto 8px" }}>
+          {restaurantInitials}
+        </div>
+        <h3 style={{ fontSize: "1.6rem" }}>{restaurantName}</h3>
+        <span className="mu sm">Verified dining clearance · bill settled</span>
+
+        {/* QR Code Container */}
+        <div className="pz">
+          <QRCodeSVG
+            value={qrPayload}
+            size={176}
+            level="H"
+            includeMargin={false}
+          />
         </div>
 
-        {/* Ticket Body */}
-        <div className="p-6 flex flex-col items-center text-center gap-4">
-          <div>
-            <h2 className="text-xl font-black text-gray-100 font-display tracking-tight">
-              {restaurantName}
-            </h2>
-            <p className="text-xs text-gray-300 mt-0.5">
-              Verified Dining Clearance • Bill Settled
-            </p>
+        {/* 4-Digit Exit Code */}
+        {exitCode ? (
+          <div className="cn" aria-label={`Exit code ${exitCode}`}>
+            {exitCode.split("").map((c, i) => (
+              <span key={i}>{c}</span>
+            ))}
           </div>
-
-          {/* Warm Hand Join (Namaste) Cartoon Animation */}
-          <NamasteMascotAnimation isCompleted={isCompleted} customerName={customerName} />
-
-          {isCompleted ? (
-            /* Session Closed & 1-Click Approved Exit Clearance Stamp */
-            <div className="w-full p-6 rounded-2xl glass-emerald flex flex-col items-center text-center gap-4 text-emerald-300 animate-fadeIn specular-rim">
-              <div className="w-16 h-16 rounded-full bg-emerald-500/20 border-2 border-emerald-400/50 flex items-center justify-center shadow-lg shadow-emerald-500/20">
-                <CheckCircle2 className="w-10 h-10 text-emerald-400" />
-              </div>
-              <div>
-                <span className="inline-block px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 font-mono text-[11px] font-bold uppercase tracking-wider mb-2 border border-emerald-500/40 backdrop-blur-md">
-                  SESSION HAS CLOSED 🚪✨
-                </span>
-                <h3 className="text-xl font-black font-display tracking-tight text-emerald-200">
-                  EXIT APPROVED WITH GATE PASS 🎉
-                </h3>
-                <p className="text-xs text-emerald-100/90 mt-2 max-w-xs leading-relaxed mx-auto">
-                  Your dining session has officially closed. Your exit pass was verified and approved by the floor team. You may depart freely.
-                </p>
-              </div>
-
-              <div className="w-full p-3.5 rounded-xl bg-black/40 backdrop-blur-md border border-emerald-500/30 flex flex-col gap-2 text-xs text-left">
-                <div className="flex justify-between items-center text-gray-300">
-                  <span>Session Status:</span>
-                  <span className="text-emerald-300 font-bold font-mono">CLOSED & FINALIZED</span>
-                </div>
-                <div className="flex justify-between items-center text-gray-300">
-                  <span>Floor Clearance:</span>
-                  <span className="text-emerald-300 font-bold flex items-center gap-1">
-                    <CheckCircle2 className="w-3.5 h-3.5" /> Approved by Waiter
-                  </span>
-                </div>
-                {exitCode && (
-                  <div className="flex justify-between items-center text-gray-300">
-                    <span>Gate Pass Code:</span>
-                    <span className="font-mono text-white font-bold tracking-widest">{exitCode}</span>
-                  </div>
-                )}
-              </div>
-
-              <span className="px-4 py-1.5 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-bold font-mono border border-emerald-500/40 backdrop-blur-md shadow-sm">
-                GOOD TO GO AHEAD! 🚪✅
-              </span>
-            </div>
-          ) : (
-            <>
-              {/* QR Code Container on Floating Glass Pedestal */}
-              <div className="p-4 rounded-3xl bg-white shadow-2xl flex items-center justify-center border-4 border-amber-400/80 shadow-primary/20">
-                <QRCodeSVG
-                  value={qrPayload}
-                  size={180}
-                  level="H"
-                  includeMargin={false}
-                />
-              </div>
-
-              {/* 4-Digit OTP Display in Spatial Glass Capsule */}
-              <div className="flex flex-col items-center gap-1.5 w-full">
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">
-                  Manual Verification Code
-                </span>
-                <div className="px-8 py-3 rounded-2xl glass-pill border-2 border-primary/50 text-3xl sm:text-4xl font-black font-mono tracking-widest text-primary shadow-glow flex items-center justify-center min-w-[160px] min-h-[56px]">
-                  {exitCode || (
-                    <span className="text-xs font-mono font-medium text-primary/80 animate-pulse">
-                      GENERATING...
-                    </span>
-                  )}
-                </div>
-                <span className="text-[10px] text-gray-400 mt-1">
-                  Valid for 15+ Minutes • Single-Use Only
-                </span>
-              </div>
-            </>
-          )}
-
-          {/* Perforated Divider Line */}
-          <div className="w-full border-t-2 border-dashed border-white/10 my-1 relative">
-            <div className="absolute -left-9 -top-3 w-6 h-6 rounded-full bg-background" />
-            <div className="absolute -right-9 -top-3 w-6 h-6 rounded-full bg-background" />
+        ) : (
+          <div className="say" style={{ justifyContent: "center" }}>
+            Generating code...
           </div>
+        )}
 
-          {/* Departure Instructions */}
-          <div className="flex items-start gap-2.5 text-left p-3.5 rounded-2xl glass-pill text-xs text-gray-200 w-full border border-white/10">
-            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-            <span>
-              {isCompleted
-                ? "You may exit the restaurant freely. Have a wonderful day!"
-                : "Present this QR code or 4-digit code to the waiter or exit guard."}
-            </span>
+        <div className="dv" />
+
+        <div className="it">
+          <span className="mu">Table</span>
+          <b>{tableNumber}</b>
+        </div>
+        <div className="it">
+          <span className="mu">Guest</span>
+          <b>{customerName || "Guest"} · {guestCount}</b>
+        </div>
+        {vehicleNumber && (
+          <div className="it">
+            <span className="mu">Vehicle</span>
+            <b>{vehicleNumber}</b>
           </div>
+        )}
+        <div className="it">
+          <span className="mu">Amount paid</span>
+          <b>{formatMoney(finalTotalMinor)}</b>
         </div>
 
-        {/* Ticket Footer */}
-        <div className="glass-panel px-6 py-3.5 border-t border-white/10 flex items-center justify-between text-[11px] text-gray-300 font-mono">
-          <span>Session: {sessionId.substring(0, 8)}...</span>
-          <span className={`font-bold ${session?.status === "COMPLETED" ? "text-emerald-400" : "text-amber-400"}`}>
-            STATUS: {session?.status === "COMPLETED" ? "SESSION CLOSED ✅" : "ISSUED 🎟️"}
-          </span>
-        </div>
-      </div>
+        <div className="dv" />
 
-      <div className="text-center text-[11px] text-gray-500 pt-2">
-        Thank you for dining with us! We look forward to hosting you again.
+        <span
+          className={`tag ${isCompleted ? "" : "pl"}`}
+          style={{
+            display: "inline-block",
+            padding: "8px 16px",
+            fontSize: ".9rem",
+          }}
+        >
+          {isCompleted ? "Exit approved" : "Waiting for staff to approve"}
+        </span>
+
+        <p className="mu sm" style={{ marginTop: 10 }}>
+          Show this to the floor team at the exit.
+        </p>
+
+        {isCompleted && (
+          <button
+            type="button"
+            className="b p"
+            style={{ marginTop: 16 }}
+            onClick={() => setShowPassReceipt(false)}
+          >
+            Back to thank you screen
+          </button>
+        )}
       </div>
     </div>
   );

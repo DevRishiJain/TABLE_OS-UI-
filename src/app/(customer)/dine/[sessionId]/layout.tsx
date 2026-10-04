@@ -169,293 +169,449 @@ export default function CustomerDineLayout({
     },
   ];
 
+  const [fontSizeStep, setFontSizeStep] = useState(0);
+
+  const SKINS = [
+    { id: "paper", n: "Paper white", pp: "#FFFFFF", ac: "#8C6A2E" },
+    { id: "cream", n: "Warm cream", pp: "#FBF8F0", ac: "#A9772A" },
+    { id: "sage", n: "Sage", pp: "#FFFFFF", ac: "#3F7A55" },
+    { id: "night", n: "Midnight", pp: "#1C1812", ac: "#D2A252" },
+  ];
+
+  const [currentSkin, setCurrentSkin] = useState<string>("paper");
+
+  useEffect(() => {
+    // Reset any legacy documentElement inline style to keep admin & marketing pages pristine
+    if (typeof document !== "undefined") {
+      document.documentElement.style.fontSize = "";
+      const savedSkin = localStorage.getItem("tableos_customer_skin") || "paper";
+      setCurrentSkin(savedSkin);
+    }
+  }, []);
+
+  const setSkin = (skinId: string) => {
+    setCurrentSkin(skinId);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("tableos_customer_skin", skinId);
+    }
+    const sk = SKINS.find((s) => s.id === skinId);
+    dispatch(
+      addToast({
+        type: "info",
+        message: `${sk?.n || "Theme"} active`,
+        durationMs: 1500,
+      })
+    );
+  };
+
+  const cycleSkin = () => {
+    const idx = SKINS.findIndex((s) => s.id === currentSkin);
+    const next = SKINS[(idx + 1) % SKINS.length];
+    setSkin(next.id);
+  };
+
+  const toggleFontSize = () => {
+    const next = (fontSizeStep + 1) % 3;
+    setFontSizeStep(next);
+    const remSizes = ["1rem", "1.12rem", "1.24rem"];
+    const customerEl = document.querySelector(".customer-app") as HTMLElement | null;
+    if (customerEl) {
+      customerEl.style.fontSize = remSizes[next];
+    }
+    const labels = ["Normal", "Large", "Extra large"];
+    dispatch(
+      addToast({
+        type: "info",
+        message: `${labels[next]} text enabled`,
+        durationMs: 1500,
+      })
+    );
+  };
+
+  const restaurantInitials = restaurantName
+    .split(" ")
+    .map((w: string) => w[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase() || "SR";
+
+  const isMenu = pathname.includes("/menu");
+  const isOrders = pathname.includes("/orders");
+  const isBill = pathname.includes("/bill");
+  const isCheckout = pathname.includes("/checkout");
+  const isExit = pathname.includes("/exit");
+
+  const waiterRequests = [
+    {
+      icon: (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ width: "1.7rem", height: "1.7rem", color: "var(--ac)" }}>
+          <path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z" />
+        </svg>
+      ),
+      title: "Water",
+      subtitle: "Refill or extra glasses",
+      reason: "Water Refill / Extra Glasses",
+    },
+    {
+      icon: (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ width: "1.7rem", height: "1.7rem", color: "var(--ac)" }}>
+          <path d="M7 3v8M4 3v5a3 3 0 0 0 6 0V3M7 11v10M17 3c-2 2-3 5-3 8h3v10" />
+        </svg>
+      ),
+      title: "Cutlery",
+      subtitle: "Spoons, forks, napkins",
+      reason: "Cutlery & Extra Napkins",
+    },
+    {
+      icon: (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ width: "1.7rem", height: "1.7rem", color: "var(--ac)" }}>
+          <path d="M12 3l2 5 5 2-5 2-2 5-2-5-5-2 5-2z" />
+        </svg>
+      ),
+      title: "Clear table",
+      subtitle: "Take away empty plates",
+      reason: "Clear Table / Remove Plates",
+    },
+    {
+      icon: (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ width: "1.7rem", height: "1.7rem", color: "var(--ac)" }}>
+          <circle cx="12" cy="12" r="9" />
+          <path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 .9-1 1.7M12 17h.01" />
+        </svg>
+      ),
+      title: "I have a question",
+      subtitle: "Menu, allergies, anything",
+      reason: "General Question / Assistance",
+    },
+    {
+      icon: (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ width: "1.7rem", height: "1.7rem", color: "var(--ac)" }}>
+          <rect x="3" y="6" width="18" height="12" rx="2" />
+          <circle cx="12" cy="12" r="2.5" />
+        </svg>
+      ),
+      title: "Bring the bill",
+      subtitle: "Cash payment",
+      reason: "Bring Cash Bill",
+      method: PaymentMethod.CASH,
+    },
+    {
+      icon: (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ width: "1.7rem", height: "1.7rem", color: "var(--ac)" }}>
+          <rect x="3" y="6" width="18" height="12" rx="2" />
+          <path d="M3 10h18" />
+        </svg>
+      ),
+      title: "Card machine",
+      subtitle: "Swipe at the table",
+      reason: "Bring POS Card Machine",
+      method: PaymentMethod.RESTAURANT_POS,
+    },
+  ];
+
+  const activeOrdersCount = (sessionData?.orders || []).filter(
+    (o) => o.status !== "SERVED" && o.status !== "CANCELLED"
+  ).length;
+
   return (
-    <div className="min-h-screen bg-background text-gray-100 flex flex-col justify-between w-full max-w-md mx-auto border-x border-white/5 relative shadow-2xl overflow-x-hidden">
-      {/* Spatial Ambient Lighting Flares */}
-      <div className="fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-md h-72 bg-gradient-to-b from-primary/10 via-amber-500/5 to-transparent pointer-events-none blur-3xl -z-10" />
-      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md h-60 bg-gradient-to-t from-sky-500/10 via-emerald-500/5 to-transparent pointer-events-none blur-3xl -z-10" />
+    <div className="customer-app min-h-screen flex flex-col justify-between" data-skin={currentSkin}>
+      {/* Top Header */}
+      {!isExit && (
+        <header className="w" id="hd">
+          <div className="hd">
+            <div className="lg">{restaurantInitials}</div>
+            <div className="t">
+              <b>{restaurantName}</b>
+              <small>
+                Table {tableNumber}
+                {customerName ? ` · ${customerName}` : ""}
+              </small>
+            </div>
 
-      {/* Top Header Floating Glass Capsule */}
-      <header className="sticky top-2 z-30 mx-3 my-2 rounded-2xl glass-panel px-4 py-2.5 flex items-center justify-between shadow-xl border border-white/10 specular-rim">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-primary/20 border border-primary/40 flex items-center justify-center text-primary font-black text-xs shadow-glow">
-            T{tableNumber}
-          </div>
-          <div className="flex flex-col">
-            <span className="text-xs font-bold text-gray-100 font-display flex items-center gap-1.5">
-              {restaurantName}
-              <span className="w-1 h-1 rounded-full bg-gray-500" />
-              <span className="text-[11px] font-normal text-gray-300">Table {tableNumber}</span>
-            </span>
-            <span className="text-[10px] text-gray-400 truncate max-w-[130px]">
-              {customerName}
-            </span>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          {sessionStatus === "COMPLETED" ? (
-            <Link
-              href={`/dine/${sessionId}/exit`}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-emerald-500/20 border border-emerald-500/50 text-emerald-300 text-xs font-bold shadow-sm hover:bg-emerald-500/30 transition-all"
-            >
-              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Session Closed</span>
-            </Link>
-          ) : (
-            /* Universal Call Waiter Button */
+            {/* Font size toggle */}
             <button
-              onClick={() => setShowCallModal(true)}
-              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-xs font-bold transition-all shadow-sm ${
-                activeCallReason || sessionStatus === "AWAITING_PAYMENT"
-                  ? "bg-amber-500/20 text-amber-300 border-amber-500/60 shadow-glow"
-                  : "bg-surface-subtle hover:bg-surface border-surface-border text-gray-300 hover:text-white"
-              }`}
+              className="b i"
+              onClick={toggleFontSize}
+              aria-label="Change text size"
+              title="Change text size"
             >
-              <Bell className={`w-3.5 h-3.5 ${activeCallReason || sessionStatus === "AWAITING_PAYMENT" ? "text-amber-400 animate-bounce" : "text-amber-400"}`} />
-              <span>{activeCallReason || sessionStatus === "AWAITING_PAYMENT" ? "Waiter Alerted" : "Call Waiter"}</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ width: "1.25rem", height: "1.25rem" }}>
+                <path d="M4 18l4-12 4 12M5.5 14h5M14 18l3-8 3 8M15 15.5h4" />
+              </svg>
             </button>
-          )}
-        </div>
-      </header>
 
-      {/* Session Has Closed Banner */}
-      {sessionStatus === "COMPLETED" && (
-        <div className="px-4 pt-3">
-          <div className="p-3.5 rounded-2xl bg-gradient-to-r from-emerald-500/20 via-surface to-emerald-500/10 border-2 border-emerald-500/60 shadow-glow flex items-center justify-between gap-3 animate-fadeIn">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-500/40">
-                <CheckCircle2 className="w-5 h-5 text-emerald-400" />
-              </div>
-              <div className="flex flex-col min-w-0">
-                <span className="text-xs font-black text-emerald-300 font-display flex items-center gap-1.5">
-                  Session Has Closed 🚪✨
-                </span>
-                <span className="text-[11px] text-gray-300 truncate">
-                  Exit approved with gate pass. Have a wonderful day!
-                </span>
-              </div>
-            </div>
-            <Link
-              href={`/dine/${sessionId}/exit`}
-              className="px-2.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold shrink-0 shadow-sm transition-all"
-            >
-              Exit Pass 🎟️
-            </Link>
-          </div>
-        </div>
-      )}
-
-      {/* Active Waiter Call Notification Banner */}
-      {sessionStatus !== "COMPLETED" && (activeCallReason || sessionStatus === "AWAITING_PAYMENT") && (
-        <div className="px-4 pt-3">
-          <div className="p-3 rounded-2xl bg-amber-500/15 border border-amber-500/40 shadow-sm flex items-center justify-between gap-2 animate-fadeIn">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-7 h-7 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0">
-                <Bell className="w-4 h-4 animate-pulse" />
-              </div>
-              <div className="flex flex-col min-w-0">
-                <span className="text-xs font-bold text-amber-300 truncate">
-                  {activeCallReason ? `Ping: ${activeCallReason}` : "Waiter called to settle bill"}
-                </span>
-                <span className="text-[10px] text-gray-400">Server is on the way to Table {tableNumber}</span>
-              </div>
-            </div>
+            {/* Theme switcher */}
             <button
-              onClick={handleDismissCall}
-              className="text-[11px] font-bold px-2 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 shrink-0"
+              className="b i"
+              onClick={cycleSkin}
+              aria-label="Change restaurant theme"
+              title={`Theme: ${SKINS.find((s) => s.id === currentSkin)?.n || "Paper white"}`}
             >
-              Dismiss
+              <div
+                style={{
+                  width: 22,
+                  height: 22,
+                  borderRadius: "50%",
+                  background: `linear-gradient(135deg, ${SKINS.find((s) => s.id === currentSkin)?.pp} 50%, ${SKINS.find((s) => s.id === currentSkin)?.ac} 50%)`,
+                  border: "1.5px solid var(--ln)",
+                }}
+              />
             </button>
-          </div>
-        </div>
-      )}
 
-      {/* Main Page Content - Scrollable with safe bottom clearance */}
-      <main className="flex-1 pb-36 w-full overflow-x-hidden">{children}</main>
-
-      {/* Floating Bottom Cart Bar (shows if items in cart and on menu page) */}
-      {cartCount > 0 && !pathname.includes("/checkout") && (
-        <div className="fixed bottom-20 inset-x-0 max-w-md mx-auto px-3 z-40 pointer-events-none animate-in slide-in-from-bottom duration-300">
-          <Link
-            href={`/dine/${sessionId}/checkout`}
-            className="pointer-events-auto w-full bg-primary hover:bg-primary-hover text-background font-bold py-3.5 px-5 rounded-2xl shadow-2xl shadow-primary/30 flex items-center justify-between active:scale-[0.98] transition-all border border-amber-300/30"
-          >
-            <div className="flex items-center gap-2.5">
-              <div className="w-7 h-7 rounded-lg bg-background/20 flex items-center justify-center text-background">
-                <ShoppingBag className="w-4 h-4" />
-              </div>
-              <span className="text-sm font-bold">
-                {cartCount} {cartCount === 1 ? "Item" : "Items"} •{" "}
-                {formatMoney(cartSubtotalMinor)}
-              </span>
-            </div>
-            <div className="flex items-center gap-1 text-xs font-extrabold uppercase tracking-wider">
-              <span>Review Cart</span>
-              <ArrowRight className="w-4 h-4" />
-            </div>
-          </Link>
-        </div>
-      )}
-
-      {/* Bottom Floating Spatial Glass Dock (Menu / Orders / Bill & Pay) - Sticks to bottom */}
-      <div className="fixed bottom-3 inset-x-0 max-w-md mx-auto px-3 z-40 pointer-events-none">
-        <nav className="pointer-events-auto w-full glass-spatial bg-[#0d111a]/92 backdrop-blur-2xl rounded-3xl h-16 px-4 flex items-center justify-around shadow-2xl border border-white/15 specular-rim">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            return (
+            {/* Call Waiter / Session Closed */}
+            {sessionStatus === "COMPLETED" ? (
               <Link
-                key={item.href}
-                href={item.href}
-                className={`flex flex-col items-center gap-1 relative py-1.5 px-3.5 rounded-2xl transition-all ${
-                  item.active
-                    ? "text-primary font-bold bg-white/10 shadow-inner"
-                    : "text-gray-400 hover:text-gray-200 hover:bg-white/5"
-                }`}
+                href={`/dine/${sessionId}/exit`}
+                className="b"
+                style={{
+                  minHeight: 48,
+                  padding: "0 16px",
+                  borderColor: "var(--ok)",
+                  color: "var(--ok)",
+                  background: "color-mix(in srgb, var(--ok) 12%, transparent)",
+                }}
               >
-                <div className="relative">
-                  <Icon className={`w-5 h-5 transition-transform ${item.active ? "text-primary scale-110" : ""}`} />
-                  {item.badge && item.badge > 0 ? (
-                    <span className="absolute -top-1.5 -right-2.5 w-4 h-4 rounded-full bg-primary text-background font-black text-[9px] flex items-center justify-center shadow-glow">
-                      {item.badge}
-                    </span>
-                  ) : null}
-                </div>
-                <span className="text-[11px] font-semibold tracking-tight">
-                  {item.label}
-                </span>
-                {item.active && (
-                  <span className="w-5 h-0.5 rounded-full bg-primary -bottom-0.5 absolute shadow-glow" />
-                )}
+                Exit pass
               </Link>
-            );
-          })}
-        </nav>
+            ) : (
+              <button
+                className="b"
+                style={{
+                  minHeight: 48,
+                  padding: "0 16px",
+                  borderColor: activeCallReason || sessionStatus === "AWAITING_PAYMENT" ? "var(--ac)" : "var(--ln)",
+                  color: activeCallReason || sessionStatus === "AWAITING_PAYMENT" ? "var(--ac)" : "var(--ink)",
+                  background: activeCallReason || sessionStatus === "AWAITING_PAYMENT" ? "color-mix(in srgb, var(--ac) 12%, transparent)" : "none",
+                }}
+                onClick={() => setShowCallModal(true)}
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ width: "1.2rem", height: "1.2rem", color: "var(--ac)" }}>
+                  <path d="M6 8a6 6 0 0 1 12 0c0 7 3 8 3 8H3s3-1 3-8M10 21h4" />
+                </svg>
+                {activeCallReason || sessionStatus === "AWAITING_PAYMENT" ? "Waiter Alerted" : "Waiter"}
+              </button>
+            )}
+          </div>
+        </header>
+      )}
+
+      {/* Main Wrapper */}
+      <div className="w" style={{ flex: 1 }}>
+        {/* Active Waiter Request Banner */}
+        {(activeCallReason || sessionStatus === "AWAITING_PAYMENT") && sessionStatus !== "COMPLETED" && (
+          <div className="rq" style={{ marginTop: 8 }}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ width: "1.2rem", height: "1.2rem", color: "var(--ac)", flexShrink: 0 }}>
+              <path d="M6 8a6 6 0 0 1 12 0c0 7 3 8 3 8H3s3-1 3-8M10 21h4" />
+            </svg>
+            <span>
+              {sessionStatus === "AWAITING_PAYMENT"
+                ? "Waiter is coming to settle your bill."
+                : `Waiter notified: ${activeCallReason}.`}
+            </span>
+            <button onClick={handleDismissCall}>Cancel</button>
+          </div>
+        )}
+
+        {/* Session Completed Alert */}
+        {sessionStatus === "COMPLETED" && (
+          <div className="nl live" style={{ marginTop: 8, borderColor: "var(--ok)" }}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ width: "1.35rem", height: "1.35rem", color: "var(--ok)" }}>
+              <path d="M5 12l5 5 9-10" />
+            </svg>
+            <span>
+              <b>Session closed · exit approved</b>
+              <small>Tap to view exit pass</small>
+            </span>
+            <Link href={`/dine/${sessionId}/exit`} className="tag" style={{ background: "var(--ok)", color: "#12100C", border: 0 }}>
+              Exit Pass
+            </Link>
+          </div>
+        )}
+
+        {/* Page Content */}
+        <main style={{ paddingBottom: 190 }}>{children}</main>
       </div>
 
-      {/* Modal: Call Waiter / Service Assistance */}
+      {/* Floating Bottom Cart Bar */}
+      {cartCount > 0 && isMenu && (
+        <Link
+          href={`/dine/${sessionId}/checkout`}
+          className="cb"
+          aria-label="Review your order"
+        >
+          <span>
+            {cartCount} {cartCount === 1 ? "dish" : "dishes"} · {formatMoney(cartSubtotalMinor)}
+          </span>
+          <span style={{ display: "flex", gap: 6, alignItems: "center" }}>
+            Review order
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: "1.1rem", height: "1.1rem" }}>
+              <path d="M9 6l6 6-6 6" />
+            </svg>
+          </span>
+        </Link>
+      )}
+
+      {/* Fixed Bottom Docking Bar */}
+      {!isCheckout && !isExit && (
+        <nav className="dk" aria-label="Main Navigation">
+          <Link
+            href={`/dine/${sessionId}/menu`}
+            aria-current={isMenu ? "page" : undefined}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ width: "1.25rem", height: "1.25rem" }}>
+              <path d="M7 3v8M4 3v5a3 3 0 0 0 6 0V3M7 11v10M17 3c-2 2-3 5-3 8h3v10" />
+            </svg>
+            Menu
+          </Link>
+
+          <Link
+            href={`/dine/${sessionId}/orders`}
+            aria-current={isOrders ? "page" : undefined}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ width: "1.25rem", height: "1.25rem" }}>
+              <circle cx="12" cy="12" r="9" />
+              <path d="M12 7v5l3 2" />
+            </svg>
+            Orders
+            {activeOrdersCount > 0 && <em>{activeOrdersCount}</em>}
+          </Link>
+
+          <Link
+            href={`/dine/${sessionId}/bill`}
+            aria-current={isBill ? "page" : undefined}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ width: "1.25rem", height: "1.25rem" }}>
+              <path d="M5 3h14v18l-3-2-2 2-2-2-2 2-2-2-3 2zM9 8h6M9 12h6" />
+            </svg>
+            Bill
+          </Link>
+        </nav>
+      )}
+
+      {/* Call Waiter Bottom Sheet */}
       {showCallModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-fadeIn">
-          <Card className="w-full max-w-sm p-5 flex flex-col gap-4 glass-spatial border border-white/15 shadow-2xl specular-rim">
-            <div className="flex items-center justify-between border-b border-surface-border pb-3">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center">
-                  <Bell className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-gray-100 font-display">
-                    Call Server • Table {tableNumber}
-                  </h3>
-                  <p className="text-[11px] text-gray-400">What do you need assistance with?</p>
-                </div>
+        <div
+          className="ov"
+          role="dialog"
+          aria-modal="true"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowCallModal(false);
+          }}
+        >
+          <div className="sh">
+            <div className="sht">
+              <div>
+                <h2>Call a waiter</h2>
+                <span className="mu sm">One tap. We will come to Table {tableNumber}.</span>
               </div>
               <button
+                className="b i"
                 onClick={() => setShowCallModal(false)}
-                className="w-7 h-7 rounded-lg bg-surface-subtle hover:bg-surface-border flex items-center justify-center text-gray-400 hover:text-white text-xs font-bold"
+                aria-label="Close"
               >
-                ✕
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ width: "1.2rem", height: "1.2rem" }}>
+                  <path d="M6 6l12 12M18 6L6 18" />
+                </svg>
               </button>
             </div>
 
-            {/* Assistance Quick Options */}
-            <div className="grid grid-cols-1 gap-2">
-              {/* Option 1: General Assistance */}
-              <button
-                onClick={() => handleCallWaiter("General Table Assistance")}
-                className="p-3 rounded-xl border border-surface-border bg-surface hover:border-amber-500/60 flex items-center gap-3 text-left transition-all group"
-              >
-                <div className="w-8 h-8 rounded-lg bg-amber-500/15 text-amber-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                  <HelpCircle className="w-4 h-4" />
-                </div>
-                <div>
-                  <h4 className="text-xs font-bold text-gray-200 group-hover:text-amber-300">
-                    General Assistance
-                  </h4>
-                  <p className="text-[11px] text-gray-400">I have a question or need my server</p>
-                </div>
-              </button>
+            <div className="shb">
+              <div className="tl">
+                {waiterRequests.map((req, idx) => (
+                  <button
+                    key={idx}
+                    className="tn"
+                    onClick={() => handleCallWaiter(req.reason, req.method)}
+                  >
+                    {req.icon}
+                    <span>
+                      {req.title}
+                      <small>{req.subtitle}</small>
+                    </span>
+                  </button>
+                ))}
+              </div>
 
-              {/* Option 2: Water & Cutlery */}
-              <button
-                onClick={() => handleCallWaiter("Water & Cutlery Refill")}
-                className="p-3 rounded-xl border border-surface-border bg-surface hover:border-sky-500/60 flex items-center gap-3 text-left transition-all group"
-              >
-                <div className="w-8 h-8 rounded-lg bg-sky-500/15 text-sky-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                  <Droplets className="w-4 h-4" />
-                </div>
+              {/* Theme skin picker */}
+              <div className="sk" style={{ marginTop: 14 }}>
+                <span className="mu sm">Restaurant theme</span>
                 <div>
-                  <h4 className="text-xs font-bold text-gray-200 group-hover:text-sky-300">
-                    Water & Cutlery
-                  </h4>
-                  <p className="text-[11px] text-gray-400">Refill drinking water or bring extra spoons</p>
+                  {SKINS.map((sk) => (
+                    <button
+                      key={sk.id}
+                      type="button"
+                      aria-pressed={currentSkin === sk.id}
+                      aria-label={`${sk.n} theme`}
+                      title={sk.n}
+                      style={
+                        {
+                          "--c1": sk.pp,
+                          "--c2": sk.ac,
+                        } as React.CSSProperties
+                      }
+                      onClick={() => setSkin(sk.id)}
+                    />
+                  ))}
                 </div>
-              </button>
-
-              {/* Option 3: Clean Table */}
-              <button
-                onClick={() => handleCallWaiter("Clear Plates & Table Clean")}
-                className="p-3 rounded-xl border border-surface-border bg-surface hover:border-emerald-500/60 flex items-center gap-3 text-left transition-all group"
-              >
-                <div className="w-8 h-8 rounded-lg bg-emerald-500/15 text-emerald-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                  <Sparkles className="w-4 h-4" />
-                </div>
-                <div>
-                  <h4 className="text-xs font-bold text-gray-200 group-hover:text-emerald-300">
-                    Clean Table & Clear Plates
-                  </h4>
-                  <p className="text-[11px] text-gray-400">Clear empty dishes and freshen up table</p>
-                </div>
-              </button>
-
-              {/* Option 4: Request Bill (Cash) */}
-              <button
-                onClick={() => handleCallWaiter("Request Bill (Cash Payment)", PaymentMethod.CASH)}
-                className="p-3 rounded-xl border border-amber-500/40 bg-amber-500/10 hover:border-amber-500 flex items-center gap-3 text-left transition-all group"
-              >
-                <div className="w-8 h-8 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                  <Receipt className="w-4 h-4" />
-                </div>
-                <div>
-                  <h4 className="text-xs font-bold text-amber-300">
-                    Bring Bill (Cash Payment)
-                  </h4>
-                  <p className="text-[11px] text-gray-300">Ready to settle bill in cash</p>
-                </div>
-              </button>
-
-              {/* Option 5: Request Bill (Card POS) */}
-              <button
-                onClick={() => handleCallWaiter("Request Bill (Card POS Swiped)", PaymentMethod.RESTAURANT_POS)}
-                className="p-3 rounded-xl border border-sky-500/40 bg-sky-500/10 hover:border-sky-500 flex items-center gap-3 text-left transition-all group"
-              >
-                <div className="w-8 h-8 rounded-lg bg-sky-500/20 text-sky-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                  <Receipt className="w-4 h-4" />
-                </div>
-                <div>
-                  <h4 className="text-xs font-bold text-sky-300">
-                    Bring Card POS Machine
-                  </h4>
-                  <p className="text-[11px] text-gray-300">Ready to swipe card at the table</p>
-                </div>
-              </button>
+              </div>
             </div>
 
-            <div className="pt-2 border-t border-surface-border flex items-center justify-between">
-              <Button
-                variant="ghost"
-                size="sm"
+            <div className="shf">
+              <button
+                type="button"
+                className="b o"
                 onClick={() => setShowCallModal(false)}
-                className="text-xs"
+                style={{
+                  flex: "0 0 96px",
+                  height: 54,
+                  minHeight: 54,
+                  borderRadius: 99,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: "0.95rem",
+                  fontWeight: 700,
+                  boxSizing: "border-box",
+                }}
               >
                 Cancel
-              </Button>
-              <Link href={`/dine/${sessionId}/bill`}>
-                <Button variant="gold" size="sm" className="text-xs font-bold">
-                  Pay Online Directly →
-                </Button>
+              </button>
+              <Link
+                href={`/dine/${sessionId}/bill`}
+                className="b p"
+                onClick={() => setShowCallModal(false)}
+                style={{
+                  flex: 1,
+                  height: 54,
+                  minHeight: 54,
+                  borderRadius: 99,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 8,
+                  fontSize: "1rem",
+                  fontWeight: 700,
+                  whiteSpace: "nowrap",
+                  textDecoration: "none",
+                  boxSizing: "border-box",
+                }}
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  style={{ width: "1.2rem", height: "1.2rem" }}
+                >
+                  <rect x="3" y="6" width="18" height="12" rx="2" />
+                  <path d="M3 10h18" />
+                </svg>
+                Pay bill online →
               </Link>
             </div>
-          </Card>
+          </div>
         </div>
       )}
     </div>

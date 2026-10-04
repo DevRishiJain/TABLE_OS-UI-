@@ -1,4 +1,5 @@
-:root {
+:root,
+.floor-screen {
   --bg: #EADFC8;
   --s1: #FBF6EA;
   --s2: #F6EEDC;
@@ -561,12 +562,23 @@
 
 .floor-screen .ol .go {
   height: 36px;
-  padding: 0 14px;
+  padding: 0 16px;
   border-radius: 12px;
   border: 0;
-  background: var(--grn);
-  color: #fff;
+  background: var(--grn, #2F9A62);
+  color: #FFFFFF;
   font-weight: 800;
+  font-size: 0.86rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  transition: transform 0.1s;
+}
+
+.floor-screen .ol .go:active {
+  transform: scale(0.96);
 }
 
 .floor-screen .pb {
@@ -739,6 +751,11 @@
 .floor-screen .rw.ready {
   --c: var(--grn);
   background: linear-gradient(90deg, #2f9a6218, transparent 60%);
+}
+
+.floor-screen .rw.ready .go {
+  color: #FFFFFF;
+  background: var(--grn, #2F9A62);
 }
 
 .floor-screen .rw.kit {
@@ -956,8 +973,9 @@
 .floor-screen .ol {
   border-radius: 20px;
   padding: 16px;
-  background: var(--s2);
-  border: 1px solid var(--line);
+  background: var(--s2, #F6EEDC);
+  border: 1px solid var(--line, #1b140922);
+  color: var(--ink, #1B1409);
   display: grid;
   gap: 8px;
 }
@@ -1346,20 +1364,27 @@
 
 .floor-screen .toast {
   position: fixed;
-  z-index: 80;
+  z-index: 100;
   left: 50%;
-  top: calc(env(safe-area-inset-top, 0px) + 14px);
+  top: calc(env(safe-area-inset-top, 0px) + 16px);
   transform: translate(-50%, -30px);
   opacity: 0;
-  background: var(--ink);
-  color: var(--paper);
+  background: #1B1409;
+  color: #FAF5E8;
   font-weight: 800;
-  padding: 13px 22px;
+  font-size: 0.92rem;
+  padding: 10px 22px;
   border-radius: 99px;
-  transition: 0.3s;
+  transition: 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   pointer-events: none;
-  max-width: 90vw;
-  box-shadow: 0 14px 30px -12px #1b140966;
+  width: max-content;
+  max-width: 85vw;
+  box-shadow: 0 10px 25px rgba(27, 20, 9, 0.35);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  border: 1px solid rgba(251, 246, 234, 0.15);
 }
 
 .floor-screen .toast.on {
