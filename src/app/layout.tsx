@@ -30,7 +30,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="dark bg-background text-gray-100">
+    <html lang="en" className="dark bg-background text-gray-100" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem('tableos-theme');if(t&&t!=='amber'&&t!=='gold'){document.documentElement.setAttribute('data-theme',t);}else{document.documentElement.removeAttribute('data-theme');}}catch(e){}})()`,
+          }}
+        />
+      </head>
       <body className="min-h-screen bg-background antialiased selection:bg-primary/30 selection:text-primary">
         <ReduxProvider>
           <RestaurantThemeProvider>{children}</RestaurantThemeProvider>

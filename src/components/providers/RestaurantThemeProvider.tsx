@@ -4,7 +4,21 @@ import React, { useEffect, useState, createContext, useContext, useCallback } fr
 import { useAppSelector, useAppDispatch } from "@/store";
 import { setRestaurantTheme } from "@/store/slices/authSlice";
 
-export type RestaurantTheme = "gold" | "emerald" | "ruby" | "amethyst" | "sapphire" | "coral";
+export type RestaurantTheme =
+  | ""
+  | "jade"
+  | "scarlet"
+  | "violet"
+  | "cobalt"
+  | "rose"
+  | "gold"
+  | "amber"
+  | "emerald"
+  | "ruby"
+  | "amethyst"
+  | "sapphire"
+  | "coral";
+
 export type ThemeKey = RestaurantTheme;
 export type ColorMode = "dark" | "light";
 
@@ -17,73 +31,93 @@ export interface ThemeOption {
   description: string;
 }
 
+export function normalizeTheme(t?: string | null): string {
+  if (!t) return "";
+  const map: Record<string, string> = {
+    gold: "",
+    amber: "",
+    "": "",
+    emerald: "jade",
+    jade: "jade",
+    ruby: "scarlet",
+    scarlet: "scarlet",
+    amethyst: "violet",
+    violet: "violet",
+    sapphire: "cobalt",
+    cobalt: "cobalt",
+    coral: "rose",
+    rose: "rose",
+  };
+  return map[t] !== undefined ? map[t] : "";
+}
+
 export const THEME_OPTIONS: ThemeOption[] = [
   {
-    id: "gold",
-    key: "gold",
+    id: "",
+    key: "",
     name: "Imperial Amber",
-    primaryColor: "#E5A93C",
-    hoverColor: "#D4982E",
+    primaryColor: "#E9B24C",
+    hoverColor: "#D4562C",
     description: "Signature TableOS warm luxury aesthetic",
   },
   {
-    id: "emerald",
-    key: "emerald",
+    id: "jade",
+    key: "jade",
     name: "Botanical Jade",
-    primaryColor: "#10B981",
-    hoverColor: "#059669",
+    primaryColor: "#4BD6A0",
+    hoverColor: "#0F8F73",
     description: "Lush, fresh organic dining & bistro vibe",
   },
   {
-    id: "ruby",
-    key: "ruby",
+    id: "scarlet",
+    key: "scarlet",
     name: "Crimson Scarlet",
-    primaryColor: "#EF4444",
-    hoverColor: "#DC2626",
+    primaryColor: "#FF6A5C",
+    hoverColor: "#C21F3A",
     description: "Bold, passionate bar & steakhouse theme",
   },
   {
-    id: "amethyst",
-    key: "amethyst",
+    id: "violet",
+    key: "violet",
     name: "Velvet Violet",
-    primaryColor: "#8B5CF6",
-    hoverColor: "#7C3AED",
+    primaryColor: "#B79CFF",
+    hoverColor: "#7A3CF0",
     description: "Contemporary lounge & nightlife elegance",
   },
   {
-    id: "sapphire",
-    key: "sapphire",
+    id: "cobalt",
+    key: "cobalt",
     name: "Ocean Cobalt",
-    primaryColor: "#06B6D4",
-    hoverColor: "#0891B2",
+    primaryColor: "#5CCBFF",
+    hoverColor: "#2B6BFF",
     description: "Modern coastal cafe & refreshing atmosphere",
   },
   {
-    id: "coral",
-    key: "coral",
+    id: "rose",
+    key: "rose",
     name: "Sunset Rose",
-    primaryColor: "#F43F5E",
-    hoverColor: "#E11D48",
+    primaryColor: "#FF8FB0",
+    hoverColor: "#E0356A",
     description: "Chic dessert bar, bakery & cocktail house",
   },
 ];
 
 export interface ThemeContextType {
-  currentTheme: RestaurantTheme;
+  currentTheme: string;
   colorMode: ColorMode;
   themePrimaryColor: string;
   themeHoverColor: string;
-  setTheme: (theme: RestaurantTheme) => void;
+  setTheme: (theme: string) => void;
   setColorMode: (mode: ColorMode) => void;
   toggleColorMode: () => void;
   isMounted: boolean;
 }
 
 const ThemeContext = createContext<ThemeContextType>({
-  currentTheme: "gold",
+  currentTheme: "",
   colorMode: "dark",
-  themePrimaryColor: "#E5A93C",
-  themeHoverColor: "#D4982E",
+  themePrimaryColor: "#E9B24C",
+  themeHoverColor: "#D4562C",
   setTheme: () => {},
   setColorMode: () => {},
   toggleColorMode: () => {},
@@ -97,31 +131,18 @@ export function RestaurantThemeProvider({ children }: { children: React.ReactNod
   const dispatch = useAppDispatch();
   const storeTheme = useAppSelector((state) => state.auth.restaurantTheme);
 
-  const [currentTheme, setCurrentThemeState] = useState<RestaurantTheme>("gold");
+  const [currentTheme, setCurrentThemeState] = useState<string>("");
   const [colorMode, setColorModeState] = useState<ColorMode>("dark");
   const [isMounted, setIsMounted] = useState(false);
 
-  // Synchronize theme attribute and CSS variables on HTML root
+  // Synchronize theme attribute on HTML root element
   const applyThemeToDOM = useCallback((theme: string) => {
     if (typeof document === "undefined") return;
-    const option =
-      THEME_OPTIONS.find((t) => t.id === theme || t.key === theme) || THEME_OPTIONS[0];
-    document.documentElement.setAttribute("data-theme", option.id);
-    document.documentElement.style.setProperty("--theme-primary", option.primaryColor);
-    document.documentElement.style.setProperty("--theme-primary-hover", option.hoverColor);
-    document.documentElement.style.setProperty("--theme-primary-dark", option.hoverColor);
-
-    const hex = option.primaryColor.replace("#", "");
-    if (hex.length === 6) {
-      const r = parseInt(hex.substring(0, 2), 16);
-      const g = parseInt(hex.substring(2, 4), 16);
-      const b = parseInt(hex.substring(4, 6), 16);
-      // Space-separated for Tailwind rgb(var(--theme-primary-rgb) / <alpha-value>)
-      document.documentElement.style.setProperty("--theme-primary-rgb", `${r} ${g} ${b}`);
-      document.documentElement.style.setProperty(
-        "--theme-primary-glow",
-        `rgba(${r}, ${g}, ${b}, 0.25)`
-      );
+    const normalized = normalizeTheme(theme);
+    if (normalized) {
+      document.documentElement.setAttribute("data-theme", normalized);
+    } else {
+      document.documentElement.removeAttribute("data-theme");
     }
   }, []);
 
@@ -138,13 +159,19 @@ export function RestaurantThemeProvider({ children }: { children: React.ReactNod
 
   // Update theme with immediate state change and persistence
   const setTheme = useCallback(
-    (theme: RestaurantTheme) => {
-      const validTheme = THEME_OPTIONS.some((t) => t.id === theme) ? theme : "gold";
-      setCurrentThemeState(validTheme);
-      applyThemeToDOM(validTheme);
-      dispatch(setRestaurantTheme(validTheme));
+    (theme: string) => {
+      const normalized = normalizeTheme(theme);
+      setCurrentThemeState(normalized);
+      applyThemeToDOM(normalized);
+      dispatch(setRestaurantTheme(normalized));
       if (typeof window !== "undefined") {
-        localStorage.setItem("tableos_restaurant_theme", validTheme);
+        if (normalized) {
+          localStorage.setItem("tableos-theme", normalized);
+          localStorage.setItem("tableos_restaurant_theme", normalized);
+        } else {
+          localStorage.removeItem("tableos-theme");
+          localStorage.removeItem("tableos_restaurant_theme");
+        }
       }
     },
     [dispatch, applyThemeToDOM]
@@ -173,26 +200,33 @@ export function RestaurantThemeProvider({ children }: { children: React.ReactNod
     });
   }, [applyColorModeToDOM]);
 
-  // Initial client mount effect
+  // Initial client mount effect: sync from DOM attribute or localStorage
   useEffect(() => {
     setIsMounted(true);
+    const fromAttr = typeof document !== "undefined" ? document.documentElement.getAttribute("data-theme") : null;
     const savedTheme =
-      (localStorage.getItem("tableos_restaurant_theme") as RestaurantTheme) ||
-      (storeTheme as RestaurantTheme) ||
-      "gold";
-    const savedMode = (localStorage.getItem("tableos_color_mode") as ColorMode) || "dark";
+      (typeof window !== "undefined" ? localStorage.getItem("tableos-theme") : null) ||
+      fromAttr ||
+      (typeof window !== "undefined" ? localStorage.getItem("tableos_restaurant_theme") : null) ||
+      storeTheme ||
+      "";
+    const savedMode = (typeof window !== "undefined" ? (localStorage.getItem("tableos_color_mode") as ColorMode) : null) || "dark";
 
-    setCurrentThemeState(savedTheme);
+    const normalized = normalizeTheme(savedTheme);
+    setCurrentThemeState(normalized);
     setColorModeState(savedMode);
-    applyThemeToDOM(savedTheme);
+    applyThemeToDOM(normalized);
     applyColorModeToDOM(savedMode);
   }, [storeTheme, applyThemeToDOM, applyColorModeToDOM]);
 
   // Keep in sync if Redux store changes externally
   useEffect(() => {
-    if (storeTheme && storeTheme !== currentTheme) {
-      setCurrentThemeState(storeTheme as RestaurantTheme);
-      applyThemeToDOM(storeTheme);
+    if (storeTheme !== undefined && storeTheme !== null) {
+      const normalized = normalizeTheme(storeTheme);
+      if (normalized !== currentTheme) {
+        setCurrentThemeState(normalized);
+        applyThemeToDOM(normalized);
+      }
     }
   }, [storeTheme, currentTheme, applyThemeToDOM]);
 

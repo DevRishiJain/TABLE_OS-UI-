@@ -29,8 +29,8 @@ const config: Config = {
         primary: {
           DEFAULT: "var(--b)",
           hover: "var(--b2)",
-          glow: "var(--theme-primary-glow, rgba(233,178,76,0.25))",
-          dark: "var(--theme-primary-dark, #A3721A)",
+          glow: "var(--theme-primary-glow, color-mix(in srgb, var(--b) 25%, transparent))",
+          dark: "var(--theme-primary-dark, var(--b2))",
         },
       },
       fontFamily: {

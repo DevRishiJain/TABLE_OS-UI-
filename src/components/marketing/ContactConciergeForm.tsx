@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
 import {
   Sparkles,
   Phone,
@@ -323,20 +324,38 @@ export function ContactConciergeForm() {
                   />
                 </div>
 
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="w-full py-3.5 px-4 rounded-xl bg-primary text-black font-bold text-sm hover:bg-primary-hover transition-all flex items-center justify-center gap-2 shadow-lg shadow-primary/20 disabled:opacity-50"
-                >
-                  {isSubmitting ? (
-                    <span>Notifying Concierge Team...</span>
-                  ) : (
-                    <>
-                      <span>Submit Inquiry & Activate 2 Months Free</span>
-                      <Send className="w-4 h-4" />
-                    </>
-                  )}
-                </button>
+                <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="flex-1 py-3.5 px-4 rounded-xl bg-primary text-black font-bold text-sm hover:bg-primary-hover transition-all flex items-center justify-center gap-2 shadow-lg shadow-primary/20 disabled:opacity-50"
+                  >
+                    {isSubmitting ? (
+                      <span>Notifying Concierge Team...</span>
+                    ) : (
+                      <>
+                        <span>Book my demo and start free</span>
+                        <Send className="w-4 h-4" />
+                      </>
+                    )}
+                  </button>
+                  <Link
+                    href="/signup"
+                    className="btn-signup"
+                    style={{
+                      padding: "12px 24px",
+                      borderRadius: "12px",
+                      fontSize: "0.88rem",
+                      fontWeight: 800,
+                      textAlign: "center",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    Sign up
+                  </Link>
+                </div>
               </form>
             )}
           </div>
