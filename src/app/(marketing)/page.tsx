@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import {
   QrCode,
@@ -54,8 +54,13 @@ const DiningTableScene = dynamic(
 );
 
 export default function LandingPage() {
-  const { currentTheme, setTheme } = useTheme();
+  const { currentTheme, setTheme, isMounted } = useTheme();
   const [activeInventoryTab, setActiveInventoryTab] = useState<"sourcing" | "packaging" | "wastage" | "bom">("sourcing");
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   return (
     <div className="flex flex-col gap-24 py-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
@@ -685,12 +690,13 @@ export default function LandingPage() {
 
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
           {THEME_OPTIONS.map((t) => {
-            const isSelected = currentTheme === t.key;
+            const isSelected = mounted ? currentTheme === t.key : t.key === "gold";
             return (
               <button
                 key={t.key}
+                type="button"
                 onClick={() => setTheme(t.key)}
-                className={`p-3.5 rounded-2xl border text-left flex flex-col justify-between gap-3 transition-all ${
+                className={`p-3.5 rounded-2xl border text-left flex flex-col justify-between gap-3 transition-all cursor-pointer ${
                   isSelected
                     ? "border-primary ring-2 ring-primary/40 bg-surface shadow-glow"
                     : "border-surface-border bg-surface-subtle hover:border-gray-500"
@@ -698,13 +704,17 @@ export default function LandingPage() {
               >
                 <div className="flex items-center justify-between">
                   <div
-                    className="w-7 h-7 rounded-full border border-white/20 shadow-sm flex items-center justify-center"
+                    suppressHydrationWarning
+                    className="w-7 h-7 rounded-full border border-white/20 shadow-sm flex items-center justify-center shrink-0"
                     style={{ backgroundColor: t.primaryColor }}
                   >
                     {isSelected && <Check className="w-4 h-4 text-black stroke-[3]" />}
                   </div>
                   {isSelected && (
-                    <span className="text-[10px] font-bold text-primary font-mono uppercase">
+                    <span
+                      suppressHydrationWarning
+                      className="text-[10px] font-bold text-primary font-mono uppercase"
+                    >
                       Previewing
                     </span>
                   )}

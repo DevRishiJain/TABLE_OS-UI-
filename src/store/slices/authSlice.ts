@@ -36,7 +36,7 @@ function getInitialState(): AuthState {
       restaurantId: "",
       restaurantName: null,
       restaurantSlug: null,
-      restaurantTheme: null,
+      restaurantTheme: "gold",
       userName: null,
       sessionToken: null,
       activeSessionId: null,

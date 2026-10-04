@@ -1,10 +1,12 @@
 "use client";
 
-import React, { useEffect, createContext, useContext } from "react";
-import { useAppSelector } from "@/store";
+import React, { useEffect, useState, createContext, useContext, useCallback } from "react";
+import { useAppSelector, useAppDispatch } from "@/store";
+import { setRestaurantTheme } from "@/store/slices/authSlice";
 
 export type RestaurantTheme = "gold" | "emerald" | "ruby" | "amethyst" | "sapphire" | "coral";
 export type ThemeKey = RestaurantTheme;
+export type ColorMode = "dark" | "light";
 
 export interface ThemeOption {
   id: RestaurantTheme;
@@ -68,38 +70,136 @@ export const THEME_OPTIONS: ThemeOption[] = [
 
 interface ThemeContextType {
   currentTheme: RestaurantTheme;
+  colorMode: ColorMode;
   setTheme: (theme: RestaurantTheme) => void;
+  setColorMode: (mode: ColorMode) => void;
+  toggleColorMode: () => void;
+  isMounted: boolean;
 }
 
 const ThemeContext = createContext<ThemeContextType>({
   currentTheme: "gold",
+  colorMode: "dark",
   setTheme: () => {},
+  setColorMode: () => {},
+  toggleColorMode: () => {},
+  isMounted: false,
 });
 
 export const useRestaurantTheme = () => useContext(ThemeContext);
 export const useTheme = useRestaurantTheme;
 
 export function RestaurantThemeProvider({ children }: { children: React.ReactNode }) {
+  const dispatch = useAppDispatch();
   const storeTheme = useAppSelector((state) => state.auth.restaurantTheme);
 
-  const applyTheme = (theme: string) => {
-    if (typeof document !== "undefined") {
-      const validTheme = THEME_OPTIONS.some((t) => t.id === theme) ? theme : "gold";
-      document.documentElement.setAttribute("data-theme", validTheme);
-      localStorage.setItem("tableos_restaurant_theme", validTheme);
-    }
-  };
+  const [currentTheme, setCurrentThemeState] = useState<RestaurantTheme>("gold");
+  const [colorMode, setColorModeState] = useState<ColorMode>("dark");
+  const [isMounted, setIsMounted] = useState(false);
 
+  // Synchronize theme attribute and CSS variables on HTML root
+  const applyThemeToDOM = useCallback((theme: string) => {
+    if (typeof document === "undefined") return;
+    const option =
+      THEME_OPTIONS.find((t) => t.id === theme || t.key === theme) || THEME_OPTIONS[0];
+    document.documentElement.setAttribute("data-theme", option.id);
+    document.documentElement.style.setProperty("--theme-primary", option.primaryColor);
+    document.documentElement.style.setProperty("--theme-primary-hover", option.hoverColor);
+    document.documentElement.style.setProperty("--theme-primary-dark", option.hoverColor);
+
+    const hex = option.primaryColor.replace("#", "");
+    if (hex.length === 6) {
+      const r = parseInt(hex.substring(0, 2), 16);
+      const g = parseInt(hex.substring(2, 4), 16);
+      const b = parseInt(hex.substring(4, 6), 16);
+      document.documentElement.style.setProperty("--theme-primary-rgb", `${r}, ${g}, ${b}`);
+      document.documentElement.style.setProperty(
+        "--theme-primary-glow",
+        `rgba(${r}, ${g}, ${b}, 0.25)`
+      );
+    }
+  }, []);
+
+  // Synchronize color mode on HTML root
+  const applyColorModeToDOM = useCallback((mode: ColorMode) => {
+    if (typeof document === "undefined") return;
+    document.documentElement.setAttribute("data-color-mode", mode);
+    if (mode === "light") {
+      document.documentElement.classList.add("light");
+    } else {
+      document.documentElement.classList.remove("light");
+    }
+  }, []);
+
+  // Update theme with immediate state change and persistence
+  const setTheme = useCallback(
+    (theme: RestaurantTheme) => {
+      const validTheme = THEME_OPTIONS.some((t) => t.id === theme) ? theme : "gold";
+      setCurrentThemeState(validTheme);
+      applyThemeToDOM(validTheme);
+      dispatch(setRestaurantTheme(validTheme));
+      if (typeof window !== "undefined") {
+        localStorage.setItem("tableos_restaurant_theme", validTheme);
+      }
+    },
+    [dispatch, applyThemeToDOM]
+  );
+
+  // Update color mode
+  const setColorMode = useCallback(
+    (mode: ColorMode) => {
+      setColorModeState(mode);
+      applyColorModeToDOM(mode);
+      if (typeof window !== "undefined") {
+        localStorage.setItem("tableos_color_mode", mode);
+      }
+    },
+    [applyColorModeToDOM]
+  );
+
+  const toggleColorMode = useCallback(() => {
+    setColorModeState((prev) => {
+      const nextMode = prev === "dark" ? "light" : "dark";
+      applyColorModeToDOM(nextMode);
+      if (typeof window !== "undefined") {
+        localStorage.setItem("tableos_color_mode", nextMode);
+      }
+      return nextMode;
+    });
+  }, [applyColorModeToDOM]);
+
+  // Initial client mount effect
   useEffect(() => {
-    const savedTheme = storeTheme || localStorage.getItem("tableos_restaurant_theme") || "gold";
-    applyTheme(savedTheme);
-  }, [storeTheme]);
+    setIsMounted(true);
+    const savedTheme =
+      (localStorage.getItem("tableos_restaurant_theme") as RestaurantTheme) ||
+      (storeTheme as RestaurantTheme) ||
+      "gold";
+    const savedMode = (localStorage.getItem("tableos_color_mode") as ColorMode) || "dark";
+
+    setCurrentThemeState(savedTheme);
+    setColorModeState(savedMode);
+    applyThemeToDOM(savedTheme);
+    applyColorModeToDOM(savedMode);
+  }, [storeTheme, applyThemeToDOM, applyColorModeToDOM]);
+
+  // Keep in sync if Redux store changes externally
+  useEffect(() => {
+    if (storeTheme && storeTheme !== currentTheme) {
+      setCurrentThemeState(storeTheme as RestaurantTheme);
+      applyThemeToDOM(storeTheme);
+    }
+  }, [storeTheme, currentTheme, applyThemeToDOM]);
 
   return (
     <ThemeContext.Provider
       value={{
-        currentTheme: (storeTheme as RestaurantTheme) || "gold",
-        setTheme: applyTheme,
+        currentTheme,
+        colorMode,
+        setTheme,
+        setColorMode,
+        toggleColorMode,
+        isMounted,
       }}
     >
       {children}

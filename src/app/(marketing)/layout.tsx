@@ -12,8 +12,11 @@ import {
   FileText,
   Clock,
   ArrowRight,
+  Sun,
+  Moon,
 } from "lucide-react";
 import { PolicyModals, ModalType } from "@/components/marketing/PolicyModals";
+import { useRestaurantTheme } from "@/components/providers/RestaurantThemeProvider";
 
 export default function MarketingLayout({
   children,
@@ -21,6 +24,7 @@ export default function MarketingLayout({
   children: React.ReactNode;
 }) {
   const [activeModal, setActiveModal] = useState<ModalType>(null);
+  const { colorMode, toggleColorMode, isMounted } = useRestaurantTheme();
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-gray-100 selection:bg-primary/30 selection:text-white">
@@ -89,6 +93,21 @@ export default function MarketingLayout({
             >
               Sign In
             </Link>
+
+            {/* Light / Dark Mode Toggle */}
+            <button
+              type="button"
+              onClick={toggleColorMode}
+              aria-label="Toggle Light/Dark Mode"
+              className="w-9 h-9 rounded-xl bg-surface-subtle hover:bg-surface-hover border border-surface-border flex items-center justify-center text-gray-300 hover:text-white transition-all shadow-sm group"
+              title={isMounted && colorMode === "light" ? "Switch to Dark Mode" : "Switch to Light Mode"}
+            >
+              {isMounted && colorMode === "light" ? (
+                <Moon className="w-4 h-4 text-indigo-500 group-hover:scale-110 transition-transform" />
+              ) : (
+                <Sun className="w-4 h-4 text-amber-400 group-hover:scale-110 transition-transform" />
+              )}
+            </button>
           </div>
         </div>
       </header>
