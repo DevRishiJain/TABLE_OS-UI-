@@ -68,13 +68,14 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 20px 18px 6px;
-  max-width: 1280px;
+  padding: 18px 24px 6px;
+  width: 100%;
+  max-width: 1440px;
   margin: 0 auto;
 }
 
 .floor-screen .top h1 {
-  font: 400 clamp(1.9rem, 5vw, 2.8rem)/1 var(--serif);
+  font: 400 clamp(1.8rem, 4vw, 2.8rem)/1 var(--serif);
   margin: 0;
   letter-spacing: -0.02em;
 }
@@ -129,11 +130,22 @@
 .floor-screen .app {
   position: relative;
   z-index: 2;
-  max-width: 1280px;
+  width: 100%;
+  max-width: 1440px;
   margin: 0 auto;
-  padding: 14px 18px calc(120px + env(safe-area-inset-bottom, 0px));
+  padding: 14px 24px calc(110px + env(safe-area-inset-bottom, 0px));
   display: grid;
-  gap: 22px;
+  gap: 24px;
+}
+
+.floor-screen #floor {
+  min-width: 0;
+  width: 100%;
+}
+
+.floor-screen #queue {
+  min-width: 0;
+  width: 100%;
 }
 
 .floor-screen .app[data-v="floor"] #queue,
@@ -143,7 +155,7 @@
 
 @media (min-width: 1000px) {
   .floor-screen .app {
-    grid-template-columns: 1fr 430px;
+    grid-template-columns: minmax(0, 1fr) 420px;
     align-items: start;
     padding-bottom: 50px;
   }
@@ -160,6 +172,79 @@
   }
   .floor-screen .dk {
     display: inline-flex !important;
+  }
+}
+
+@media (max-width: 999px) {
+  .floor-screen .top {
+    padding: 14px 16px 4px;
+    gap: 10px;
+  }
+  .floor-screen .top h1 {
+    font-size: 1.8rem;
+  }
+  .floor-screen .top p {
+    font-size: 0.8rem;
+    margin: 2px 0 0;
+  }
+  .floor-screen .app {
+    padding: 10px 14px calc(90px + env(safe-area-inset-bottom, 0px));
+    gap: 16px;
+    display: block;
+  }
+  .floor-screen .app[data-v="floor"] #floor {
+    display: block;
+  }
+  .floor-screen .app[data-v="floor"] #queue {
+    display: none;
+  }
+  .floor-screen .app[data-v="queue"] #floor {
+    display: none;
+  }
+  .floor-screen .app[data-v="queue"] #queue {
+    display: block;
+  }
+  .floor-screen .grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 10px !important;
+  }
+  .floor-screen .tc {
+    padding: 16px 10px 14px !important;
+  }
+  .floor-screen .tc .id {
+    font-size: 1.4rem !important;
+  }
+  .floor-screen .stage {
+    height: 76px !important;
+  }
+  .floor-screen .tc .tg {
+    width: 74px !important;
+    height: 74px !important;
+  }
+  .floor-screen .chips {
+    padding: 2px 0 8px !important;
+    gap: 6px !important;
+  }
+  .floor-screen .chip {
+    height: 36px !important;
+    padding: 0 12px !important;
+    font-size: 0.78rem !important;
+  }
+  .floor-screen .h2 h2 {
+    font-size: 1.6rem !important;
+  }
+  .floor-screen .seg {
+    margin-bottom: 10px !important;
+  }
+  .floor-screen .seg button {
+    height: 44px !important;
+    font-size: 0.82rem !important;
+  }
+  .floor-screen .nav {
+    display: grid !important;
+  }
+  .floor-screen .dk {
+    display: none !important;
   }
 }
 
