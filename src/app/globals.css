@@ -635,6 +635,30 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .theme-dot { width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0; }
 
 /* =============================================================
+   CONTACT / ONBOARDING SECTION (#contact)
+   ============================================================= */
+.contact-section {
+  padding: 100px var(--px);
+  border-top: 1px solid var(--line);
+  background:
+    radial-gradient(circle at 10% 20%, color-mix(in srgb, var(--b) 16%, transparent), transparent 55%),
+    radial-gradient(circle at 90% 80%, color-mix(in srgb, var(--b2) 12%, transparent), transparent 60%),
+    var(--bg);
+  position: relative;
+  transition: background 0.6s;
+}
+.contact-section h2 {
+  margin: 0;
+}
+.contact-section p.contact-sub {
+  color: var(--mute);
+  margin-top: 22px;
+  max-width: 56ch;
+  font-size: 1.15rem;
+  line-height: 1.5;
+}
+
+/* =============================================================
    CONTACT / FORM
    ============================================================= */
 .contact-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--px); padding: 140px var(--px); }

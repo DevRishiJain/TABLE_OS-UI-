@@ -3,7 +3,6 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import {
-  Sparkles,
   Phone,
   Mail,
   CheckCircle2,
@@ -65,23 +64,21 @@ export function ContactConciergeForm() {
   };
 
   return (
-    <section id="contact" className="w-full max-w-5xl mx-auto py-16 px-4 sm:px-6 lg:px-8 flex flex-col gap-10 scroll-mt-24">
-      {/* 1. TOP TITLE & SUBTITLE */}
-      <div className="flex flex-col items-start gap-4">
-        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-primary/15 border border-primary/30 text-primary text-xs font-mono font-bold">
-          <Sparkles className="w-3.5 h-3.5 fill-current" />
-          <span>2 MONTHS FREE TRIAL ONBOARDING</span>
-        </div>
-        <h2 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white tracking-tight leading-[1.15]">
-          Let&apos;s set up <em className="italic text-primary font-serif font-normal">your venue.</em>
+    <section id="contact" className="contact-section scroll-mt-20">
+      {/* 1. TOP TITLE & SUBTITLE (Exact twin of .theme-section) */}
+      <div className="contact-head">
+        <h2>
+          Let&apos;s set up <em>your venue.</em>
         </h2>
-        <p className="text-base sm:text-lg text-gray-300 max-w-2xl leading-relaxed">
+        <p className="contact-sub">
           We&apos;ll build your menu and table layout with you, then switch on two free months. No credit card needed.
         </p>
       </div>
 
-      {/* 2. FORM CARD DIRECTLY BELOW TITLE */}
-      <div className="rounded-3xl bg-surface/90 border border-surface-border p-6 sm:p-10 shadow-2xl relative overflow-hidden backdrop-blur-xl">
+      {/* 2. FORM & INFO WRAPPER */}
+      <div className="w-full max-w-4xl flex flex-col gap-6 mt-12">
+        {/* Form Card */}
+        <div className="rounded-3xl bg-surface/90 border border-surface-border p-6 sm:p-10 shadow-2xl relative overflow-hidden backdrop-blur-xl">
         {/* Glow accent */}
         <div className="absolute top-0 right-0 w-96 h-96 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
 
@@ -186,11 +183,11 @@ export function ContactConciergeForm() {
                   onChange={(e) => setAuthority(e.target.value)}
                   className="w-full px-4 py-3 rounded-xl bg-surface-subtle border border-surface-border text-sm text-gray-100 focus:outline-none focus:border-primary transition-colors cursor-pointer"
                 >
-                  <option value="Owner">Owner / Managing Partner</option>
-                  <option value="General Manager">General Manager / Director</option>
-                  <option value="Floor Manager">Floor Manager</option>
-                  <option value="Executive Chef">Executive Chef / Head Chef</option>
-                  <option value="Operations Staff">Operations / Service Staff</option>
+                  <option value="Owner" className="bg-[#14100C] text-[#F4ECDD]">Owner / Managing Partner</option>
+                  <option value="General Manager" className="bg-[#14100C] text-[#F4ECDD]">General Manager / Director</option>
+                  <option value="Floor Manager" className="bg-[#14100C] text-[#F4ECDD]">Floor Manager</option>
+                  <option value="Executive Chef" className="bg-[#14100C] text-[#F4ECDD]">Executive Chef / Head Chef</option>
+                  <option value="Operations Staff" className="bg-[#14100C] text-[#F4ECDD]">Operations / Service Staff</option>
                 </select>
               </div>
 
@@ -204,11 +201,11 @@ export function ContactConciergeForm() {
                   onChange={(e) => setRestaurantType(e.target.value)}
                   className="w-full px-4 py-3 rounded-xl bg-surface-subtle border border-surface-border text-sm text-gray-100 focus:outline-none focus:border-primary transition-colors cursor-pointer"
                 >
-                  <option value="Fine Dine Restaurant">Fine Dine Restaurant</option>
-                  <option value="Cafe & Bakery">Cafe &amp; Bakery</option>
-                  <option value="Drive-In / Car-O-Bar">Drive-In / Car-O-Bar</option>
-                  <option value="Hotel & Banquets">Hotel &amp; Banquets / Room Service</option>
-                  <option value="Cloud Kitchen / QSR">Cloud Kitchen / QSR</option>
+                  <option value="Fine Dine Restaurant" className="bg-[#14100C] text-[#F4ECDD]">Fine Dine Restaurant</option>
+                  <option value="Cafe & Bakery" className="bg-[#14100C] text-[#F4ECDD]">Cafe &amp; Bakery</option>
+                  <option value="Drive-In / Car-O-Bar" className="bg-[#14100C] text-[#F4ECDD]">Drive-In / Car-O-Bar</option>
+                  <option value="Hotel & Banquets" className="bg-[#14100C] text-[#F4ECDD]">Hotel &amp; Banquets / Room Service</option>
+                  <option value="Cloud Kitchen / QSR" className="bg-[#14100C] text-[#F4ECDD]">Cloud Kitchen / QSR</option>
                 </select>
               </div>
 
@@ -262,7 +259,7 @@ export function ContactConciergeForm() {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="flex-1 py-3.5 px-6 rounded-xl bg-primary text-black font-bold text-sm hover:bg-primary-hover transition-all flex items-center justify-center gap-2 shadow-lg shadow-primary/25 disabled:opacity-50 cursor-pointer"
+                className="btn-brand flex-1 justify-center py-3.5 px-6 text-sm sm:text-base font-bold cursor-pointer disabled:opacity-50"
               >
                 {isSubmitting ? (
                   <span>Notifying Concierge Team...</span>
@@ -275,7 +272,7 @@ export function ContactConciergeForm() {
               </button>
               <Link
                 href="/signup"
-                className="px-6 py-3.5 rounded-xl bg-surface-subtle hover:bg-surface-hover border border-surface-border text-sm font-bold text-gray-200 hover:text-white transition-all text-center flex items-center justify-center font-mono"
+                className="btn-outline px-8 py-3.5 text-sm sm:text-base font-bold justify-center text-center flex items-center"
               >
                 Sign up
               </Link>
@@ -336,9 +333,10 @@ export function ContactConciergeForm() {
         </div>
       </div>
 
-      <p className="text-center text-xs text-gray-400 -mt-2">
+      <p className="text-center text-xs text-gray-400 pt-1">
         Zero credit card required • Instant trial activation • Unlimited staff seats
       </p>
+      </div>
     </section>
   );
 }
