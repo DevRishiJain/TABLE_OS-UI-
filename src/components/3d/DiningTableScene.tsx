@@ -10,13 +10,14 @@ import {
   Environment,
 } from "@react-three/drei";
 import * as THREE from "three";
+import { useTheme } from "@/components/providers/RestaurantThemeProvider";
 
 // ============================================================================
 // Canvas 2D Texture Generators (Ultra High-DPI, Crisp & Photo-realistic)
 // ============================================================================
 
 /** Generates an authentic, luxury restaurant QR Standee texture */
-function useQRStandeeTexture(): THREE.CanvasTexture {
+function useQRStandeeTexture(primaryColor: string = "#E5A93C"): THREE.CanvasTexture {
   return useMemo(() => {
     const canvas = document.createElement("canvas");
     canvas.width = 1024;
@@ -31,18 +32,18 @@ function useQRStandeeTexture(): THREE.CanvasTexture {
     ctx.fillStyle = bgGrad;
     ctx.fillRect(0, 0, 1024, 1440);
 
-    // 2. Luxury Brass/Gold Border
-    ctx.strokeStyle = "#E5A93C";
+    // 2. Luxury Theme Accent Border
+    ctx.strokeStyle = primaryColor;
     ctx.lineWidth = 14;
     ctx.strokeRect(36, 36, 952, 1368);
 
-    ctx.strokeStyle = "rgba(229, 169, 60, 0.35)";
+    ctx.strokeStyle = primaryColor;
     ctx.lineWidth = 4;
     ctx.strokeRect(54, 54, 916, 1332);
 
     // 3. Top Restaurant Header
     ctx.textAlign = "center";
-    ctx.fillStyle = "#E5A93C";
+    ctx.fillStyle = primaryColor;
     ctx.font = "bold 44px 'Plus Jakarta Sans', system-ui, sans-serif";
     ctx.fillText("TABLEOS DINING", 512, 160);
 
@@ -132,7 +133,7 @@ function useQRStandeeTexture(): THREE.CanvasTexture {
       }
     }
 
-    // Center Golden Table Emblem on the QR code
+    // Center Theme Table Emblem on the QR code
     const emblemSize = cellSize * 7;
     const emblemX = startX + 11 * cellSize;
     const emblemY = startY + 11 * cellSize;
@@ -140,11 +141,11 @@ function useQRStandeeTexture(): THREE.CanvasTexture {
     ctx.beginPath();
     ctx.roundRect(emblemX, emblemY, emblemSize, emblemSize, 14);
     ctx.fill();
-    ctx.strokeStyle = "#E5A93C";
+    ctx.strokeStyle = primaryColor;
     ctx.lineWidth = 5;
     ctx.stroke();
 
-    ctx.fillStyle = "#E5A93C";
+    ctx.fillStyle = primaryColor;
     ctx.font = "bold 38px 'Plus Jakarta Sans', system-ui, sans-serif";
     ctx.fillText("T1", emblemX + emblemSize / 2, emblemY + emblemSize / 2 + 13);
 
@@ -153,7 +154,7 @@ function useQRStandeeTexture(): THREE.CanvasTexture {
     ctx.font = "bold 44px 'Plus Jakarta Sans', system-ui, sans-serif";
     ctx.fillText("SCAN TO DINE & PAY", 512, 1020);
 
-    ctx.fillStyle = "#E5A93C";
+    ctx.fillStyle = primaryColor;
     ctx.font = "600 30px 'Plus Jakarta Sans', system-ui, sans-serif";
     ctx.fillText("TABLE T1 • INSTANT SERVICE", 512, 1075);
 
@@ -162,15 +163,15 @@ function useQRStandeeTexture(): THREE.CanvasTexture {
     ctx.fillText("Point phone camera • Zero App Install Required", 512, 1140);
 
     // 6. Security & TableOS Footer
-    ctx.fillStyle = "rgba(229, 169, 60, 0.15)";
+    ctx.fillStyle = "rgba(255, 255, 255, 0.08)";
     ctx.beginPath();
     ctx.roundRect(260, 1220, 504, 76, 20);
     ctx.fill();
-    ctx.strokeStyle = "rgba(229, 169, 60, 0.4)";
+    ctx.strokeStyle = primaryColor;
     ctx.lineWidth = 3;
     ctx.stroke();
 
-    ctx.fillStyle = "#F59E0B";
+    ctx.fillStyle = primaryColor;
     ctx.font = "bold 26px 'Plus Jakarta Sans', system-ui, sans-serif";
     ctx.fillText("⚡ POWERED BY TABLEOS", 512, 1268);
 
@@ -178,11 +179,11 @@ function useQRStandeeTexture(): THREE.CanvasTexture {
     texture.colorSpace = THREE.SRGBColorSpace;
     texture.anisotropy = 16;
     return texture;
-  }, []);
+  }, [primaryColor]);
 }
 
 /** Generates an authentic, beautiful TableOS Mobile App interface texture */
-function usePhoneScreenTexture(): THREE.CanvasTexture {
+function usePhoneScreenTexture(primaryColor: string = "#E5A93C"): THREE.CanvasTexture {
   return useMemo(() => {
     const canvas = document.createElement("canvas");
     canvas.width = 1080;
@@ -245,13 +246,13 @@ function usePhoneScreenTexture(): THREE.CanvasTexture {
     ctx.beginPath();
     ctx.roundRect(64, 400, 952, 110, 28);
     ctx.fill();
-    ctx.strokeStyle = "rgba(229, 169, 60, 0.4)";
-    ctx.lineWidth = 3;
+    ctx.strokeStyle = primaryColor;
+    ctx.lineWidth = 2;
     ctx.stroke();
 
-    ctx.fillStyle = "#E5A93C";
+    ctx.fillStyle = primaryColor;
     ctx.font = "bold 38px 'Plus Jakarta Sans', system-ui, sans-serif";
-    ctx.fillText("✨ Ask AI: 'Best spicy chicken under ₹300?'", 100, 470);
+    ctx.fillText("✨ Ask AI: 'Best dishes for tonight?'", 100, 470);
 
     // 5. Category Chips Row
     const categories = [
@@ -263,7 +264,7 @@ function usePhoneScreenTexture(): THREE.CanvasTexture {
     let chipX = 64;
     categories.forEach((cat) => {
       const chipWidth = cat.active ? 200 : 180;
-      ctx.fillStyle = cat.active ? "#E5A93C" : "#1A1E26";
+      ctx.fillStyle = cat.active ? primaryColor : "#1A1E26";
       ctx.beginPath();
       ctx.roundRect(chipX, 550, chipWidth, 75, 22);
       ctx.fill();
@@ -297,14 +298,14 @@ function usePhoneScreenTexture(): THREE.CanvasTexture {
 
       // Food placeholder thumbnail with warm gradient
       const imgGrad = ctx.createLinearGradient(92, y + 36, 360, y + 340);
-      imgGrad.addColorStop(0, "#3D2413");
-      imgGrad.addColorStop(1, "#1E140C");
+      imgGrad.addColorStop(0, "#222733");
+      imgGrad.addColorStop(1, "#121418");
       ctx.fillStyle = imgGrad;
       ctx.beginPath();
       ctx.roundRect(96, y + 40, 300, 300, 24);
       ctx.fill();
-      ctx.strokeStyle = "rgba(229, 169, 60, 0.3)";
-      ctx.lineWidth = 3;
+      ctx.strokeStyle = primaryColor;
+      ctx.lineWidth = 2;
       ctx.stroke();
 
       // Icon on food thumbnail
@@ -333,32 +334,32 @@ function usePhoneScreenTexture(): THREE.CanvasTexture {
       });
 
       // Price in INR
-      ctx.fillStyle = "#E5A93C";
+      ctx.fillStyle = primaryColor;
       ctx.font = "bold 48px 'Plus Jakarta Sans', system-ui, sans-serif";
       ctx.fillText(price, 430, y + 265);
 
       // Action Button
       if (qty !== null) {
         // Quantity Pill [ - 1 + ]
-        ctx.fillStyle = "rgba(229, 169, 60, 0.15)";
+        ctx.fillStyle = "rgba(255, 255, 255, 0.08)";
         ctx.beginPath();
         ctx.roundRect(740, y + 220, 240, 80, 24);
         ctx.fill();
-        ctx.strokeStyle = "#E5A93C";
+        ctx.strokeStyle = primaryColor;
         ctx.lineWidth = 3;
         ctx.stroke();
 
-        ctx.fillStyle = "#E5A93C";
+        ctx.fillStyle = primaryColor;
         ctx.font = "bold 40px 'Plus Jakarta Sans', system-ui, sans-serif";
         ctx.textAlign = "center";
         ctx.fillText("-", 780, y + 275);
         ctx.fillStyle = "#FFFFFF";
         ctx.fillText(String(qty), 860, y + 275);
-        ctx.fillStyle = "#E5A93C";
+        ctx.fillStyle = primaryColor;
         ctx.fillText("+", 940, y + 275);
       } else {
         // Add Button
-        ctx.fillStyle = "#E5A93C";
+        ctx.fillStyle = primaryColor;
         ctx.beginPath();
         ctx.roundRect(800, y + 220, 180, 80, 24);
         ctx.fill();
@@ -375,8 +376,8 @@ function usePhoneScreenTexture(): THREE.CanvasTexture {
 
     // 7. Floating Bottom Cart Drawer Banner
     const cartGrad = ctx.createLinearGradient(0, 2020, 0, 2260);
-    cartGrad.addColorStop(0, "#E5A93C");
-    cartGrad.addColorStop(1, "#D97706");
+    cartGrad.addColorStop(0, primaryColor);
+    cartGrad.addColorStop(1, primaryColor);
     ctx.fillStyle = cartGrad;
     ctx.beginPath();
     ctx.roundRect(64, 2040, 952, 160, 36);
@@ -403,7 +404,7 @@ function usePhoneScreenTexture(): THREE.CanvasTexture {
     texture.colorSpace = THREE.SRGBColorSpace;
     texture.anisotropy = 16;
     return texture;
-  }, []);
+  }, [primaryColor]);
 }
 
 // ============================================================================
@@ -487,8 +488,8 @@ function DiningTable() {
 }
 
 /** Luxury Brushed Brass & Frosted Acrylic QR Standee */
-function QRStandee() {
-  const qrTexture = useQRStandeeTexture();
+function QRStandee({ primaryColor = "#E5A93C" }: { primaryColor?: string }) {
+  const qrTexture = useQRStandeeTexture(primaryColor);
 
   return (
     <group position={[-0.85, -0.22, 0.35]} rotation={[0, 0.45, 0]}>
@@ -553,8 +554,8 @@ function QRStandee() {
 }
 
 /** Modern Floating Smartphone with Titanium Frame & Live TableOS Screen */
-function FloatingSmartphone() {
-  const phoneTexture = usePhoneScreenTexture();
+function FloatingSmartphone({ primaryColor = "#E5A93C" }: { primaryColor?: string }) {
+  const phoneTexture = usePhoneScreenTexture(primaryColor);
   const phoneRef = useRef<THREE.Group>(null);
 
   useFrame((state) => {
@@ -591,7 +592,7 @@ function FloatingSmartphone() {
       <mesh position={[0, 0, 0]}>
         <boxGeometry args={[1.09, 2.23, 0.04]} />
         <meshStandardMaterial
-          color="#E5A93C"
+          color={primaryColor}
           roughness={0.2}
           metalness={0.95}
         />
@@ -726,6 +727,8 @@ function WarmBokehEmbers({ count = 30 }: { count?: number }) {
 // ============================================================================
 
 export function DiningTableScene() {
+  const { themePrimaryColor } = useTheme();
+  const primaryColor = themePrimaryColor || "#E5A93C";
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   const [mounted, setMounted] = useState(false);
 
@@ -744,8 +747,8 @@ export function DiningTableScene() {
   if (!mounted || prefersReducedMotion) {
     return (
       <div className="w-full h-full min-h-[460px] rounded-3xl bg-gradient-to-br from-[#16191E] via-[#0F1115] to-[#0A0B0E] border border-surface-border flex flex-col items-center justify-center p-8 relative overflow-hidden shadow-2xl">
-        <div className="w-24 h-24 rounded-2xl bg-amber-500/20 border-2 border-amber-500/40 flex items-center justify-center shadow-glow mb-4">
-          <span className="text-3xl font-extrabold text-amber-400 font-display">T1</span>
+        <div className="w-24 h-24 rounded-2xl bg-primary/20 border-2 border-primary/40 flex items-center justify-center shadow-glow mb-4">
+          <span className="text-3xl font-extrabold text-primary font-display">T1</span>
         </div>
         <h3 className="text-xl font-bold text-gray-100 font-display">
           TableOS Interactive Experience
@@ -760,7 +763,12 @@ export function DiningTableScene() {
   return (
     <div className="w-full h-[500px] md:h-[580px] rounded-3xl overflow-hidden relative border border-surface-border/70 shadow-2xl bg-gradient-to-b from-[#13161D] via-[#0E1015] to-[#090A0D]">
       {/* Soft studio vignette glow */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_35%,rgba(229,169,60,0.12),transparent_70%)] pointer-events-none" />
+      <div
+        className="absolute inset-0 pointer-events-none transition-all duration-500"
+        style={{
+          background: "radial-gradient(circle at 50% 35%, var(--theme-primary-glow), transparent 70%)",
+        }}
+      />
 
       <Canvas
         camera={{ position: [0, 1.4, 4.0], fov: 38 }}
@@ -780,13 +788,13 @@ export function DiningTableScene() {
         {/* Warm Studio Lighting */}
         <ambientLight intensity={1.1} color="#FDF6E2" />
 
-        {/* Primary Warm Amber Key Light */}
+        {/* Primary Warm Theme Key Light */}
         <spotLight
           position={[2.5, 4.5, 3.2]}
           angle={0.6}
           penumbra={0.7}
           intensity={3.5}
-          color="#FBBF24"
+          color={primaryColor}
           castShadow
         />
 
@@ -806,8 +814,8 @@ export function DiningTableScene() {
 
         {/* Scene Objects */}
         <DiningTable />
-        <QRStandee />
-        <FloatingSmartphone />
+        <QRStandee primaryColor={primaryColor} />
+        <FloatingSmartphone primaryColor={primaryColor} />
         <TableCandleAccent />
         <WarmBokehEmbers count={35} />
 
@@ -823,7 +831,7 @@ export function DiningTableScene() {
             Live 3D Standee & Dining App • Table T1
           </span>
         </div>
-        <div className="glass-card px-3.5 py-1.5 rounded-full text-xs font-semibold text-amber-300 border border-amber-500/30 shadow-lg pointer-events-auto">
+        <div className="glass-card px-3.5 py-1.5 rounded-full text-xs font-semibold text-primary border border-primary/30 shadow-lg pointer-events-auto">
           Rotate with Mouse or Touch ✦
         </div>
       </div>

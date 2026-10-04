@@ -20,7 +20,7 @@
   --theme-primary-hover: #D4982E;
   --theme-primary-glow: rgba(229, 169, 60, 0.25);
   --theme-primary-dark: #A3721A;
-  --theme-primary-rgb: 229, 169, 60;
+  --theme-primary-rgb: 229 169 60;
 }
 
 [data-theme="emerald"] {
@@ -28,7 +28,7 @@
   --theme-primary-hover: #059669;
   --theme-primary-glow: rgba(16, 185, 129, 0.25);
   --theme-primary-dark: #047857;
-  --theme-primary-rgb: 16, 185, 129;
+  --theme-primary-rgb: 16 185 129;
 }
 
 [data-theme="ruby"],
@@ -37,7 +37,7 @@
   --theme-primary-hover: #DC2626;
   --theme-primary-glow: rgba(239, 68, 68, 0.25);
   --theme-primary-dark: #B91C1C;
-  --theme-primary-rgb: 239, 68, 68;
+  --theme-primary-rgb: 239 68 68;
 }
 
 [data-theme="amethyst"],
@@ -46,7 +46,7 @@
   --theme-primary-hover: #7C3AED;
   --theme-primary-glow: rgba(139, 92, 246, 0.25);
   --theme-primary-dark: #6D28D9;
-  --theme-primary-rgb: 139, 92, 246;
+  --theme-primary-rgb: 139 92 246;
 }
 
 [data-theme="sapphire"],
@@ -55,7 +55,7 @@
   --theme-primary-hover: #0891B2;
   --theme-primary-glow: rgba(6, 182, 212, 0.25);
   --theme-primary-dark: #0E7490;
-  --theme-primary-rgb: 6, 182, 212;
+  --theme-primary-rgb: 6 182 212;
 }
 
 [data-theme="coral"],
@@ -64,14 +64,14 @@
   --theme-primary-hover: #E11D48;
   --theme-primary-glow: rgba(244, 63, 94, 0.25);
   --theme-primary-dark: #BE123C;
-  --theme-primary-rgb: 244, 63, 94;
+  --theme-primary-rgb: 244 63 94;
 }
 
 html, body {
   color: var(--foreground);
   background: var(--background);
   background-image: 
-    radial-gradient(ellipse 90% 60% at 50% -10%, rgba(229, 169, 60, 0.1), transparent 70%),
+    radial-gradient(ellipse 90% 60% at 50% -10%, rgb(var(--theme-primary-rgb) / 0.18), transparent 70%),
     radial-gradient(circle at 10% 90%, rgba(56, 189, 248, 0.05), transparent 45%),
     radial-gradient(circle at 90% 40%, rgba(16, 185, 129, 0.04), transparent 40%),
     linear-gradient(180deg, #090B0F 0%, #06070A 100%);
@@ -100,7 +100,7 @@ h1, h2, h3, h4, .font-display {
   border: 1px solid rgba(255, 255, 255, 0.05);
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(229, 169, 60, 0.7);
+  background: var(--theme-primary);
 }
 
 /* ---------------- Spatial & VisionOS Glass Architecture ---------------- */
@@ -239,7 +239,7 @@ html.light body {
   color: #0F172A !important;
   background: #F8FAFC !important;
   background-image: 
-    radial-gradient(ellipse 90% 60% at 50% -10%, rgba(var(--theme-primary-rgb), 0.12), transparent 70%),
+    radial-gradient(ellipse 90% 60% at 50% -10%, rgb(var(--theme-primary-rgb) / 0.15), transparent 70%),
     radial-gradient(circle at 10% 90%, rgba(14, 165, 233, 0.05), transparent 45%),
     linear-gradient(180deg, #FFFFFF 0%, #F1F5F9 100%) !important;
 }

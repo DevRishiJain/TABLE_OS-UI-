@@ -68,9 +68,11 @@ export const THEME_OPTIONS: ThemeOption[] = [
   },
 ];
 
-interface ThemeContextType {
+export interface ThemeContextType {
   currentTheme: RestaurantTheme;
   colorMode: ColorMode;
+  themePrimaryColor: string;
+  themeHoverColor: string;
   setTheme: (theme: RestaurantTheme) => void;
   setColorMode: (mode: ColorMode) => void;
   toggleColorMode: () => void;
@@ -80,6 +82,8 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType>({
   currentTheme: "gold",
   colorMode: "dark",
+  themePrimaryColor: "#E5A93C",
+  themeHoverColor: "#D4982E",
   setTheme: () => {},
   setColorMode: () => {},
   toggleColorMode: () => {},
@@ -112,7 +116,8 @@ export function RestaurantThemeProvider({ children }: { children: React.ReactNod
       const r = parseInt(hex.substring(0, 2), 16);
       const g = parseInt(hex.substring(2, 4), 16);
       const b = parseInt(hex.substring(4, 6), 16);
-      document.documentElement.style.setProperty("--theme-primary-rgb", `${r}, ${g}, ${b}`);
+      // Space-separated for Tailwind rgb(var(--theme-primary-rgb) / <alpha-value>)
+      document.documentElement.style.setProperty("--theme-primary-rgb", `${r} ${g} ${b}`);
       document.documentElement.style.setProperty(
         "--theme-primary-glow",
         `rgba(${r}, ${g}, ${b}, 0.25)`
@@ -191,11 +196,16 @@ export function RestaurantThemeProvider({ children }: { children: React.ReactNod
     }
   }, [storeTheme, currentTheme, applyThemeToDOM]);
 
+  const activeOption =
+    THEME_OPTIONS.find((t) => t.id === currentTheme || t.key === currentTheme) || THEME_OPTIONS[0];
+
   return (
     <ThemeContext.Provider
       value={{
         currentTheme,
         colorMode,
+        themePrimaryColor: activeOption.primaryColor,
+        themeHoverColor: activeOption.hoverColor,
         setTheme,
         setColorMode,
         toggleColorMode,

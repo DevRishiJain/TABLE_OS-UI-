@@ -54,7 +54,7 @@ const DiningTableScene = dynamic(
 );
 
 export default function LandingPage() {
-  const { currentTheme, setTheme, isMounted } = useTheme();
+  const { currentTheme, setTheme, isMounted, colorMode, themePrimaryColor } = useTheme();
   const [activeInventoryTab, setActiveInventoryTab] = useState<"sourcing" | "packaging" | "wastage" | "bom">("sourcing");
   const [mounted, setMounted] = useState(false);
 
@@ -79,7 +79,17 @@ export default function LandingPage() {
 
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white tracking-tight leading-[1.1] font-display">
             Hospitality Elegance. <br />
-            <span className="bg-gradient-to-r from-amber-400 via-primary to-yellow-500 bg-clip-text text-transparent">
+            <span
+              className="bg-clip-text text-transparent transition-all duration-300 inline-block"
+              style={{
+                backgroundImage:
+                  colorMode === "light"
+                    ? "linear-gradient(135deg, var(--theme-primary) 0%, #0F172A 75%)"
+                    : "linear-gradient(135deg, var(--theme-primary) 0%, #FFFFFF 55%, var(--theme-primary-hover) 100%)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+              }}
+            >
               Modern Restaurant OS.
             </span>
           </h1>
@@ -129,7 +139,7 @@ export default function LandingPage() {
             </div>
 
             <div className="p-3 rounded-2xl bg-surface/40 border border-surface-border">
-              <div className="text-xl sm:text-2xl font-black text-amber-400 font-display">
+              <div className="text-xl sm:text-2xl font-black text-primary font-display">
                 Auto BOM
               </div>
               <div className="text-[11px] text-gray-400 mt-0.5">Wastage & Sourcing</div>
@@ -235,7 +245,7 @@ export default function LandingPage() {
       {/* SECTION 2: RAW MATERIAL SOURCING, PACKAGING & WASTAGE CALCULATOR (#inventory) */}
       <section id="inventory" className="flex flex-col gap-8 scroll-mt-24">
         <div className="flex flex-col gap-2">
-          <span className="text-xs font-bold uppercase tracking-wider text-amber-400 font-mono">
+          <span className="text-xs font-bold uppercase tracking-wider text-primary font-mono">
             Kitchen Back-of-House Intelligence
           </span>
           <h2 className="text-3xl sm:text-4xl font-bold font-display text-white">
@@ -277,7 +287,7 @@ export default function LandingPage() {
         {activeInventoryTab === "sourcing" && (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center bg-surface/50 border border-surface-border rounded-3xl p-6 sm:p-8 animate-fade-in">
             <div className="lg:col-span-6 space-y-4">
-              <div className="inline-flex items-center gap-2 text-xs font-bold text-amber-400">
+              <div className="inline-flex items-center gap-2 text-xs font-bold text-primary">
                 <Boxes className="w-4 h-4" />
                 <span>Supplier Delivery Intake & Inventory Valuation</span>
               </div>
@@ -569,9 +579,9 @@ export default function LandingPage() {
             </div>
           </Card>
 
-          <Card className="flex flex-col justify-between p-6 space-y-4">
+          <Card className="flex flex-col justify-between p-6 space-y-4 hover:border-primary/50 transition-all">
             <div className="space-y-3">
-              <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
+              <div className="w-12 h-12 rounded-2xl bg-primary/10 border border-primary/30 flex items-center justify-center text-primary">
                 <ChefHat className="w-6 h-6" />
               </div>
               <h3 className="text-lg font-bold text-white font-display">
@@ -581,7 +591,7 @@ export default function LandingPage() {
                 Touch-first kitchen Kanban screen. 60px+ touch targets advancing tickets: Incoming → Preparing → Ready → Served. Eliminates thermal printer paper jams and lost orders.
               </p>
             </div>
-            <div className="pt-4 border-t border-surface-border text-xs text-amber-400 font-semibold flex items-center gap-1.5">
+            <div className="pt-4 border-t border-surface-border text-xs text-primary font-semibold flex items-center gap-1.5">
               <CheckCircle2 className="w-4 h-4" />
               <span>Real-time prep timer & audio chimes</span>
             </div>

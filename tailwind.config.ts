@@ -17,7 +17,7 @@ const config: Config = {
           hover: "rgb(var(--surface-hover-rgb) / <alpha-value>)",
         },
         primary: {
-          DEFAULT: "var(--theme-primary, #E5A93C)",
+          DEFAULT: "rgb(var(--theme-primary-rgb) / <alpha-value>)",
           hover: "var(--theme-primary-hover, #D4982E)",
           glow: "var(--theme-primary-glow, rgba(229, 169, 60, 0.15))",
           dark: "var(--theme-primary-dark, #A3721A)",
