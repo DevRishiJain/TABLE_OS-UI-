@@ -60,6 +60,54 @@ const THEMES = [
   { key: "rose",    color: "#FF8FB0", label: "Sunset rose" },
 ];
 
+const VENUES = [
+  {
+    id: "fine-dining",
+    num: "01",
+    tag: "COURSES & PAIRING",
+    title: "Fine dining",
+    desc: "Course pacing, drink pairing and split bills.",
+    img: "/marketing/venues/fine-dining.jpg",
+    alt: "Fine dining candlelit table setting with wine glasses and course pacing",
+  },
+  {
+    id: "drive-in",
+    num: "02",
+    tag: "BAY ORDERING",
+    title: "Drive-in bars",
+    desc: "Order from the car with a QR on every bay.",
+    img: "/marketing/venues/drive-in.jpg",
+    alt: "Drive-in bar parking bay with illuminated QR code order stand at night",
+  },
+  {
+    id: "cafes",
+    num: "03",
+    tag: "COUNTER & STOCK",
+    title: "Cafes and bakeries",
+    desc: "Fast orders, pastry stock and takeaway packaging.",
+    img: "/marketing/venues/cafe-bakery.jpg",
+    alt: "Artisanal bakery and espresso cafe counter with fresh pastries and coffee",
+  },
+  {
+    id: "hotels",
+    num: "04",
+    tag: "IN-ROOM DINING",
+    title: "Hotel rooms",
+    desc: "In-room QR cards routed to one kitchen.",
+    img: "/marketing/venues/hotel-room.jpg",
+    alt: "Luxury hotel room suite with in-room dining tray and bedside QR ordering card",
+  },
+  {
+    id: "cloud-kitchens",
+    num: "05",
+    tag: "MULTI-BRAND KDS",
+    title: "Cloud kitchens",
+    desc: "Batch tickets across brands with shared stock.",
+    img: "/marketing/venues/cloud-kitchen.jpg",
+    alt: "Commercial cloud kitchen with KDS screen and high-efficiency order dispatch",
+  },
+];
+
 const clamp = (x: number, a = 0, b = 1) => Math.max(a, Math.min(b, x));
 
 export default function LandingPage() {
@@ -527,26 +575,23 @@ export default function LandingPage() {
           Built for <em>every</em> kind of room.
         </h2>
         <div className="ven-grid">
-          <div className="ven-item">
-            <h3>Fine dining</h3>
-            <p>Course pacing, drink pairing and split bills.</p>
-          </div>
-          <div className="ven-item">
-            <h3>Drive-in bars</h3>
-            <p>Order from the car with a QR on every bay.</p>
-          </div>
-          <div className="ven-item">
-            <h3>Cafes and bakeries</h3>
-            <p>Fast orders, pastry stock and takeaway packaging.</p>
-          </div>
-          <div className="ven-item">
-            <h3>Hotel rooms</h3>
-            <p>In-room QR cards routed to one kitchen.</p>
-          </div>
-          <div className="ven-item" style={{ borderRight: 0 }}>
-            <h3>Cloud kitchens</h3>
-            <p>Batch tickets across brands with shared stock.</p>
-          </div>
+          {VENUES.map((v, i) => (
+            <div
+              key={v.id}
+              className="ven-item"
+              style={i === VENUES.length - 1 ? { borderRight: 0 } : undefined}
+            >
+              <div className="ven-thumb">
+                <img src={v.img} alt={v.alt} className="ven-img" loading="lazy" />
+                <span className="ven-badge">{v.num}</span>
+              </div>
+              <div className="ven-content">
+                <span className="ven-tag">{v.tag}</span>
+                <h3>{v.title}</h3>
+                <p>{v.desc}</p>
+              </div>
+            </div>
+          ))}
         </div>
       </section>
 

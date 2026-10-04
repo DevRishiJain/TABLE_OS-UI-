@@ -95,6 +95,7 @@ export interface ForceCloseSessionRequest {
 // Kitchen KDS
 export interface KitchenOrderQueueItem extends Order {
   table_number?: string;
+  vehicle_number?: string;
   elapsed_minutes?: number;
 }
 

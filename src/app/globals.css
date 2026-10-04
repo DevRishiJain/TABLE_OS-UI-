@@ -606,14 +606,110 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 /* =============================================================
    VENUE STRIP
    ============================================================= */
-.ven-grid { display: grid; grid-template-columns: repeat(5, 1fr); border-top: 1px solid var(--line); }
-.ven-item { padding: 36px var(--px) 36px 28px; min-height: 300px; border-right: 1px solid var(--line); display: flex; flex-direction: column; justify-content: flex-end; transition: background 0.4s; }
-.ven-item:hover { background: linear-gradient(0deg, color-mix(in srgb, var(--b) 22%, transparent), transparent); }
-.ven-item h3 { font-size: 2.2rem; margin-bottom: 10px; }
-.ven-item p { color: var(--mute); font-size: 0.92rem; }
-@media (max-width: 1000px) {
-  .ven-grid { grid-template-columns: 1fr 1fr; }
-  .ven-item { min-height: 200px; border-bottom: 1px solid var(--line); }
+.ven-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+.ven-item {
+  padding: 24px 20px 32px 20px;
+  min-height: 410px;
+  border-right: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 20px;
+  transition: background 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  background: transparent;
+}
+.ven-item:hover {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--b) 5%, transparent) 0%, color-mix(in srgb, var(--b) 18%, transparent) 100%);
+}
+.ven-thumb {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--line) 90%, transparent);
+  box-shadow: 0 10px 28px -8px rgba(0, 0, 0, 0.5);
+  background: var(--panel, #14110e);
+}
+.ven-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), filter 0.6s ease;
+  filter: brightness(0.92) contrast(1.04);
+}
+.ven-item:hover .ven-img {
+  transform: scale(1.06);
+  filter: brightness(1.02) contrast(1.08);
+}
+.ven-thumb::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg, transparent 55%, rgba(11, 9, 7, 0.65) 100%);
+  transition: opacity 0.4s ease;
+}
+.ven-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: rgba(11, 9, 7, 0.75);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: var(--b);
+  border: 1px solid color-mix(in srgb, var(--b) 35%, transparent);
+  z-index: 2;
+}
+.ven-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+}
+.ven-tag {
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  color: var(--b);
+  text-transform: uppercase;
+}
+.ven-item h3 {
+  font-size: 1.85rem;
+  line-height: 1.15;
+  margin: 0;
+  color: var(--ink);
+  font-family: var(--serif);
+  font-weight: 400;
+}
+.ven-item p {
+  color: var(--mute);
+  font-size: 0.88rem;
+  line-height: 1.45;
+  margin: 0;
+}
+@media (max-width: 1100px) {
+  .ven-grid { grid-template-columns: repeat(2, 1fr); }
+  .ven-item:nth-child(2n) { border-right: 0; }
+  .ven-item { border-bottom: 1px solid var(--line); min-height: 360px; }
+}
+@media (max-width: 640px) {
+  .ven-grid { grid-template-columns: 1fr; }
+  .ven-item { border-right: 0; border-bottom: 1px solid var(--line); min-height: auto; }
 }
 
 /* =============================================================
