@@ -12,13 +12,20 @@ import { Receipt, ShieldCheck } from "lucide-react";
 export default function RestaurantLedgerPage() {
   const { data: ledgerEntries, isLoading } = useGetPlatformFeeLedgerQuery();
 
-  const entries = ledgerEntries || [];
+  const entries = Array.isArray(ledgerEntries)
+    ? ledgerEntries
+    : Array.isArray((ledgerEntries as any)?.entries)
+    ? (ledgerEntries as any).entries
+    : Array.isArray((ledgerEntries as any)?.settlements)
+    ? (ledgerEntries as any).settlements
+    : [];
+
   const totalGmvMinor = entries.reduce(
-    (acc, e) => acc + (e.gmv_amount?.amount_minor_units || 0),
+    (acc: number, e: any) => acc + (e.gmv_amount?.amount_minor_units || e.gross_sales_minor || 0),
     0
   );
   const totalFeesMinor = entries.reduce(
-    (acc, e) => acc + (e.fee_amount?.amount_minor_units || 0),
+    (acc: number, e: any) => acc + (e.fee_amount?.amount_minor_units || e.platform_fees_owed_minor || 0),
     0
   );
 
@@ -94,38 +101,38 @@ export default function RestaurantLedgerPage() {
                   </td>
                 </tr>
               ) : (
-                entries.map((e) => (
+                entries.map((e: any) => (
                   <tr
-                    key={e.id}
+                    key={e.id || Math.random()}
                     className="hover:bg-surface-subtle/50 transition-colors"
                   >
                     <td className="py-3.5">
                       <div className="flex flex-col">
                         <span className="font-mono text-gray-200">
-                          {e.session_id.substring(0, 16)}...
+                          {e.session_id ? e.session_id.substring(0, 16) : e.id ? e.id.substring(0, 16) : "N/A"}...
                         </span>
                         <span className="text-[10px] text-gray-500">
-                          {new Date(e.created_at).toLocaleString()}
+                          {e.created_at ? new Date(e.created_at).toLocaleString() : ""}
                         </span>
                       </div>
                     </td>
                     <td className="py-3.5 font-mono text-gray-300">
-                      {e.billing_period}
+                      {e.billing_period || "Current"}
                     </td>
                     <td className="py-3.5 text-right font-mono font-bold text-gray-100">
-                      {formatMoney(e.gmv_amount.amount_minor_units)}
+                      {formatMoney(e.gmv_amount?.amount_minor_units || e.gross_sales_minor || 0)}
                     </td>
                     <td className="py-3.5 text-right font-mono font-bold text-amber-400">
-                      {formatMoney(e.fee_amount.amount_minor_units)}
+                      {formatMoney(e.fee_amount?.amount_minor_units || e.platform_fees_owed_minor || 0)}
                     </td>
                     <td className="py-3.5 text-right">
                       <Badge
                         variant={
-                          e.settlement_status === "SETTLED" ? "success" : "gold"
+                          e.settlement_status === "SETTLED" || e.status === "SETTLED" ? "success" : "gold"
                         }
                         size="sm"
                       >
-                        {humanizeStatus(e.settlement_status)}
+                        {humanizeStatus(e.settlement_status || e.status || "PENDING")}
                       </Badge>
                     </td>
                   </tr>

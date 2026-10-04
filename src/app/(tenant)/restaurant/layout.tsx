@@ -188,18 +188,6 @@ export default function RestaurantAdminLayout({
               <span>Staff & Roles</span>
             </Link>
 
-            {/* Platform Fee Ledger */}
-            <Link
-              href="/restaurant/ledger"
-              className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-colors ${
-                pathname.includes("/restaurant/ledger")
-                  ? "bg-primary text-background font-bold shadow-md shadow-primary/20"
-                  : "text-gray-300 hover:text-white hover:bg-surface-hover"
-              }`}
-            >
-              <Receipt className="w-4 h-4 text-emerald-400" />
-              <span>1% Platform Fee Ledger</span>
-            </Link>
 
             {/* Settlements */}
             <Link
