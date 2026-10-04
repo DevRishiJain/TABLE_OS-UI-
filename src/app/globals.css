@@ -260,7 +260,9 @@ html.light [class*="bg-surface/"] {
 }
 
 [data-color-mode="light"] .bg-surface-subtle,
-html.light .bg-surface-subtle {
+html.light .bg-surface-subtle,
+[data-color-mode="light"] [class*="bg-surface-subtle"],
+html.light [class*="bg-surface-subtle"] {
   background-color: #F8FAFC !important;
   border-color: #E2E8F0 !important;
 }
@@ -270,6 +272,34 @@ html.light .border-surface-border,
 [data-color-mode="light"] [class*="border-surface-border"],
 html.light [class*="border-surface-border"] {
   border-color: #E2E8F0 !important;
+}
+
+/* Contact & Concierge Form Container */
+[data-color-mode="light"] #contact > div,
+html.light #contact > div {
+  background: #FFFFFF !important;
+  background-image: none !important;
+  border-color: #E2E8F0 !important;
+  box-shadow: 0 20px 45px -10px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+}
+
+[data-color-mode="light"] #contact h2,
+[data-color-mode="light"] #contact h3,
+[data-color-mode="light"] #contact .text-white,
+html.light #contact h2,
+html.light #contact h3,
+html.light #contact .text-white {
+  color: #0F172A !important;
+}
+
+[data-color-mode="light"] #contact .text-gray-300,
+html.light #contact .text-gray-300 {
+  color: #334155 !important;
+}
+
+[data-color-mode="light"] #contact .text-gray-400,
+html.light #contact .text-gray-400 {
+  color: #64748B !important;
 }
 
 /* Glass Architecture in Light Mode */

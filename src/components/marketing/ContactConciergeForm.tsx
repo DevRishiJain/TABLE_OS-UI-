@@ -71,7 +71,7 @@ export function ContactConciergeForm() {
 
   return (
     <div id="contact" className="w-full scroll-mt-24">
-      <div className="rounded-3xl bg-gradient-to-b from-surface to-background border border-surface-border p-6 sm:p-10 lg:p-12 shadow-2xl relative overflow-hidden">
+      <div className="rounded-3xl bg-surface border border-surface-border p-6 sm:p-10 lg:p-12 shadow-2xl relative overflow-hidden">
         {/* Glow accent */}
         <div className="absolute top-0 right-0 w-96 h-96 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
 
@@ -92,7 +92,7 @@ export function ContactConciergeForm() {
             </div>
 
             {/* Customer Care Desk Contact Card */}
-            <div className="p-5 rounded-2xl bg-surface-subtle/80 border border-surface-border space-y-4">
+            <div className="p-5 rounded-2xl bg-surface-subtle border border-surface-border space-y-4">
               <div className="text-xs font-bold uppercase tracking-wider text-gray-400 flex items-center justify-between">
                 <span>Dedicated Customer Care Desk</span>
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
