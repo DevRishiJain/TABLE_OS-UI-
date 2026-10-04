@@ -645,7 +645,56 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
     radial-gradient(circle at 90% 80%, color-mix(in srgb, var(--b2) 12%, transparent), transparent 60%),
     var(--bg);
   position: relative;
+  overflow: hidden;
   transition: background 0.6s;
+}
+.contact-section .contact-spotlight-asset {
+  position: absolute;
+  right: clamp(10px, 3.5vw, 60px);
+  top: 50%;
+  transform: translateY(-50%);
+  width: min(46vw, 660px);
+  max-width: 660px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+  pointer-events: none;
+  user-select: none;
+}
+.contact-section .contact-spotlight-asset img {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  border-radius: 40px;
+  mask-image: radial-gradient(circle at 50% 50%, black 50%, transparent 92%);
+  -webkit-mask-image: radial-gradient(circle at 50% 50%, black 50%, transparent 92%);
+  filter: contrast(1.06) brightness(0.98);
+}
+.contact-section .contact-spotlight-glow {
+  position: absolute;
+  width: 120%;
+  height: 120%;
+  border-radius: 50%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--b) 35%, transparent), transparent 65%);
+  pointer-events: none;
+  z-index: -1;
+  opacity: 0.7;
+  filter: blur(40px);
+}
+.contact-section .contact-dark {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: radial-gradient(circle 380px at var(--cmx, 78%) var(--cmy, 50%), transparent 0, #0b0907ea 100%);
+  transition: background 0.08s ease-out;
+}
+.contact-section > *:not(.contact-spotlight-asset):not(.contact-dark) {
+  position: relative;
+  z-index: 2;
 }
 .contact-section h2 {
   margin: 0;
@@ -656,6 +705,13 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
   max-width: 56ch;
   font-size: 1.15rem;
   line-height: 1.5;
+}
+@media (max-width: 1024px) {
+  .contact-section .contact-spotlight-asset {
+    opacity: 0.2;
+    right: -10vw;
+    width: 75vw;
+  }
 }
 
 /* =============================================================

@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { ContactConciergeForm } from "@/components/marketing/ContactConciergeForm";
+import { HeroDiningAsset } from "@/components/marketing/HeroDiningAsset";
 import { THEME_OPTIONS, useRestaurantTheme } from "@/components/providers/RestaurantThemeProvider";
 
 // ── Static data ──
@@ -212,29 +213,8 @@ export default function LandingPage() {
           HERO
       ══════════════════════════════════════════════════ */}
       <header className="tos-hero" id="top" ref={heroRef}>
-        {/* SVG scene */}
-        <svg className="hero-svg" viewBox="0 0 800 700" aria-hidden="true">
-          <defs>
-            <radialGradient id="g">
-              <stop offset="0" stopColor="var(--b)" stopOpacity=".6"/>
-              <stop offset="1" stopColor="var(--b)" stopOpacity="0"/>
-            </radialGradient>
-            <linearGradient id="gd" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0" stopColor="var(--b)"/>
-              <stop offset="1" stopColor="var(--b2)"/>
-            </linearGradient>
-          </defs>
-          <circle cx="400" cy="350" r="350" fill="url(#g)"/>
-          <circle cx="400" cy="350" r="255" fill="#1d1710" stroke="#f4ecdd22"/>
-          <circle cx="400" cy="350" r="195" fill="#f4ecdd" opacity=".93"/>
-          <circle cx="400" cy="350" r="152" fill="none" stroke="#0b090722" strokeWidth="2"/>
-          <circle cx="400" cy="350" r="64" fill="url(#gd)"/>
-          <circle cx="380" cy="330" r="18" fill="#fff" opacity=".35"/>
-          <rect x="150" y="190" width="16" height="320" rx="8" fill="#d9cdb6"/>
-          <path d="M650 190 q-32 120 0 190 v130" stroke="#d9cdb6" strokeWidth="16" fill="none" strokeLinecap="round"/>
-          <circle cx="620" cy="120" r="50" fill="#ffffff10" stroke="#f4ecdd44"/>
-          <circle cx="620" cy="120" r="21" fill="var(--b2)" opacity=".7"/>
-        </svg>
+        {/* Refined Cutlery & Dynamic Theme-Driven Dining Platter */}
+        <HeroDiningAsset theme={currentTheme} />
 
         {/* Spotlight */}
         <div className="hero-dark" ref={darkRef} />
