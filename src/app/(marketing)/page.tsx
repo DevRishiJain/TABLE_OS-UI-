@@ -45,19 +45,19 @@ const CALLS = [
 
 const WASTE_ITEMS = [
   ["Tomatoes", 60, 18],
-  ["Paneer",   48, 12],
-  ["Cream",    54,  9],
-  ["Bread",    68, 24],
-  ["Greens",   40, 14],
+  ["Paneer", 48, 12],
+  ["Cream", 54, 9],
+  ["Bread", 68, 24],
+  ["Greens", 40, 14],
 ] as const;
 
 const THEMES = [
-  { key: "",        color: "#E9B24C", label: "Imperial amber" },
-  { key: "jade",    color: "#4BD6A0", label: "Botanical jade" },
+  { key: "", color: "#E9B24C", label: "Imperial amber" },
+  { key: "jade", color: "#4BD6A0", label: "Botanical jade" },
   { key: "scarlet", color: "#FF6A5C", label: "Crimson scarlet" },
-  { key: "violet",  color: "#B79CFF", label: "Velvet violet" },
-  { key: "cobalt",  color: "#5CCBFF", label: "Ocean cobalt" },
-  { key: "rose",    color: "#FF8FB0", label: "Sunset rose" },
+  { key: "violet", color: "#B79CFF", label: "Velvet violet" },
+  { key: "cobalt", color: "#5CCBFF", label: "Ocean cobalt" },
+  { key: "rose", color: "#FF8FB0", label: "Sunset rose" },
 ];
 
 const VENUES = [
@@ -111,7 +111,20 @@ const VENUES = [
 const clamp = (x: number, a = 0, b = 1) => Math.max(a, Math.min(b, x));
 
 export default function LandingPage() {
-  const { currentTheme, setTheme } = useRestaurantTheme?.() ?? { currentTheme: "", setTheme: () => {} };
+  const { currentTheme, setTheme } = useRestaurantTheme?.() ?? { currentTheme: "", setTheme: () => { } };
+
+  const handleThemeChange = (key: string) => {
+    if (key) {
+      document.documentElement.setAttribute("data-theme", key);
+      localStorage.setItem("tableos-theme", key);
+    } else {
+      document.documentElement.removeAttribute("data-theme");
+      localStorage.removeItem("tableos-theme");
+    }
+    setTheme?.(key);
+  };
+
+  const activeTheme = THEMES.find((t) => t.key === currentTheme) || THEMES[0];
 
   // ── Refs for each chapter section ──
   const chap0 = useRef<HTMLDivElement>(null);
@@ -269,9 +282,39 @@ export default function LandingPage() {
 
         {/* Hero copy */}
         <div className="rise">
-          <div className="hero-pill">
-            <b>2 months free</b>No setup cost, no platform fee
+          <div>
+            <div className="hero-pill">
+              <b>2 months free</b>No setup cost, no platform fee
+            </div>
           </div>
+
+          <div className="hero-theme-row">
+            <div className="hero-theme-pill" role="toolbar" aria-label="Brand color palette switcher">
+              <span className="hero-theme-label">
+                <span style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--b)", display: "inline-block" }} />
+                Palette
+              </span>
+              <div className="hero-theme-dots">
+                {THEMES.map((t) => {
+                  const isPressed = currentTheme === t.key || (!currentTheme && t.key === "");
+                  return (
+                    <button
+                      key={t.key}
+                      type="button"
+                      className="hero-theme-dot"
+                      style={{ background: t.color }}
+                      aria-label={`${t.label} brand theme`}
+                      aria-pressed={isPressed}
+                      title={t.label}
+                      onClick={() => handleThemeChange(t.key)}
+                    />
+                  );
+                })}
+              </div>
+              <span className="hero-theme-name">{activeTheme.label}</span>
+            </div>
+          </div>
+
           <h1>
             Every table,<br />
             <em>perfectly</em> timed.
@@ -315,7 +358,7 @@ export default function LandingPage() {
           {/* Right viz */}
           <div className="chap-viz">
             <div className="viz-header">
-              <span><span className="viz-dot"/>Live orders</span>
+              <span><span className="viz-dot" />Live orders</span>
               <span>Tonight</span>
             </div>
             <div className="order-list">
@@ -361,7 +404,7 @@ export default function LandingPage() {
           </div>
           <div className="chap-viz">
             <div className="viz-header">
-              <span><span className="viz-dot"/>Kitchen display</span>
+              <span><span className="viz-dot" />Kitchen display</span>
               <span id="kt">{activeTicketsCount} active</span>
             </div>
             <div className="kds-board kb">
@@ -454,7 +497,7 @@ export default function LandingPage() {
           </div>
           <div className="chap-viz">
             <div className="viz-header">
-              <span><span className="viz-dot"/>Floor view</span>
+              <span><span className="viz-dot" />Floor view</span>
               <span>Waiter: Ananya</span>
             </div>
             <div className="floor-wrap">
@@ -541,7 +584,7 @@ export default function LandingPage() {
           </div>
           <div className="chap-viz">
             <div className="viz-header">
-              <span><span className="viz-dot"/>Stock and waste</span>
+              <span><span className="viz-dot" />Stock and waste</span>
               <span>This week</span>
             </div>
             <div className="waste-list">
@@ -607,16 +650,7 @@ export default function LandingPage() {
               key={t.key}
               className="theme-btn"
               aria-pressed={currentTheme === t.key || (!currentTheme && t.key === "") ? "true" : "false"}
-              onClick={() => {
-                if (t.key) {
-                  document.documentElement.setAttribute("data-theme", t.key);
-                  localStorage.setItem("tableos-theme", t.key);
-                } else {
-                  document.documentElement.removeAttribute("data-theme");
-                  localStorage.removeItem("tableos-theme");
-                }
-                setTheme?.(t.key);
-              }}
+              onClick={() => handleThemeChange(t.key)}
             >
               <span className="theme-dot" style={{ background: t.color }} />
               {t.label}
