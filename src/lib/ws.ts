@@ -109,8 +109,8 @@ class TableOSWebSocketClient {
       // 1. Acquire single-use authentication ticket
       const ticket = await this.acquireTicket();
       if (!ticket) {
+        // No authentication credentials or expired token; stop reconnect loop
         this.setStatus("CLOSED");
-        this.scheduleReconnect();
         return;
       }
 
@@ -148,7 +148,7 @@ class TableOSWebSocketClient {
         }
       };
     } catch (err) {
-      console.warn("[WS] Connection failed:", err);
+      console.warn("[WS] Connection failed (network/transient):", err);
       this.setStatus("CLOSED");
       if (!this.isExplicitClose) {
         this.scheduleReconnect();
@@ -194,43 +194,53 @@ class TableOSWebSocketClient {
   }
 
   private async acquireTicket(): Promise<string | null> {
-    try {
-      const baseUrl =
-        process.env.NEXT_PUBLIC_API_BASE_URL ||
-        (typeof window !== "undefined" ? window.location.origin : "http://localhost:8088");
+    const sessionToken =
+      typeof window !== "undefined"
+        ? localStorage.getItem("tableos_session_token") || null
+        : null;
+    const staffToken =
+      typeof window !== "undefined"
+        ? localStorage.getItem("tableos_staff_token") || null
+        : null;
 
-      const sessionToken =
-        localStorage.getItem("tableos_session_token") || null;
-      const staffToken =
-        localStorage.getItem("tableos_staff_token") || null;
-
-      const headers: Record<string, string> = {
-        "Content-Type": "application/json",
-      };
-
-      if (staffToken) {
-        headers["Authorization"] = `Bearer ${staffToken}`;
-      } else if (sessionToken) {
-        headers["X-Session-Token"] = sessionToken;
-      } else {
-        // No authentication credentials found yet
-        return null;
-      }
-
-      const res = await fetch(`${baseUrl}/api/v1/ws/ticket`, {
-        method: "POST",
-        headers,
-      });
-
-      if (!res.ok) {
-        return null;
-      }
-
-      const data: WSTicketResponse = await res.json();
-      return data.ticket;
-    } catch {
+    if (!staffToken && !sessionToken) {
+      // No credentials present yet; do not poll or spam the ticket endpoint
       return null;
     }
+
+    // In browser, use same-origin relative URL ("") to route through Next.js proxy without CORS preflight
+    const baseUrl =
+      typeof window !== "undefined"
+        ? ""
+        : (process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8088");
+
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+
+    if (staffToken) {
+      headers["Authorization"] = `Bearer ${staffToken}`;
+    } else if (sessionToken) {
+      headers["X-Session-Token"] = sessionToken;
+    }
+
+    const res = await fetch(`${baseUrl}/api/v1/ws/ticket`, {
+      method: "POST",
+      headers,
+    });
+
+    if (res.status === 401 || res.status === 403) {
+      // Credentials invalid or expired; log once and do NOT trigger a reconnect loop
+      console.warn("[WS] Ticket acquisition unauthorized (token invalid or expired). Awaiting fresh login.");
+      return null;
+    }
+
+    if (!res.ok) {
+      throw new Error(`Ticket acquisition failed with HTTP ${res.status}`);
+    }
+
+    const data: WSTicketResponse = await res.json();
+    return data.ticket;
   }
 
   private buildWebSocketUrl(ticket: string): string {
