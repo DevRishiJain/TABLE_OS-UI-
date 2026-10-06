@@ -532,9 +532,17 @@ function LoginContent() {
               </div>
 
               <div>
-                <label className="text-xs font-bold text-gray-300 block mb-1.5">
-                  Password
-                </label>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-xs font-bold text-gray-300">
+                    Password
+                  </label>
+                  <Link
+                    href={verifiedRestaurant?.slug ? `/forgot-password?restaurant=${verifiedRestaurant.slug}` : "/forgot-password"}
+                    className="text-[11px] text-amber-400 hover:text-amber-300 transition-colors"
+                  >
+                    Forgot Password?
+                  </Link>
+                </div>
                 <div className="relative">
                   <input
                     type={showAdminPassword ? "text" : "password"}
@@ -595,9 +603,17 @@ function LoginContent() {
               </div>
 
               <div>
-                <label className="text-xs font-bold text-gray-300 block mb-1.5">
-                  Shift Password
-                </label>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-xs font-bold text-gray-300">
+                    Shift Password
+                  </label>
+                  <Link
+                    href={verifiedRestaurant?.slug ? `/forgot-password?restaurant=${verifiedRestaurant.slug}` : "/forgot-password"}
+                    className="text-[11px] text-amber-400 hover:text-amber-300 transition-colors"
+                  >
+                    Forgot Password?
+                  </Link>
+                </div>
                 <div className="relative">
                   <input
                     type={showStaffPassword ? "text" : "password"}

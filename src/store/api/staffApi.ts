@@ -210,6 +210,28 @@ export const staffApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ["Payment", "Session", "Table", "Analytics"],
     }),
+
+    forgotPassword: builder.mutation<
+      { message: string; reset_token?: string },
+      { identifier: string; restaurant_id?: string }
+    >({
+      query: (body) => ({
+        url: "/api/v1/auth/forgot-password",
+        method: "POST",
+        body,
+      }),
+    }),
+
+    resetPassword: builder.mutation<
+      { message: string },
+      { token: string; new_password: string }
+    >({
+      query: (body) => ({
+        url: "/api/v1/auth/reset-password",
+        method: "POST",
+        body,
+      }),
+    }),
   }),
 });
 
@@ -227,5 +249,7 @@ export const {
   useStaffVerifyExitMutation,
   useStaffDismissAssistanceMutation,
   useStartStaffSessionMutation,
+  useForgotPasswordMutation,
+  useResetPasswordMutation,
 } = staffApi;
 
