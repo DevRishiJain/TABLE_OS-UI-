@@ -26,6 +26,7 @@ export const customerApi = baseApi.injectEndpoints({
         { type: "Session", id },
         { type: "Order", id },
         { type: "Payment", id },
+        { type: "ExitPass", id },
       ],
     }),
 

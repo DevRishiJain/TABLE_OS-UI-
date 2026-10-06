@@ -9,6 +9,8 @@ import {
 } from "@/store/api/kitchenApi";
 import { OrderState } from "@/types/enums";
 import { useAppSelector } from "@/store";
+import { wsClient } from "@/lib/ws";
+import { playKitchenChime } from "@/lib/audio";
 import "../kitchen.css";
 
 interface KitchenTicket {
@@ -101,6 +103,39 @@ export default function KitchenQueuePage() {
       el.classList.remove("on");
     }, 2000);
   }, []);
+
+  // Real-time kitchen WebSocket subscription & audible chime
+  useEffect(() => {
+    wsClient.connect();
+
+    const unsubOrderPlaced = wsClient.on("ORDER_PLACED", () => {
+      playKitchenChime();
+      showToast("🛎️ New order placed!");
+      refetch();
+    });
+
+    const unsubOrderAccepted = wsClient.on("ORDER_ACCEPTED", () => {
+      playKitchenChime();
+      showToast("🛎️ Order confirmed for kitchen!");
+      refetch();
+    });
+
+    const unsubOrderStatus = wsClient.on("ORDER_STATUS_CHANGED", () => {
+      refetch();
+    });
+
+    const unsubOrderCancelled = wsClient.on("ORDER_CANCELLED", () => {
+      showToast("⚠️ Order cancelled");
+      refetch();
+    });
+
+    return () => {
+      unsubOrderPlaced();
+      unsubOrderAccepted();
+      unsubOrderStatus();
+      unsubOrderCancelled();
+    };
+  }, [refetch, showToast]);
 
   // Format helpers matching the HTML
   const fmt = (ms: number) => {

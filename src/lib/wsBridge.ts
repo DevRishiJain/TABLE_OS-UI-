@@ -19,7 +19,7 @@ function debouncedInvalidateTags(dispatch: AppDispatch, tags: string[]) {
       pendingTags.clear();
       dispatch(baseApi.util.invalidateTags(tagsToInvalidate as any));
     }
-  }, 200);
+  }, 50);
 }
 
 /**
@@ -60,6 +60,7 @@ export function initWebSocketBridge(dispatch: AppDispatch) {
 
       case "SESSION_STARTED":
       case "SESSION_CLOSED":
+      case "SESSION_UPDATED":
       case "BILL_REQUESTED":
         debouncedInvalidateTags(dispatch, ["Session", "Table", "Analytics"]);
         break;
@@ -72,6 +73,7 @@ export function initWebSocketBridge(dispatch: AppDispatch) {
       case "PAYMENT_INITIATED":
       case "PAYMENT_CONFIRMED":
       case "PAYMENT_VOIDED":
+      case "EXIT_PASS_GENERATED":
         debouncedInvalidateTags(dispatch, [
           "Payment",
           "Session",
@@ -79,6 +81,21 @@ export function initWebSocketBridge(dispatch: AppDispatch) {
           "Analytics",
           "Table",
         ]);
+        break;
+
+      case "FRAUD_ALERT_TRIGGERED":
+      case "SUSPICIOUS_SESSION_FLAGGED":
+        debouncedInvalidateTags(dispatch, ["FraudRisk"]);
+        break;
+
+      case "STOCK_UPDATED":
+      case "INVENTORY_CHANGED":
+        debouncedInvalidateTags(dispatch, ["Inventory"]);
+        break;
+
+      case "EXPENSE_CREATED":
+      case "EXPENSE_UPDATED":
+        debouncedInvalidateTags(dispatch, ["Expense", "Analytics"]);
         break;
 
       default:

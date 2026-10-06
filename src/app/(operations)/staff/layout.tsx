@@ -20,6 +20,8 @@ import {
   Bell,
 } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
+import { wsClient } from "@/lib/ws";
+import { playWaiterBell } from "@/lib/audio";
 
 function playNotificationChime() {
   if (typeof window === "undefined") return;
@@ -89,6 +91,43 @@ export default function StaffOperationsLayout({
     }
     prevCallsCountRef.current = serviceCallsCount;
   }, [mounted, serviceCallsCount, activeAssistanceTables, dispatch]);
+
+  // Real-time assistance alerts via direct WebSocket push
+  useEffect(() => {
+    wsClient.connect();
+
+    const unsubAssistance = wsClient.on("ASSISTANCE_REQUESTED", (env) => {
+      playWaiterBell();
+      const reason = (env?.d as any)?.assistance_reason || "Assistance Requested";
+      const tableNumber = (env?.d as any)?.table_number || "Diner";
+      dispatch(
+        addToast({
+          type: "warning",
+          title: `🛎️ Table ${tableNumber} Calling Waiter!`,
+          message: `Reason: "${reason}" • Please attend immediately.`,
+          durationMs: 6000,
+        })
+      );
+    });
+
+    const unsubOrderPlaced = wsClient.on("ORDER_PLACED", (env) => {
+      playWaiterBell();
+      const tableNumber = (env?.d as any)?.table_number || "Diner";
+      dispatch(
+        addToast({
+          type: "info",
+          title: `📋 New Order from ${tableNumber}`,
+          message: `New order placed. Needs review/acceptance.`,
+          durationMs: 4000,
+        })
+      );
+    });
+
+    return () => {
+      unsubAssistance();
+      unsubOrderPlaced();
+    };
+  }, [dispatch]);
 
   const handleLogout = () => {
     dispatch(logoutStaff());

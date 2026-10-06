@@ -56,7 +56,7 @@ export default function CustomerOrdersPage() {
     isLoading,
     refetch,
     error: sessionError,
-  } = useGetSessionQuery(sessionId, { skipPollingIfUnfocused: true });
+  } = useGetSessionQuery(sessionId);
 
   const [customerPay, { isLoading: isRequestingBill }] = useCustomerPayMutation();
   const [showBillModal, setShowBillModal] = useState(false);

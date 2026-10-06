@@ -40,10 +40,7 @@ export default function CustomerBillPage() {
   const sessionId = params.sessionId as string;
   const dispatch = useAppDispatch();
 
-  const { data: sessionData, isLoading, refetch, error: sessionError } = useGetSessionQuery(
-    sessionId,
-    { skipPollingIfUnfocused: true }
-  );
+  const { data: sessionData, isLoading, refetch, error: sessionError } = useGetSessionQuery(sessionId);
 
   const session = sessionData?.session;
   const orders = sessionData?.orders || [];

@@ -12,9 +12,7 @@ export default function CustomerExitPassPage() {
   const params = useParams();
   const sessionId = params.sessionId as string;
 
-  const { data: sessionData, error: sessionError } = useGetSessionQuery(sessionId, {
-    skipPollingIfUnfocused: true,
-  });
+  const { data: sessionData, error: sessionError } = useGetSessionQuery(sessionId);
   const exitPass = sessionData?.exit_pass;
   const isLoading = !sessionData;
 

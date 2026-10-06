@@ -33,6 +33,7 @@ import { addToast } from "@/store/slices/uiSlice";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { wsClient } from "@/lib/ws";
 
 export default function CustomerDineLayout({
   children,
@@ -68,6 +69,17 @@ export default function CustomerDineLayout({
       if (saved) setActiveCallReason(saved);
     }
   }, [sessionId, sessionData?.session]);
+
+  // Ensure real-time WebSocket connection is active for this session
+  useEffect(() => {
+    if (sessionData?.session?.session_token && typeof window !== "undefined") {
+      const currentToken = localStorage.getItem("tableos_session_token");
+      if (currentToken !== sessionData.session.session_token) {
+        localStorage.setItem("tableos_session_token", sessionData.session.session_token);
+      }
+    }
+    wsClient.connect();
+  }, [sessionId, sessionData?.session?.session_token]);
 
   const cartCount = useAppSelector(selectCartTotalCount);
   const cartSubtotalMinor = useAppSelector(selectCartSubtotalMinor);
