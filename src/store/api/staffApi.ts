@@ -20,16 +20,13 @@ export interface PendingOrderEntry {
 export const staffApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     getStaffTables: builder.query<StaffTableSummary[], string | void>({
-      query: (restaurantId) =>
-        restaurantId
-          ? `/api/v1/staff/dashboard/tables?restaurant_id=${restaurantId}`
-          : "/api/v1/staff/dashboard/tables",
+      query: () => "/api/v1/staff/dashboard/tables",
       providesTags: ["Table", "Session"],
     }),
 
     getPendingOrders: builder.query<PendingOrderEntry[], void>({
       query: () => "/api/v1/staff/orders/pending",
-      providesTags: ["Order", "KitchenQueue"],
+      providesTags: ["PendingOrder"],
     }),
 
     placeStaffOrder: builder.mutation<
@@ -84,6 +81,7 @@ export const staffApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: (result, error, { orderId }) => [
         { type: "Order", id: orderId },
+        "PendingOrder",
         "KitchenQueue",
         "Table",
       ],
@@ -100,6 +98,7 @@ export const staffApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: (result, error, { orderId }) => [
         { type: "Order", id: orderId },
+        "PendingOrder",
         "KitchenQueue",
         "Table",
         "Session",
@@ -202,6 +201,15 @@ export const staffApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ["Table", "Session"],
     }),
+
+    voidPayment: builder.mutation<Payment, { paymentId: string; reason?: string }>({
+      query: ({ paymentId, reason }) => ({
+        url: `/api/v1/staff/payments/${paymentId}/void`,
+        method: "POST",
+        body: { reason: reason || "Voided by manager" },
+      }),
+      invalidatesTags: ["Payment", "Session", "Table", "Analytics"],
+    }),
   }),
 });
 
@@ -214,8 +222,10 @@ export const {
   useAcceptOrderMutation,
   useCancelStaffOrderMutation,
   useConfirmPaymentMutation,
+  useVoidPaymentMutation,
   useForceCloseSessionMutation,
   useStaffVerifyExitMutation,
   useStaffDismissAssistanceMutation,
   useStartStaffSessionMutation,
 } = staffApi;
+

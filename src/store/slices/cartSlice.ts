@@ -11,8 +11,29 @@ interface CartState {
   items: Record<string, CartItem>; // keyed by menuItem.id
 }
 
+const loadInitialCart = (): Record<string, CartItem> => {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = localStorage.getItem("tableos_cart");
+    if (raw) return JSON.parse(raw);
+  } catch {
+    // ignore parsing failure
+  }
+  return {};
+};
+
+const saveCartToStorage = (items: Record<string, CartItem>) => {
+  if (typeof window !== "undefined") {
+    try {
+      localStorage.setItem("tableos_cart", JSON.stringify(items));
+    } catch {
+      // ignore storage failure
+    }
+  }
+};
+
 const initialState: CartState = {
-  items: {},
+  items: loadInitialCart(),
 };
 
 const cartSlice = createSlice({
@@ -41,6 +62,7 @@ const cartSlice = createSlice({
           specialInstructions,
         };
       }
+      saveCartToStorage(state.items);
     },
     updateQuantity(
       state,
@@ -52,6 +74,7 @@ const cartSlice = createSlice({
       } else if (state.items[menuItemId]) {
         state.items[menuItemId].quantity = quantity;
       }
+      saveCartToStorage(state.items);
     },
     updateInstructions(
       state,
@@ -61,12 +84,15 @@ const cartSlice = createSlice({
       if (state.items[menuItemId]) {
         state.items[menuItemId].specialInstructions = instructions;
       }
+      saveCartToStorage(state.items);
     },
     removeItem(state, action: PayloadAction<string>) {
       delete state.items[action.payload];
+      saveCartToStorage(state.items);
     },
     clearCart(state) {
       state.items = {};
+      saveCartToStorage(state.items);
     },
   },
 });

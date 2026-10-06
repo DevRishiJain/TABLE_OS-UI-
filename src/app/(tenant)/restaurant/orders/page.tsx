@@ -59,8 +59,7 @@ export default function RestaurantOrderHistoryPage() {
   }, [restaurantId, startDate, endDate]);
 
   const { data: orders, isLoading, refetch, isFetching } = useGetRestaurantOrdersQuery(
-    queryArgs,
-    { pollingInterval: 5000 }
+    queryArgs
   );
 
   const allOrders = orders || [];

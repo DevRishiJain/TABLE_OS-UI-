@@ -4,13 +4,14 @@ import React, { useState } from "react";
 import {
   useGetStaffTablesQuery,
   useConfirmPaymentMutation,
+  useVoidPaymentMutation,
 } from "@/store/api/staffApi";
 import { useGetSessionQuery } from "@/store/api/customerApi";
 import { formatMoney } from "@/lib/money";
 import { PaymentMethod } from "@/types/enums";
 import { generateUUID } from "@/lib/idempotency";
 import { addToast } from "@/store/slices/uiSlice";
-import { useAppDispatch } from "@/store";
+import { useAppDispatch, useAppSelector } from "@/store";
 import { translateBackendError } from "@/lib/errors";
 import { humanizeStatus } from "@/lib/statusLabels";
 import { Card } from "@/components/ui/Card";
@@ -24,6 +25,8 @@ import {
   ShieldCheck,
   RefreshCw,
   Utensils,
+  QrCode,
+  AlertTriangle,
 } from "lucide-react";
 
 interface TablePaymentCardProps {
@@ -42,13 +45,14 @@ function TablePaymentCard({
   onRefreshParent,
 }: TablePaymentCardProps) {
   const dispatch = useAppDispatch();
-  const { data: sessionData, refetch: refetchSession } = useGetSessionQuery(
-    sessionId,
-    { pollingInterval: 4000 }
-  );
+  const staffRole = useAppSelector((state) => state.auth.staffRole) || "WAITER";
+  const canVoid = ["MANAGER", "RESTAURANT_ADMIN", "RESTAURANT_OWNER"].includes(staffRole);
+
+  const { data: sessionData, refetch: refetchSession } = useGetSessionQuery(sessionId);
 
   const [confirmPayment, { isLoading: isConfirming }] =
     useConfirmPaymentMutation();
+  const [voidPayment, { isLoading: isVoiding }] = useVoidPaymentMutation();
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod>(
     PaymentMethod.CASH
   );
@@ -237,6 +241,18 @@ function TablePaymentCard({
               <CreditCard className="w-4 h-4" />
               <span>Card POS Swiped</span>
             </button>
+
+            <button
+              onClick={() => setSelectedMethod(PaymentMethod.UPI_QR)}
+              className={`p-3 rounded-xl border flex items-center gap-2.5 text-xs font-bold transition-all ${
+                selectedMethod === PaymentMethod.UPI_QR
+                  ? "border-amber-500 bg-amber-500/10 text-amber-300"
+                  : "border-surface-border bg-surface text-gray-400"
+              }`}
+            >
+              <QrCode className="w-4 h-4" />
+              <span>Counter UPI QR</span>
+            </button>
           </div>
 
           <Button
@@ -251,12 +267,38 @@ function TablePaymentCard({
           </Button>
         </div>
       ) : (
-        <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center gap-3 text-emerald-300 text-xs">
-          <ShieldCheck className="w-6 h-6 text-emerald-400 shrink-0" />
-          <span>
-            Payment has been verified and settled. Exit Pass has been generated
-            for customer.
-          </span>
+        <div className="flex flex-col gap-3">
+          <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center gap-3 text-emerald-300 text-xs">
+            <ShieldCheck className="w-6 h-6 text-emerald-400 shrink-0" />
+            <span>
+              Payment has been verified and settled. Exit Pass has been generated
+              for customer.
+            </span>
+          </div>
+
+          {canVoid && sessionData?.payments && sessionData.payments.length > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-red-400 border-red-500/30 hover:bg-red-500/10 hover:border-red-500/50 w-full"
+              isLoading={isVoiding}
+              leftIcon={<AlertTriangle className="w-4 h-4 text-red-400" />}
+              onClick={async () => {
+                const p = sessionData.payments[sessionData.payments.length - 1];
+                if (!p) return;
+                try {
+                  await voidPayment({ paymentId: p.id, reason: "Voided by manager at counter" }).unwrap();
+                  dispatch(addToast({ type: "success", title: "Payment Voided", message: "Session balance restored to open" }));
+                  refetchSession();
+                  onRefreshParent();
+                } catch (e: any) {
+                  dispatch(addToast({ type: "error", title: "Void Failed", message: e?.data?.error || "Could not void payment" }));
+                }
+              }}
+            >
+              Manager Void Payment
+            </Button>
+          )}
         </div>
       )}
     </Card>
@@ -264,10 +306,7 @@ function TablePaymentCard({
 }
 
 export default function StaffPaymentsConfirmationPage() {
-  const { data: tables, isLoading, refetch } = useGetStaffTablesQuery(
-    undefined,
-    { pollingInterval: 4000 }
-  );
+  const { data: tables, isLoading, refetch } = useGetStaffTablesQuery();
 
   const activeTables = (tables || []).filter((t) => t.active_session_id);
 

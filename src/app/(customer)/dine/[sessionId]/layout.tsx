@@ -43,10 +43,7 @@ export default function CustomerDineLayout({
   const params = useParams();
   const dispatch = useAppDispatch();
   const sessionId = params.sessionId as string;
-
-  const { data: sessionData, refetch, error: sessionError } = useGetSessionQuery(sessionId, {
-    pollingInterval: 3000,
-  });
+  const { data: sessionData, refetch, error: sessionError } = useGetSessionQuery(sessionId);
 
   const restaurantName = useAppSelector((state) => state.auth.restaurantName) || (sessionData?.session as any)?.restaurant_name || "Restaurant";
 

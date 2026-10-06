@@ -9,6 +9,9 @@ const API_BASE_URL =
 
 export const baseApi = createApi({
   reducerPath: "api",
+  refetchOnFocus: false,
+  refetchOnReconnect: false,
+  refetchOnMountOrArgChange: false,
   baseQuery: fetchBaseQuery({
     baseUrl: API_BASE_URL,
     prepareHeaders: (headers, { getState, endpoint }) => {
@@ -62,6 +65,7 @@ export const baseApi = createApi({
   tagTypes: [
     "Session",
     "Order",
+    "PendingOrder",
     "Payment",
     "ExitPass",
     "Table",

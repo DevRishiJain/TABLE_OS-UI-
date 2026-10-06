@@ -44,6 +44,7 @@ export const customerApi = baseApi.injectEndpoints({
       invalidatesTags: (result, error, { sessionId }) => [
         { type: "Session", id: sessionId },
         { type: "Order", id: sessionId },
+        "PendingOrder",
         "KitchenQueue",
         "Table",
       ],

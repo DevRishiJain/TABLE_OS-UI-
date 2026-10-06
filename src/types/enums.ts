@@ -25,6 +25,8 @@ export enum PaymentMethod {
   CASH = "CASH",
   RESTAURANT_POS = "RESTAURANT_POS",
   EXTERNAL_UPI = "EXTERNAL_UPI",
+  UPI_QR = "UPI_QR",
+  POS_CARD = "POS_CARD",
 }
 
 export enum PaymentStatus {

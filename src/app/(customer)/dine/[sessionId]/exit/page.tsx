@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { QRCodeSVG } from "qrcode.react";
-import { useGetExitPassQuery, useGetSessionQuery } from "@/store/api/customerApi";
+import { useGetSessionQuery } from "@/store/api/customerApi";
 import { useAppSelector } from "@/store";
 import { formatMoney } from "@/lib/money";
 
@@ -13,17 +13,14 @@ export default function CustomerExitPassPage() {
   const sessionId = params.sessionId as string;
 
   const { data: sessionData, error: sessionError } = useGetSessionQuery(sessionId, {
-    pollingInterval: 2500,
+    skipPollingIfUnfocused: true,
   });
-  const { data: exitPass, isLoading, error: exitPassError } = useGetExitPassQuery(sessionId, {
-    pollingInterval: 2500,
-  });
+  const exitPass = sessionData?.exit_pass;
+  const isLoading = !sessionData;
 
   const isSessionGone =
     (sessionError as any)?.status === 410 ||
-    (exitPassError as any)?.status === 410 ||
-    JSON.stringify(sessionError || {}).includes("session has closed") ||
-    JSON.stringify(exitPassError || {}).includes("session has closed");
+    JSON.stringify(sessionError || {}).includes("session has closed");
 
   const session = sessionData?.session;
   const customerName =

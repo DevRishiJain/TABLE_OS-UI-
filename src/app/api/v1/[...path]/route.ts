@@ -31,8 +31,13 @@ async function proxyRequest(request: NextRequest, { params }: { params: { path: 
   const headers = new Headers();
   request.headers.forEach((value, key) => {
     const lower = key.toLowerCase();
-    // Exclude host and content-length headers so fetch automatically computes correct headers
-    if (lower !== "host" && lower !== "connection" && lower !== "content-length") {
+    // Exclude host, content-length, and accept-encoding so fetch handles decompression cleanly
+    if (
+      lower !== "host" &&
+      lower !== "connection" &&
+      lower !== "content-length" &&
+      lower !== "accept-encoding"
+    ) {
       headers.set(key, value);
     }
   });
@@ -51,12 +56,27 @@ async function proxyRequest(request: NextRequest, { params }: { params: { path: 
       }
     }
 
-    const backendResponse = await fetch(targetUrl, fetchOptions);
+    let backendResponse: Response;
+    try {
+      backendResponse = await fetch(targetUrl, fetchOptions);
+    } catch (initialErr) {
+      // Fast single retry to absorb transient Windows loopback socket resets during concurrent bursts
+      await new Promise((resolve) => setTimeout(resolve, 60));
+      backendResponse = await fetch(targetUrl, fetchOptions);
+    }
     const responseHeaders = new Headers();
 
-    // Copy backend response headers
+    // Copy backend response headers, stripping content-encoding and content-length
+    // because Node.js fetch automatically decompresses the body in memory.
     backendResponse.headers.forEach((val, key) => {
-      responseHeaders.set(key, val);
+      const lower = key.toLowerCase();
+      if (
+        lower !== "content-encoding" &&
+        lower !== "content-length" &&
+        lower !== "transfer-encoding"
+      ) {
+        responseHeaders.set(key, val);
+      }
     });
 
     // Enforce permissive CORS headers on the response
@@ -65,7 +85,15 @@ async function proxyRequest(request: NextRequest, { params }: { params: { path: 
       responseHeaders.set(k, v as string);
     });
 
-    const responseBody = await backendResponse.arrayBuffer();
+    const isNullBodyStatus =
+      backendResponse.status === 304 ||
+      backendResponse.status === 204 ||
+      backendResponse.status === 205 ||
+      backendResponse.status === 101;
+
+    const responseBody = isNullBodyStatus
+      ? null
+      : await backendResponse.arrayBuffer();
 
     return new NextResponse(responseBody, {
       status: backendResponse.status,

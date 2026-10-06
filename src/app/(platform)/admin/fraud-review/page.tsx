@@ -40,7 +40,7 @@ export default function FraudReviewPage() {
     data: apiIncidents,
     isLoading,
     refetch,
-  } = useGetFraudReviewQueueQuery(undefined, { pollingInterval: 5000 });
+  } = useGetFraudReviewQueueQuery();
 
   const [resolvedStatus, setResolvedStatus] = useState<
     Record<string, "FLAGGED_FRAUD" | "DISMISSED">

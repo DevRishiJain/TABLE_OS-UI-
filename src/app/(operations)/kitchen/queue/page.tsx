@@ -55,11 +55,7 @@ const MUTE = "#7A6C55";
 export default function KitchenQueuePage() {
   const router = useRouter();
   const restaurantId = useAppSelector((state) => state.auth.restaurantId);
-
-  const { data: queueOrders, refetch } = useGetKitchenQueueQuery(
-    restaurantId || undefined,
-    { pollingInterval: 5000 }
-  );
+  const { data: queueOrders, refetch } = useGetKitchenQueueQuery();
   const [updateKitchenStatus] = useUpdateKitchenStatusMutation();
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);

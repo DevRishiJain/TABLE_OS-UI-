@@ -6,7 +6,6 @@ import Link from "next/link";
 import {
   useGetSessionQuery,
   useCustomerPayMutation,
-  useGetExitPassQuery,
   useCancelOrderMutation,
 } from "@/store/api/customerApi";
 import { formatMoney } from "@/lib/money";
@@ -41,26 +40,19 @@ export default function CustomerBillPage() {
   const sessionId = params.sessionId as string;
   const dispatch = useAppDispatch();
 
-  // Fast polling to pick up waiter cash confirmation & gatepass approval in real time
   const { data: sessionData, isLoading, refetch, error: sessionError } = useGetSessionQuery(
     sessionId,
-    { pollingInterval: 2500 }
+    { skipPollingIfUnfocused: true }
   );
 
   const session = sessionData?.session;
   const orders = sessionData?.orders || [];
   const payments = sessionData?.payments || [];
-
-  const { data: exitPassData, error: exitPassError } = useGetExitPassQuery(sessionId, {
-    pollingInterval: 2500,
-    skip: false,
-  });
+  const exitPassData = sessionData?.exit_pass;
 
   const isSessionGone =
     (sessionError as any)?.status === 410 ||
-    (exitPassError as any)?.status === 410 ||
-    JSON.stringify(sessionError || {}).includes("session has closed") ||
-    JSON.stringify(exitPassError || {}).includes("session has closed");
+    JSON.stringify(sessionError || {}).includes("session has closed");
 
   const isCompleted =
     isSessionGone ||

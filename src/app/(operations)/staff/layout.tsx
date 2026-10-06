@@ -63,12 +63,7 @@ export default function StaffOperationsLayout({
   const staffRole = useAppSelector((state) => state.auth.staffRole) || "WAITER";
   const employeeId = useAppSelector((state) => state.auth.employeeId);
   const restaurantId = useAppSelector((state) => state.auth.restaurantId) || undefined;
-
-  // Poll floor tables every 3.5s to listen for live customer waiter calls (only when restaurant is active)
-  const { data: tablesData } = useGetStaffTablesQuery(restaurantId, {
-    pollingInterval: 3500,
-    skip: !restaurantId,
-  });
+  const { data: tablesData } = useGetStaffTablesQuery();
 
   const activeAssistanceTables = (tablesData || []).filter(
     (t) => Boolean(t.assistance_reason)

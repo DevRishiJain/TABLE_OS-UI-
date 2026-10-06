@@ -1,6 +1,26 @@
 import { DiningSession, Order, Payment, ExitPass, MenuItem, MenuCategory, Table, StaffUser, Restaurant, RestaurantSettings, PlatformFeeLedgerEntry, RestaurantSettlement } from "./domain";
 import { OrderState, PaymentMethod, PaymentStatus } from "./enums";
 
+// Realtime WebSocket Canonical Envelope (§Phase 3.1)
+export interface WSEnvelope<T = any> {
+  v: number;
+  id: string;
+  seq: number;
+  t: string;
+  room: string;
+  ts: number;
+  d: T;
+}
+
+export interface WSTicketResponse {
+  ticket: string;
+  expires_in: number;
+  role: string;
+  session_id?: string;
+  rooms?: string[];
+}
+
+
 // Public & Session
 export interface StartSessionRequest {
   table_token: string;
@@ -18,6 +38,8 @@ export interface SessionDetailResponse {
   session: DiningSession;
   orders: Order[];
   payments: Payment[];
+  exit_pass?: ExitPass | null;
+  exit_otp?: string | null;
 }
 
 export interface CreateOrderRequest {

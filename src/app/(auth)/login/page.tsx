@@ -6,10 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useAppDispatch, useAppSelector } from "@/store";
 import { setStaffAuth, setRestaurantInfo, clearRestaurant } from "@/store/slices/authSlice";
 import { useStaffLoginMutation } from "@/store/api/staffApi";
-import {
-  useLazyCheckHandleAvailabilityQuery,
-  useLazyLookupRestaurantQuery,
-} from "@/store/api/publicApi";
+import { useLazyLookupRestaurantQuery } from "@/store/api/publicApi";
 import { addToast } from "@/store/slices/uiSlice";
 import { StaffRole } from "@/types/enums";
 import {
@@ -64,7 +61,6 @@ function LoginContent() {
   const [isLoading, setIsLoading] = useState(false);
 
   // APIs
-  const [checkHandle] = useLazyCheckHandleAvailabilityQuery();
   const [lookupRestaurant] = useLazyLookupRestaurantQuery();
   const [staffLogin] = useStaffLoginMutation();
 
@@ -81,13 +77,14 @@ function LoginContent() {
       setHandleError("");
 
       try {
-        const res = await checkHandle(clean).unwrap();
-        if (res && res.restaurant && res.exists) {
+        // Look up restaurant by slug or identifier directly
+        const lookupRes = await lookupRestaurant(clean).unwrap();
+        if (lookupRes && lookupRes.id) {
           const restaurantObj: VerifiedRestaurant = {
-            id: res.restaurant.id,
-            name: res.restaurant.name,
-            slug: res.restaurant.slug || clean,
-            theme: res.restaurant.theme || "gold",
+            id: lookupRes.id,
+            name: lookupRes.name,
+            slug: lookupRes.slug || clean,
+            theme: lookupRes.theme || "gold",
           };
           if (autoSelect) {
             setVerifiedRestaurant(restaurantObj);
@@ -107,49 +104,18 @@ function LoginContent() {
           }
           return restaurantObj;
         } else {
-          // Fallback to lookup by slug
-          try {
-            const lookupRes = await lookupRestaurant(clean).unwrap();
-            if (lookupRes && lookupRes.id) {
-              const restaurantObj: VerifiedRestaurant = {
-                id: lookupRes.id,
-                name: lookupRes.name,
-                slug: lookupRes.slug || clean,
-                theme: lookupRes.theme || "gold",
-              };
-              if (autoSelect) {
-                setVerifiedRestaurant(restaurantObj);
-                dispatch(
-                  setRestaurantInfo({
-                    restaurantId: restaurantObj.id,
-                    restaurantName: restaurantObj.name,
-                    restaurantSlug: restaurantObj.slug,
-                    restaurantTheme: restaurantObj.theme,
-                  })
-                );
-                if (typeof window !== "undefined") {
-                  const url = new URL(window.location.href);
-                  url.searchParams.set("restaurant", restaurantObj.slug || clean);
-                  window.history.replaceState(null, "", url.toString());
-                }
-              }
-              return restaurantObj;
-            }
-          } catch {
-            // Not found
-          }
           setHandleError(`@${clean} is not registered yet.`);
           return null;
         }
       } catch (err: any) {
-        console.error("Handle verification failed:", err);
-        setHandleError("Error verifying restaurant handle.");
+        console.error("Restaurant lookup failed:", err);
+        setHandleError(`@${clean} is not registered yet.`);
         return null;
       } finally {
         setIsVerifyingHandle(false);
       }
     },
-    [checkHandle, lookupRestaurant, dispatch]
+    [lookupRestaurant, dispatch]
   );
 
   // Initialize on mount
@@ -426,6 +392,7 @@ function LoginContent() {
                   type="text"
                   required
                   autoFocus
+                  suppressHydrationWarning
                   value={handleInput}
                   onChange={(e) => {
                     setHandleInput(e.target.value);
@@ -554,6 +521,7 @@ function LoginContent() {
                   <input
                     type="text"
                     required
+                    suppressHydrationWarning
                     value={adminIdentifier}
                     onChange={(e) => setAdminIdentifier(e.target.value)}
                     placeholder="admin@yourrestaurant.com"
@@ -571,6 +539,7 @@ function LoginContent() {
                   <input
                     type={showAdminPassword ? "text" : "password"}
                     required
+                    suppressHydrationWarning
                     value={adminPassword}
                     onChange={(e) => setAdminPassword(e.target.value)}
                     placeholder="••••••••"
@@ -615,6 +584,7 @@ function LoginContent() {
                     type="text"
                     required
                     autoFocus
+                    suppressHydrationWarning
                     value={staffIdentifier}
                     onChange={(e) => setStaffIdentifier(e.target.value)}
                     placeholder="Aman, Rajesh, Sunil, or EMP-WTR-001"
@@ -632,6 +602,7 @@ function LoginContent() {
                   <input
                     type={showStaffPassword ? "text" : "password"}
                     required
+                    suppressHydrationWarning
                     value={staffPassword}
                     onChange={(e) => setStaffPassword(e.target.value)}
                     placeholder="••••••••"

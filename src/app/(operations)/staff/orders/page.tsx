@@ -168,15 +168,10 @@ export default function WaiterFloorScreenPage() {
   const userFirstName = userName.split(" ")[0] || "Vikram";
   const restaurantName = auth.restaurantName || "The Spice Route";
 
-  // Real-time Queries
-  const { data: tablesData, refetch: refetchTables } = useGetStaffTablesQuery(
-    restaurantId,
-    { pollingInterval: 3500 }
-  );
-  const { data: pendingOrders, refetch: refetchPending } =
-    useGetPendingOrdersQuery(undefined, { pollingInterval: 3000 });
-  const { data: kitchenQueue, refetch: refetchKitchen } =
-    useGetKitchenQueueQuery(restaurantId, { pollingInterval: 3500 });
+  // Real-time Queries (Driven by WebSocket push)
+  const { data: tablesData, refetch: refetchTables } = useGetStaffTablesQuery();
+  const { data: pendingOrders, refetch: refetchPending } = useGetPendingOrdersQuery();
+  const { data: kitchenQueue, refetch: refetchKitchen } = useGetKitchenQueueQuery();
   const { data: menuItemsData } = useGetPublicMenuItemsQuery({ restaurantId });
   const { data: menuCategoriesData } = useGetPublicMenuCategoriesQuery({
     restaurantId,

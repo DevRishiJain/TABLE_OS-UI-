@@ -38,11 +38,8 @@ export default function RestaurantDashboardOverviewPage() {
     setTimeout(() => setToastMsg(null), 2400);
   };
 
-  // Live queries - zero hardcoded data
-  const { data: today, error: todayError } = useGetTodayAnalyticsQuery(
-    undefined,
-    { pollingInterval: 6000 }
-  );
+  // Live queries - zero hardcoded data (Real-time updates via WebSockets)
+  const { data: today, error: todayError } = useGetTodayAnalyticsQuery();
 
   const isBackendUnreachable = Boolean(
     (todayError as any)?.status === 502 ||
@@ -50,21 +47,11 @@ export default function RestaurantDashboardOverviewPage() {
     (todayError as any)?.data?.details?.includes("fetch failed")
   );
 
-  const { data: staffTables } = useGetStaffTablesQuery(undefined, {
-    pollingInterval: 3500,
-  });
-  const { data: pendingOrders } = useGetPendingOrdersQuery(undefined, {
-    pollingInterval: 3000,
-  });
-  const { data: kitchenQueue } = useGetKitchenQueueQuery(undefined, {
-    pollingInterval: 3500,
-  });
-  const { data: inventoryData } = useGetInventoryQuery(undefined, {
-    pollingInterval: 10000,
-  });
-  const { data: expensesData } = useGetExpensesQuery(undefined, {
-    pollingInterval: 12000,
-  });
+  const { data: staffTables } = useGetStaffTablesQuery();
+  const { data: pendingOrders } = useGetPendingOrdersQuery();
+  const { data: kitchenQueue } = useGetKitchenQueueQuery();
+  const { data: inventoryData } = useGetInventoryQuery();
+  const { data: expensesData } = useGetExpensesQuery();
 
   // Financial Metrics
   const totalGmvMinor = today?.total_gmv?.amount_minor_units || 0;
