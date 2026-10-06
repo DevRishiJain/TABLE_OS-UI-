@@ -232,6 +232,63 @@ export const staffApi = baseApi.injectEndpoints({
         body,
       }),
     }),
+
+    getSubscriptionInfo: builder.query<{
+      restaurant_id: string;
+      restaurant_name: string;
+      subscription_plan: string;
+      subscription_status: string;
+      subscription_end_at: string;
+      days_remaining: number;
+      is_active: boolean;
+    }, void>({
+      query: () => "/api/v1/restaurant/subscription",
+      providesTags: ["Subscription" as any],
+    }),
+
+    renewSubscription: builder.mutation<
+      {
+        message: string;
+        subscription_end_at: string;
+        days_remaining: number;
+        is_active: boolean;
+      },
+      { days?: number } | void
+    >({
+      query: (body) => ({
+        url: "/api/v1/restaurant/subscription/renew",
+        method: "POST",
+        body: body || { days: 30 },
+      }),
+      invalidatesTags: ["Subscription" as any],
+    }),
+
+    getFranchiseOutlets: builder.query<
+      Array<{
+        id: string;
+        name: string;
+        slug: string;
+        status: string;
+        subscription_plan: string;
+        subscription_status: string;
+        subscription_end_at: string;
+        days_remaining: number;
+        is_active: boolean;
+      }>,
+      void
+    >({
+      query: () => "/api/v1/franchise/outlets",
+    }),
+
+    getFranchiseSummary: builder.query<{
+      total_outlets: number;
+      active_subscriptions: number;
+      expired_subscriptions: number;
+      top_performing_outlet: string;
+      total_revenue_minor: number;
+    }, void>({
+      query: () => "/api/v1/franchise/summary",
+    }),
   }),
 });
 
@@ -251,5 +308,9 @@ export const {
   useStartStaffSessionMutation,
   useForgotPasswordMutation,
   useResetPasswordMutation,
+  useGetSubscriptionInfoQuery,
+  useRenewSubscriptionMutation,
+  useGetFranchiseOutletsQuery,
+  useGetFranchiseSummaryQuery,
 } = staffApi;
 

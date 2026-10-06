@@ -60,7 +60,7 @@ export const RoleGuard: React.FC<RoleGuardProps> = ({
   // Suggested redirect destination based on current role
   const getRoleRedirectUrl = (role: StaffRole | null): string => {
     if (fallbackRedirect) return fallbackRedirect;
-    if (!role) return "/staff/login";
+    if (!role) return "/login";
     switch (role) {
       case StaffRole.WAITER:
         return "/staff/orders";
@@ -68,6 +68,8 @@ export const RoleGuard: React.FC<RoleGuardProps> = ({
         return "/staff/payments";
       case StaffRole.KITCHEN:
         return "/kitchen/queue";
+      case StaffRole.FRANCHISE_OWNER:
+        return "/restaurant/franchise";
       case StaffRole.MANAGER:
       case StaffRole.RESTAURANT_ADMIN:
       case StaffRole.RESTAURANT_OWNER:
@@ -77,7 +79,7 @@ export const RoleGuard: React.FC<RoleGuardProps> = ({
       case StaffRole.GUARD:
         return "/guard/scan";
       default:
-        return "/staff/login";
+        return "/login";
     }
   };
 
@@ -128,7 +130,7 @@ export const RoleGuard: React.FC<RoleGuardProps> = ({
           </Button>
           <Button
             variant="ghost"
-            onClick={() => router.replace("/staff/login")}
+            onClick={() => router.replace("/login")}
             className="w-full text-xs text-gray-400 hover:text-white"
           >
             Switch Staff Account

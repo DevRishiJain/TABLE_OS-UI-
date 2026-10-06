@@ -9,6 +9,7 @@ import { RoleGuard } from "@/components/auth/RoleGuard";
 import { StaffRole } from "@/types/enums";
 import { LogOut } from "lucide-react";
 import { useRestaurantTheme } from "@/components/providers/RestaurantThemeProvider";
+import { SubscriptionLockModal } from "@/components/SubscriptionLockModal";
 import "./admin.css";
 
 const SVGIcons: Record<string, string> = {
@@ -24,6 +25,7 @@ const SVGIcons: Record<string, string> = {
   cf: '<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/>',
   pl: '<path d="M12 5v14M5 12h14"/>',
   ob: '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>',
+  sb: '<path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><path d="M2 10h20"/><path d="M7 15h3"/>',
 };
 
 function Icon({ name }: { name: string }) {
@@ -59,6 +61,15 @@ export default function RestaurantAdminLayout({
     router.push("/login");
   };
 
+  const normalizedRole = (userRole || "").toUpperCase();
+  const isOwnerOrAdmin =
+    normalizedRole.includes("SUPER") ||
+    normalizedRole.includes("FRANCHISE") ||
+    normalizedRole.includes("OWNER") ||
+    normalizedRole.includes("ADMIN");
+  const isFranchiseOrSuper =
+    normalizedRole.includes("SUPER") || normalizedRole.includes("FRANCHISE");
+
   const navGroups = [
     {
       group: "Run service",
@@ -70,9 +81,16 @@ export default function RestaurantAdminLayout({
     {
       group: "Money",
       items: [
-        { key: "analytics", label: "Profit & Loss", href: "/restaurant/analytics", icon: "an", exact: true },
+        ...(isOwnerOrAdmin
+          ? [{ key: "analytics", label: "Profit & Loss", href: "/restaurant/analytics", icon: "an", exact: true }]
+          : []),
         { key: "expenses", label: "Expenses", href: "/restaurant/expenses", icon: "ex", exact: true },
-        { key: "settle", label: "Payouts", href: "/restaurant/settlements", icon: "se", exact: false },
+        ...(isOwnerOrAdmin
+          ? [{ key: "settle", label: "Payouts", href: "/restaurant/settlements", icon: "se", exact: false }]
+          : []),
+        ...(isOwnerOrAdmin
+          ? [{ key: "subscription", label: "Subscription & Billing", href: "/restaurant/subscription", icon: "sb", exact: true }]
+          : []),
       ],
     },
     {
@@ -87,6 +105,9 @@ export default function RestaurantAdminLayout({
       items: [
         { key: "tables", label: "Tables & QR", href: "/restaurant/tables", icon: "tb", exact: false },
         { key: "staff", label: "Staff", href: "/restaurant/staff", icon: "pp", exact: false },
+        ...(isFranchiseOrSuper
+          ? [{ key: "franchise", label: "Franchise Suite", href: "/restaurant/franchise", icon: "ob", exact: true }]
+          : []),
         { key: "onboarding", label: "Onboarding", href: "/restaurant/onboarding", icon: "ob", exact: false },
         { key: "settings", label: "Settings", href: "/restaurant/settings", icon: "cf", exact: false },
       ],
@@ -98,11 +119,12 @@ export default function RestaurantAdminLayout({
       allowedRoles={[
         StaffRole.RESTAURANT_ADMIN,
         StaffRole.RESTAURANT_OWNER,
+        StaffRole.FRANCHISE_OWNER,
         StaffRole.MANAGER,
         StaffRole.SUPER_ADMIN,
       ]}
       portalName="Restaurant Management & Analytics Hub"
-      fallbackRedirect="/staff/orders"
+      fallbackRedirect="/login"
     >
       <div className={`admin-screen ${colorMode}`}>
         {/* Desktop Sidebar Navigation */}
@@ -321,6 +343,7 @@ export default function RestaurantAdminLayout({
           </div>
         </div>
       </div>
+      <SubscriptionLockModal />
     </RoleGuard>
   );
 }

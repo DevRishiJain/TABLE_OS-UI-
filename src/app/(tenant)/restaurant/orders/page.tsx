@@ -8,6 +8,7 @@ import { formatMoney } from "@/lib/money";
 import { Order, OrderItem } from "@/types/domain";
 import { OrderState } from "@/types/enums";
 import { formatDestination } from "@/lib/location";
+import { FranchiseOutletFilterSelect } from "@/components/franchise/FranchiseOutletFilterSelect";
 
 const formatDateInput = (date: Date) => {
   const y = date.getFullYear();
@@ -18,7 +19,10 @@ const formatDateInput = (date: Date) => {
 
 export default function RestaurantOrderHistoryPage() {
   const restaurantId = useAppSelector((state) => state.auth.restaurantId);
+  const selectedOutletId = useAppSelector((state) => state.franchise.selectedOutletId);
   const restaurantName = useAppSelector((state) => state.auth.restaurantName) || "The Spice Route";
+
+  const targetRestId = selectedOutletId || restaurantId;
 
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStatus, setSelectedStatus] = useState<string>("ALL");
@@ -49,14 +53,14 @@ export default function RestaurantOrderHistoryPage() {
   };
 
   const queryArgs = useMemo(() => {
-    if (!restaurantId) return undefined;
+    if (!targetRestId) return undefined;
     return {
-      restaurantId,
+      restaurantId: targetRestId,
       limit: 200,
       startDate: startDate || undefined,
       endDate: endDate || undefined,
     };
-  }, [restaurantId, startDate, endDate]);
+  }, [targetRestId, startDate, endDate]);
 
   const { data: orders, isLoading, refetch, isFetching } = useGetRestaurantOrdersQuery(
     queryArgs
@@ -166,6 +170,7 @@ export default function RestaurantOrderHistoryPage() {
           <p>All tickets, searchable · {metrics.totalOrders} total recorded</p>
         </div>
         <div className="sp"></div>
+        <FranchiseOutletFilterSelect />
         <button
           className="btn s sm"
           onClick={() => refetch()}

@@ -238,8 +238,21 @@ function LoginContent() {
           })
         );
 
-        const restSlug = verifiedRestaurant.slug || "venue";
-        router.push(`/restaurant/dashboard?restaurant=${restSlug}`);
+        const role = res.staff.role;
+        if (role === "SUPER_ADMIN" || (res.staff as any).is_platform) {
+          router.push("/admin/restaurants");
+        } else if (role === "FRANCHISE_OWNER") {
+          router.push("/restaurant/franchise");
+        } else if (role === "WAITER") {
+          router.push("/staff/orders");
+        } else if (role === "KITCHEN") {
+          router.push("/kitchen/queue");
+        } else if (role === "GUARD") {
+          router.push("/guard/exit");
+        } else {
+          const restSlug = verifiedRestaurant?.slug || "venue";
+          router.push(`/restaurant/dashboard?restaurant=${restSlug}`);
+        }
       }
     } catch (err: any) {
       console.error("Admin sign-in failed:", err);
@@ -478,185 +491,84 @@ function LoginContent() {
               {verifiedRestaurant.name} Portal
             </h2>
             <p className="text-xs text-gray-400 mt-1">
-              {activeTab === "admin"
-                ? "Sign in with admin credentials to access the management suite."
-                : "Sign in with your name or ID to access your shift station."}
+              Enter your Email or Employee ID and Password to access your portal.
             </p>
           </div>
 
-          {/* Dual Switcher: Owner/Admin vs Floor Staff Login */}
-          <div className="grid grid-cols-2 gap-1.5 p-1 rounded-2xl bg-surface-subtle border border-surface-border">
-            <button
-              type="button"
-              onClick={() => setActiveTab("admin")}
-              className={`py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
-                activeTab === "admin"
-                  ? "bg-primary text-black shadow-md shadow-primary/20 font-extrabold"
-                  : "text-gray-400 hover:text-gray-200"
-              }`}
-            >
-              <ShieldCheck className="w-3.5 h-3.5" /> Owner / Admin
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab("staff")}
-              className={`py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
-                activeTab === "staff"
-                  ? "bg-amber-500 text-black shadow-md shadow-amber-500/20 font-extrabold"
-                  : "text-gray-400 hover:text-amber-400"
-              }`}
-            >
-              <Users className="w-3.5 h-3.5" /> Floor Staff Login
-            </button>
-          </div>
-
-          {activeTab === "admin" ? (
-            /* TAB 1: OWNER / ADMIN FORM */
-            <form onSubmit={handleAdminSignIn} className="flex flex-col gap-4">
-              <div>
-                <label className="text-xs font-bold text-gray-300 block mb-1.5">
-                  Owner Email or Employee ID
-                </label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    required
-                    suppressHydrationWarning
-                    value={adminIdentifier}
-                    onChange={(e) => setAdminIdentifier(e.target.value)}
-                    placeholder="admin@yourrestaurant.com"
-                    className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-surface-subtle border border-surface-border text-sm text-gray-100 focus:outline-none focus:border-primary font-mono"
-                  />
-                  <Mail className="w-4 h-4 text-gray-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                </div>
-              </div>
-
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="text-xs font-bold text-gray-300">
-                    Password
-                  </label>
-                  <Link
-                    href={verifiedRestaurant?.slug ? `/forgot-password?restaurant=${verifiedRestaurant.slug}` : "/forgot-password"}
-                    className="text-[11px] text-amber-400 hover:text-amber-300 transition-colors"
-                  >
-                    Forgot Password?
-                  </Link>
-                </div>
-                <div className="relative">
-                  <input
-                    type={showAdminPassword ? "text" : "password"}
-                    required
-                    suppressHydrationWarning
-                    value={adminPassword}
-                    onChange={(e) => setAdminPassword(e.target.value)}
-                    placeholder="••••••••"
-                    className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-surface-subtle border border-surface-border text-sm text-gray-100 focus:outline-none focus:border-primary font-mono"
-                  />
-                  <Lock className="w-4 h-4 text-gray-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                  <button
-                    type="button"
-                    onClick={() => setShowAdminPassword(!showAdminPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-200"
-                  >
-                    {showAdminPassword ? (
-                      <EyeOff className="w-4 h-4" />
-                    ) : (
-                      <Eye className="w-4 h-4" />
-                    )}
-                  </button>
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="mt-2 w-full py-3 rounded-xl bg-primary text-black font-extrabold text-sm flex items-center justify-center gap-2 hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 disabled:opacity-50"
-              >
-                {isLoading ? "Authenticating..." : "Enter Restaurant Management Suite"}
-                <ArrowRight className="w-4 h-4" />
-              </button>
-            </form>
-          ) : (
-            /* TAB 2: FLOOR STAFF SHIFT SIGN-IN (Name or ID + Auto-Role) */
-            <form onSubmit={handleStaffSignIn} className="flex flex-col gap-4">
-              <div>
-                <label className="text-xs font-bold text-gray-300 block mb-1.5 flex items-center justify-between">
-                  <span>Your Name or Employee ID</span>
-                  <span className="text-[10px] font-mono text-gray-400">
-                    e.g. Aman, Rajesh, Sunil
-                  </span>
-                </label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    required
-                    autoFocus
-                    suppressHydrationWarning
-                    value={staffIdentifier}
-                    onChange={(e) => setStaffIdentifier(e.target.value)}
-                    placeholder="Aman, Rajesh, Sunil, or EMP-WTR-001"
-                    className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-surface-subtle border border-surface-border text-sm text-gray-100 focus:outline-none focus:border-amber-400 font-mono"
-                  />
-                  <Users className="w-4 h-4 text-gray-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                </div>
-              </div>
-
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="text-xs font-bold text-gray-300">
-                    Shift Password
-                  </label>
-                  <Link
-                    href={verifiedRestaurant?.slug ? `/forgot-password?restaurant=${verifiedRestaurant.slug}` : "/forgot-password"}
-                    className="text-[11px] text-amber-400 hover:text-amber-300 transition-colors"
-                  >
-                    Forgot Password?
-                  </Link>
-                </div>
-                <div className="relative">
-                  <input
-                    type={showStaffPassword ? "text" : "password"}
-                    required
-                    suppressHydrationWarning
-                    value={staffPassword}
-                    onChange={(e) => setStaffPassword(e.target.value)}
-                    placeholder="••••••••"
-                    className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-surface-subtle border border-surface-border text-sm text-gray-100 focus:outline-none focus:border-amber-400 font-mono"
-                  />
-                  <Lock className="w-4 h-4 text-gray-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                  <button
-                    type="button"
-                    onClick={() => setShowStaffPassword(!showStaffPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-200"
-                  >
-                    {showStaffPassword ? (
-                      <EyeOff className="w-4 h-4" />
-                    ) : (
-                      <Eye className="w-4 h-4" />
-                    )}
-                  </button>
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="mt-2 w-full py-3 rounded-xl bg-amber-500 text-black font-extrabold text-sm flex items-center justify-center gap-2 hover:bg-amber-400 transition-all shadow-lg shadow-amber-500/20 disabled:opacity-50"
-              >
-                {isLoading ? "Recognizing Role & Connecting..." : "Sign In to Station"}
-                <ArrowRight className="w-4 h-4" />
-              </button>
-
-              {/* Auto-Role Hint */}
-              <div className="p-2.5 rounded-xl bg-surface-subtle border border-surface-border text-[11px] text-gray-400 flex items-center gap-2">
-                <Sparkles className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                <span>
-                  Auto-Portal: Recognizes whether you are Waiter, Chef, Cashier, or Guard and opens your terminal.
+          {/* Single Unified Login Form */}
+          <form onSubmit={handleAdminSignIn} className="flex flex-col gap-4">
+            <div>
+              <label className="text-xs font-bold text-gray-300 block mb-1.5 flex items-center justify-between">
+                <span>Email, Username or Employee ID</span>
+                <span className="text-[10px] font-mono text-gray-400">
+                  e.g. admin@spice.com, EMP-ADM-001
                 </span>
+              </label>
+              <div className="relative">
+                <input
+                  type="text"
+                  required
+                  autoFocus
+                  suppressHydrationWarning
+                  value={adminIdentifier}
+                  onChange={(e) => setAdminIdentifier(e.target.value)}
+                  placeholder="admin@spice.com or EMP-ADM-001"
+                  className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-surface-subtle border border-surface-border text-sm text-gray-100 focus:outline-none focus:border-primary font-mono"
+                />
+                <Mail className="w-4 h-4 text-gray-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
               </div>
-            </form>
-          )}
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-xs font-bold text-gray-300">
+                  Password
+                </label>
+                <Link
+                  href={
+                    verifiedRestaurant?.slug
+                      ? `/forgot-password?restaurant=${verifiedRestaurant.slug}`
+                      : "/forgot-password"
+                  }
+                  className="text-[11px] text-amber-400 hover:text-amber-300 transition-colors font-mono"
+                >
+                  Forgot Password?
+                </Link>
+              </div>
+              <div className="relative">
+                <input
+                  type={showAdminPassword ? "text" : "password"}
+                  required
+                  suppressHydrationWarning
+                  value={adminPassword}
+                  onChange={(e) => setAdminPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-surface-subtle border border-surface-border text-sm text-gray-100 focus:outline-none focus:border-primary font-mono"
+                />
+                <Lock className="w-4 h-4 text-gray-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <button
+                  type="button"
+                  onClick={() => setShowAdminPassword(!showAdminPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-200"
+                >
+                  {showAdminPassword ? (
+                    <EyeOff className="w-4 h-4" />
+                  ) : (
+                    <Eye className="w-4 h-4" />
+                  )}
+                </button>
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="mt-2 w-full py-3 rounded-xl bg-amber-500 text-black font-extrabold text-sm flex items-center justify-center gap-2 hover:bg-amber-400 transition-all shadow-lg shadow-amber-500/20 disabled:opacity-50"
+            >
+              {isLoading ? "Authenticating..." : "Sign In to TableOS"}
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          </form>
 
           {/* Quick Station Switchers */}
           <div className="pt-3 border-t border-surface-border flex items-center justify-between text-xs">

@@ -92,6 +92,21 @@ export const adminApi = baseApi.injectEndpoints({
     exportTableQRs: builder.query<TableQRExportItem[], string>({
       query: (restaurantId) => `/api/v1/admin/restaurants/${restaurantId}/tables/qr-export`,
     }),
+
+    adminExtendSubscription: builder.mutation<
+      Restaurant,
+      { restaurantId: string; days: number; plan?: string }
+    >({
+      query: ({ restaurantId, days, plan }) => ({
+        url: `/api/v1/admin/restaurants/${restaurantId}/extend-subscription`,
+        method: "POST",
+        body: { days, plan },
+      }),
+      invalidatesTags: (result, error, { restaurantId }) => [
+        { type: "Tenant", id: restaurantId },
+        "Tenant",
+      ],
+    }),
   }),
 });
 
@@ -104,4 +119,5 @@ export const {
   useSuspendRestaurantMutation,
   useReactivateRestaurantMutation,
   useExportTableQRsQuery,
+  useAdminExtendSubscriptionMutation,
 } = adminApi;

@@ -4,6 +4,7 @@ import React from "react";
 import { useGetSettlementsQuery } from "@/store/api/restaurantApi";
 import { formatMoney } from "@/lib/money";
 import { humanizeStatus } from "@/lib/statusLabels";
+import { FranchiseOutletFilterSelect } from "@/components/franchise/FranchiseOutletFilterSelect";
 
 export default function RestaurantSettlementsPage() {
   const { data: settlements, isLoading, refetch, isFetching } = useGetSettlementsQuery();
@@ -18,6 +19,7 @@ export default function RestaurantSettlementsPage() {
           <p>Bank settlements for dining sales minus 1% platform fee</p>
         </div>
         <div className="sp"></div>
+        <FranchiseOutletFilterSelect />
         <span className="pill c-g">Direct bank settlement</span>
       </div>
 

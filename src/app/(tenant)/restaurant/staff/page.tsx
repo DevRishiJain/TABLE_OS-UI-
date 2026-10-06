@@ -7,6 +7,7 @@ import {
   useUpdateStaffPasswordMutation,
 } from "@/store/api/restaurantApi";
 import { StaffUser } from "@/types/domain";
+import { FranchiseOutletFilterSelect } from "@/components/franchise/FranchiseOutletFilterSelect";
 
 export default function RestaurantStaffPage() {
   const { data: staffList, isLoading, refetch } = useGetStaffRosterQuery();
@@ -113,6 +114,7 @@ export default function RestaurantStaffPage() {
           <p>Team, roles and logins · {roster.length} registered members</p>
         </div>
         <div className="sp"></div>
+        <FranchiseOutletFilterSelect />
         <button className="btn" onClick={() => setIsModalOpen(true)}>
           <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" /></svg>
           Add staff

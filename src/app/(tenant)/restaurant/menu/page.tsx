@@ -10,6 +10,7 @@ import {
 } from "@/store/api/restaurantApi";
 import { formatMoney } from "@/lib/money";
 import { MenuItem } from "@/types/domain";
+import { FranchiseOutletFilterSelect } from "@/components/franchise/FranchiseOutletFilterSelect";
 
 export default function RestaurantMenuStudioPage() {
   const { data: categories = [], refetch: refetchCategories } = useGetMenuCategoriesQuery();
@@ -105,6 +106,7 @@ export default function RestaurantMenuStudioPage() {
           <p>Dishes, prices and availability</p>
         </div>
         <div className="sp"></div>
+        <FranchiseOutletFilterSelect />
         <button className="btn s" onClick={() => setIsAiModalOpen(true)}>
           Scan menu photo
         </button>

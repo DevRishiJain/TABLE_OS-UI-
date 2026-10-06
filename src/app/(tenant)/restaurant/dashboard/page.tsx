@@ -13,6 +13,7 @@ import {
 import {
   useGetStaffTablesQuery,
   useGetPendingOrdersQuery,
+  useGetSubscriptionInfoQuery,
 } from "@/store/api/staffApi";
 import { useGetKitchenQueueQuery } from "@/store/api/kitchenApi";
 import { formatMoney } from "@/lib/money";
@@ -52,6 +53,7 @@ export default function RestaurantDashboardOverviewPage() {
   const { data: kitchenQueue } = useGetKitchenQueueQuery();
   const { data: inventoryData } = useGetInventoryQuery();
   const { data: expensesData } = useGetExpensesQuery();
+  const { data: subInfo } = useGetSubscriptionInfoQuery();
 
   // Financial Metrics
   const totalGmvMinor = today?.total_gmv?.amount_minor_units || 0;
@@ -315,10 +317,27 @@ export default function RestaurantDashboardOverviewPage() {
           </span>
         </div>
 
-        <div className="cd st" style={{ "--c": "var(--admin-grn)" } as any}>
-          <small>Net after fees</small>
-          <b>{formatMoney(netRevenueMinor)}</b>
-          <span>1% platform fee deducted</span>
+        <div
+          className="cd st"
+          style={
+            {
+              "--c":
+                (subInfo?.days_remaining ?? 30) <= 5
+                  ? "var(--admin-red)"
+                  : "var(--admin-grn)",
+            } as any
+          }
+        >
+          <small>Subscription Status</small>
+          <b>
+            {subInfo?.days_remaining !== undefined
+              ? `${subInfo.days_remaining} Days Left`
+              : "Active"}
+          </b>
+          <span>
+            {subInfo?.subscription_plan || "PRO"} Plan ·{" "}
+            {subInfo?.is_active === false ? "Expired" : "Active"}
+          </span>
         </div>
 
         <div className="cd st" style={{ "--c": "var(--admin-blu)" } as any}>

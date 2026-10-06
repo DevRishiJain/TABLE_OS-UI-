@@ -234,6 +234,68 @@ export default function RestaurantSettingsPage() {
           })}
         </div>
       </div>
+
+      {/* Franchise Association Section */}
+      <div className="cd mt">
+        <div className="hd">
+          <h2>Franchise Association &amp; Governance</h2>
+          <p>Link your independent restaurant to a registered Franchise Network using a 6-digit OTP code.</p>
+        </div>
+
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            showToast("Verifying Franchise Link OTP Code...");
+            setTimeout(() => {
+              showToast("Restaurant successfully linked to Franchise Network!");
+            }, 800);
+          }}
+          style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 16, maxWidth: 460 }}
+        >
+          <div>
+            <label style={{ fontSize: "0.8rem", fontWeight: 700, display: "block", marginBottom: 4 }}>
+              Franchise Link OTP Code
+            </label>
+            <input
+              type="text"
+              placeholder="e.g. FRN-982415"
+              required
+              className="font-mono text-xs"
+              style={{
+                width: "100%",
+                padding: "8px 12px",
+                borderRadius: 8,
+                border: "1px solid var(--admin-bd)",
+                background: "var(--admin-bg)",
+                color: "var(--admin-fg)",
+              }}
+            />
+          </div>
+
+          <div>
+            <label style={{ fontSize: "0.8rem", fontWeight: 700, display: "block", marginBottom: 4 }}>
+              Confirm Store Owner Password
+            </label>
+            <input
+              type="password"
+              placeholder="••••••••"
+              required
+              style={{
+                width: "100%",
+                padding: "8px 12px",
+                borderRadius: 8,
+                border: "1px solid var(--admin-bd)",
+                background: "var(--admin-bg)",
+                color: "var(--admin-fg)",
+              }}
+            />
+          </div>
+
+          <button className="btn pri sm" type="submit" style={{ alignSelf: "flex-start", marginTop: 4 }}>
+            Authorize &amp; Link Restaurant
+          </button>
+        </form>
+      </div>
     </>
   );
 }

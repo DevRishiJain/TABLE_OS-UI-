@@ -19,6 +19,7 @@ interface TableItem {
 export default function RestaurantTablesQRPage() {
   const restaurantName = useAppSelector((state) => state.auth.restaurantName) || "The Spice Route";
   const restaurantSlug = useAppSelector((state) => state.auth.restaurantSlug) || "spiceroute";
+  const userRole = useAppSelector((state) => state.auth.staffRole);
 
   const { data: backendTables, refetch: refetchTables } = useGetRestaurantTablesQuery();
   const [createTableApi, { isLoading: isCreating }] = useCreateRestaurantTableMutation();
@@ -138,14 +139,19 @@ export default function RestaurantTablesQRPage() {
           <h1>Tables &amp; QR</h1>
           <p>Table tents for contactless ordering</p>
         </div>
-        <div className="sp"></div>
         <button className="btn s" onClick={handlePrintAll}>
           Print all QR
         </button>
-        <button className="btn" onClick={() => setShowAddModal(true)}>
-          <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" /></svg>
-          Add table
-        </button>
+        {userRole === "FRANCHISE_OWNER" ? (
+          <div className="pill font-mono text-[11px] bg-amber-500/10 text-amber-300 border border-amber-500/30 px-3 py-1.5 rounded-xl font-bold flex items-center gap-1.5">
+            🔒 Read-Only: Tables managed by venue Store Managers
+          </div>
+        ) : (
+          <button className="btn" onClick={() => setShowAddModal(true)}>
+            <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" /></svg>
+            Add table
+          </button>
+        )}
       </div>
 
       {/* KPI Cards */}

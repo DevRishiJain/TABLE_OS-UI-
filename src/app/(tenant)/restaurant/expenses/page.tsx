@@ -9,6 +9,7 @@ import {
 } from "@/store/api/restaurantApi";
 import { formatCurrencyMinor } from "@/lib/formatters";
 import { ExpenseCategory, ExpenseType, Expense } from "@/types/domain";
+import { FranchiseOutletFilterSelect } from "@/components/franchise/FranchiseOutletFilterSelect";
 
 type DateFilterPreset = "TODAY" | "THIS_MONTH" | "ALL";
 
@@ -147,6 +148,7 @@ export default function RestaurantExpensesPage() {
           <p>Purchases, wastage and operational bills</p>
         </div>
         <div className="sp"></div>
+        <FranchiseOutletFilterSelect />
         <button className="btn" onClick={() => setIsLogModalOpen(true)}>
           <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" /></svg>
           Log expense

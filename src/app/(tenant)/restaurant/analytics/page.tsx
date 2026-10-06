@@ -7,6 +7,7 @@ import {
   useGetDishMarginsQuery,
 } from "@/store/api/restaurantApi";
 import { formatCurrencyMinor } from "@/lib/formatters";
+import { FranchiseOutletFilterSelect } from "@/components/franchise/FranchiseOutletFilterSelect";
 
 type DatePreset = "TODAY" | "7_DAYS" | "THIS_MONTH" | "ALL";
 
@@ -79,6 +80,7 @@ export default function UnifiedExecutiveAnalyticsPage() {
           <p>Is the restaurant making money? Real-time operational P&amp;L</p>
         </div>
         <div className="sp"></div>
+        <FranchiseOutletFilterSelect />
         <div className="ch">
           {[
             { id: "TODAY", label: "Today" },

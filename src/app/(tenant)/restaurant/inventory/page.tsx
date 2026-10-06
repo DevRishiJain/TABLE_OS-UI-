@@ -14,6 +14,7 @@ import {
 } from "@/store/api/restaurantApi";
 import { formatCurrencyMinor } from "@/lib/formatters";
 import { InventoryChangeType, InventoryItem } from "@/types/domain";
+import { FranchiseOutletFilterSelect } from "@/components/franchise/FranchiseOutletFilterSelect";
 
 type TabMode = "STOCK" | "LOGS" | "RECIPES";
 
@@ -142,6 +143,7 @@ export default function RestaurantInventoryPage() {
           <p>Ingredients on hand and what is running low</p>
         </div>
         <div className="sp"></div>
+        <FranchiseOutletFilterSelect />
         <button className="btn" onClick={() => setIsAddItemOpen(true)}>
           <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" /></svg>
           Add ingredient
