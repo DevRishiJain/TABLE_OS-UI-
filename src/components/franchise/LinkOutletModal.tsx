@@ -1,37 +1,57 @@
 "use client";
 
 import React, { useState } from "react";
-import { useAppDispatch } from "@/store";
-import { addFranchiseOutlet } from "@/store/slices/franchiseSlice";
+import {
+  useGenerateFranchiseInviteCodeMutation,
+  useCreateFranchiseOutletMutation,
+} from "@/store/api/staffApi";
 import { X, KeyRound, Store, ShieldCheck, Copy, Check } from "lucide-react";
 
 interface LinkOutletModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onCreated?: () => void;
 }
 
 export const LinkOutletModal: React.FC<LinkOutletModalProps> = ({
   isOpen,
   onClose,
+  onCreated,
 }) => {
-  const dispatch = useAppDispatch();
   const [tab, setTab] = useState<"INVITE" | "CREATE">("INVITE");
-  
+
+  const [generateInviteCode, { isLoading: isGenerating }] = useGenerateFranchiseInviteCodeMutation();
+  const [createOutlet, { isLoading: isCreating }] = useCreateFranchiseOutletMutation();
+
   // Protocol A (Generate OTP) State
   const [generatedCode, setGeneratedCode] = useState<string | null>(null);
+  const [codeExpiry, setCodeExpiry] = useState<string | null>(null);
   const [isCopied, setIsCopied] = useState(false);
 
   // Protocol B (Direct Provisioning) State
   const [newStoreName, setNewStoreName] = useState("");
   const [newStoreSlug, setNewStoreSlug] = useState("");
-  const [managerEmail, setManagerEmail] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [newVenueType, setNewVenueType] = useState("FINE_DINE");
+  const [adminName, setAdminName] = useState("");
+  const [adminEmail, setAdminEmail] = useState("");
+  const [adminPassword, setAdminPassword] = useState("");
+  const [adminPhone, setAdminPhone] = useState("");
+  const [tableCount, setTableCount] = useState(4);
+  const [defaultCapacity, setDefaultCapacity] = useState(4);
+  const [createdInfo, setCreatedInfo] = useState<{ name: string; slug: string; admin_email: string } | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
-  const handleGenerateCode = () => {
-    const code = `FRN-${Math.floor(100000 + Math.random() * 900000)}`;
-    setGeneratedCode(code);
+  const handleGenerateCode = async () => {
+    setError(null);
+    try {
+      const res = await generateInviteCode().unwrap();
+      setGeneratedCode(res.code);
+      setCodeExpiry(res.expires_at);
+    } catch (err: any) {
+      setError(err?.data?.error || "Failed to generate invite code");
+    }
   };
 
   const handleCopy = () => {
@@ -42,33 +62,45 @@ export const LinkOutletModal: React.FC<LinkOutletModalProps> = ({
     }
   };
 
-  const handleCreateOutlet = (e: React.FormEvent) => {
+  const handleCreateOutlet = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newStoreName.trim()) return;
-
-    setIsSubmitting(true);
-    setTimeout(() => {
-      const newOutlet = {
-        id: `b1000000-0000-0000-0000-${Date.now()}`,
+    setError(null);
+    if (!newStoreName.trim() || !adminEmail.trim() || !adminPassword) {
+      setError("Outlet name, admin email and password are required.");
+      return;
+    }
+    try {
+      const res = await createOutlet({
         name: newStoreName.trim(),
         slug: newStoreSlug.trim() || newStoreName.toLowerCase().replace(/\s+/g, "-"),
-        status: "ACTIVE",
-        days_remaining: 30,
-        is_active: true,
-      };
-
-      dispatch(addFranchiseOutlet(newOutlet));
-      setIsSubmitting(false);
-      onClose();
+        venue_type: newVenueType,
+        admin_name: adminName.trim() || "Outlet Admin",
+        email: adminEmail.trim(),
+        password: adminPassword,
+        phone: adminPhone.trim() || undefined,
+        table_count: tableCount,
+        default_capacity: defaultCapacity,
+      }).unwrap();
+      setCreatedInfo({ name: res.name, slug: res.slug, admin_email: res.admin_email });
       setNewStoreName("");
       setNewStoreSlug("");
-      setManagerEmail("");
-    }, 600);
+      setAdminName("");
+      setAdminEmail("");
+      setAdminPassword("");
+      setAdminPhone("");
+      onCreated?.();
+    } catch (err: any) {
+      setError(err?.data?.error || "Failed to provision outlet");
+    }
   };
+
+  const inputCls =
+    "w-full px-3.5 py-2 rounded-xl bg-surface-subtle border border-surface-border text-xs text-gray-100 focus:outline-none focus:border-amber-400 font-mono";
+  const labelCls = "text-xs font-bold text-gray-300 block mb-1";
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in">
-      <div className="w-full max-w-lg bg-surface border border-surface-border rounded-3xl p-6 shadow-2xl relative overflow-hidden flex flex-col gap-5">
+      <div className="w-full max-w-lg bg-surface border border-surface-border rounded-3xl p-6 shadow-2xl relative overflow-hidden flex flex-col gap-5 max-h-[90vh] overflow-y-auto">
         <button
           onClick={onClose}
           className="absolute top-4 right-4 p-2 rounded-xl text-gray-400 hover:text-gray-100 hover:bg-surface-subtle transition-all"
@@ -111,6 +143,12 @@ export const LinkOutletModal: React.FC<LinkOutletModalProps> = ({
           </button>
         </div>
 
+        {error && (
+          <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-mono">
+            {error}
+          </div>
+        )}
+
         {/* Protocol A Content */}
         {tab === "INVITE" ? (
           <div className="flex flex-col gap-4">
@@ -131,7 +169,11 @@ export const LinkOutletModal: React.FC<LinkOutletModalProps> = ({
                   {generatedCode}
                 </div>
                 <span className="text-[10px] font-mono text-emerald-400">
-                  ⏱️ Valid for 15 Minutes · Single Use Only
+                  ⏱️ Expires{" "}
+                  {codeExpiry
+                    ? new Date(codeExpiry).toLocaleTimeString("en-IN")
+                    : "in 15 minutes"}{" "}
+                  · Single Use Only
                 </span>
 
                 <button
@@ -154,62 +196,154 @@ export const LinkOutletModal: React.FC<LinkOutletModalProps> = ({
             ) : (
               <button
                 onClick={handleGenerateCode}
-                className="py-3 w-full rounded-xl bg-amber-500 text-black font-extrabold text-xs flex items-center justify-center gap-2 hover:bg-amber-400 transition-all shadow-lg shadow-amber-500/20"
+                disabled={isGenerating}
+                className="py-3 w-full rounded-xl bg-amber-500 text-black font-extrabold text-xs flex items-center justify-center gap-2 hover:bg-amber-400 transition-all shadow-lg shadow-amber-500/20 disabled:opacity-50"
               >
                 <KeyRound className="w-4 h-4" />
-                Generate Secure 15-Min Link OTP Code
+                {isGenerating ? "Generating…" : "Generate Secure 15-Min Link OTP Code"}
               </button>
             )}
+          </div>
+        ) : createdInfo ? (
+          /* Provisioning success screen */
+          <div className="flex flex-col gap-3">
+            <div className="p-5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-xs text-emerald-300 flex flex-col gap-1.5">
+              <div className="font-bold text-sm">✓ Outlet provisioned</div>
+              <div><b>{createdInfo.name}</b> is now part of your franchise.</div>
+              <div className="font-mono">
+                Handle: /{createdInfo.slug}
+              </div>
+              <div className="font-mono">
+                Admin login: <b>{createdInfo.admin_email}</b>
+              </div>
+              <div className="text-emerald-400/80">
+                Share the admin credentials with the outlet manager — they sign in at the staff login page.
+              </div>
+            </div>
+            <button
+              onClick={onClose}
+              className="py-3 w-full rounded-xl bg-amber-500 text-black font-extrabold text-xs hover:bg-amber-400 transition-all"
+            >
+              Done
+            </button>
           </div>
         ) : (
           /* Protocol B Content */
           <form onSubmit={handleCreateOutlet} className="flex flex-col gap-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className={labelCls}>Outlet Name *</label>
+                <input
+                  type="text"
+                  required
+                  value={newStoreName}
+                  onChange={(e) => setNewStoreName(e.target.value)}
+                  placeholder="e.g. Spice Route - CP"
+                  className={inputCls}
+                />
+              </div>
+              <div>
+                <label className={labelCls}>Handle / Slug *</label>
+                <input
+                  type="text"
+                  required
+                  value={newStoreSlug}
+                  onChange={(e) => setNewStoreSlug(e.target.value)}
+                  placeholder="spiceroute-cp"
+                  className={inputCls}
+                />
+              </div>
+            </div>
+
             <div>
-              <label className="text-xs font-bold text-gray-300 block mb-1">
-                Outlet Name *
-              </label>
+              <label className={labelCls}>Venue Type</label>
+              <select
+                value={newVenueType}
+                onChange={(e) => setNewVenueType(e.target.value)}
+                className={inputCls}
+              >
+                <option value="FINE_DINE">Fine Dine</option>
+                <option value="CAFE">Cafe / Quick Dining</option>
+                <option value="HOTEL">Hotel Room Service</option>
+                <option value="DRIVE_IN">Drive-In</option>
+              </select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className={labelCls}>Tables</label>
+                <input
+                  type="number"
+                  min={1}
+                  value={tableCount}
+                  onChange={(e) => setTableCount(Math.max(1, Number(e.target.value)))}
+                  className={inputCls}
+                />
+              </div>
+              <div>
+                <label className={labelCls}>Seats per table</label>
+                <input
+                  type="number"
+                  min={1}
+                  max={50}
+                  value={defaultCapacity}
+                  onChange={(e) => setDefaultCapacity(Math.max(1, Number(e.target.value)))}
+                  className={inputCls}
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className={labelCls}>Outlet Admin Name *</label>
               <input
                 type="text"
+                value={adminName}
+                onChange={(e) => setAdminName(e.target.value)}
+                placeholder="e.g. Priya Sharma"
+                className={inputCls}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className={labelCls}>Admin Email *</label>
+                <input
+                  type="email"
+                  required
+                  value={adminEmail}
+                  onChange={(e) => setAdminEmail(e.target.value)}
+                  placeholder="manager.cp@brand.com"
+                  className={inputCls}
+                />
+              </div>
+              <div>
+                <label className={labelCls}>Admin Phone</label>
+                <input
+                  type="tel"
+                  value={adminPhone}
+                  onChange={(e) => setAdminPhone(e.target.value)}
+                  placeholder="+91…"
+                  className={inputCls}
+                />
+              </div>
+            </div>
+            <div>
+              <label className={labelCls}>Admin Password *</label>
+              <input
+                type="password"
                 required
-                value={newStoreName}
-                onChange={(e) => setNewStoreName(e.target.value)}
-                placeholder="e.g. The Spice Route - Connaught Place"
-                className="w-full px-3.5 py-2 rounded-xl bg-surface-subtle border border-surface-border text-xs text-gray-100 focus:outline-none focus:border-amber-400 font-mono"
-              />
-            </div>
-
-            <div>
-              <label className="text-xs font-bold text-gray-300 block mb-1">
-                Location Slug
-              </label>
-              <input
-                type="text"
-                value={newStoreSlug}
-                onChange={(e) => setNewStoreSlug(e.target.value)}
-                placeholder="spiceroute-cp"
-                className="w-full px-3.5 py-2 rounded-xl bg-surface-subtle border border-surface-border text-xs text-gray-100 focus:outline-none focus:border-amber-400 font-mono"
-              />
-            </div>
-
-            <div>
-              <label className="text-xs font-bold text-gray-300 block mb-1">
-                Store Manager Initial Email
-              </label>
-              <input
-                type="email"
-                value={managerEmail}
-                onChange={(e) => setManagerEmail(e.target.value)}
-                placeholder="manager.cp@spiceroute.com"
-                className="w-full px-3.5 py-2 rounded-xl bg-surface-subtle border border-surface-border text-xs text-gray-100 focus:outline-none focus:border-amber-400 font-mono"
+                value={adminPassword}
+                onChange={(e) => setAdminPassword(e.target.value)}
+                placeholder="Initial password"
+                className={inputCls}
               />
             </div>
 
             <button
               type="submit"
-              disabled={isSubmitting}
+              disabled={isCreating}
               className="mt-2 py-3 w-full rounded-xl bg-amber-500 text-black font-extrabold text-xs flex items-center justify-center gap-2 hover:bg-amber-400 transition-all shadow-lg shadow-amber-500/20 disabled:opacity-50"
             >
-              {isSubmitting ? "Provisioning..." : "Provision & Attach Franchise Outlet"}
+              {isCreating ? "Provisioning..." : "Provision & Attach Franchise Outlet"}
             </button>
           </form>
         )}

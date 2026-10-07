@@ -7,6 +7,8 @@ import { useAppDispatch, useAppSelector } from "@/store";
 import {
   selectCartItemsList,
   selectCartSubtotalMinor,
+  cartItemUnitPriceMinor,
+  cartItemDisplayName,
   updateQuantity,
   updateInstructions,
   removeItem,
@@ -56,6 +58,7 @@ export default function CustomerCheckoutPage() {
       const idempotencyKey = generateUUID();
       const payloadItems = cartItems.map((ci) => ({
         menu_item_id: ci.menuItem.id,
+        variant_id: ci.variant?.id || undefined,
         quantity: ci.quantity,
         special_instructions: ci.specialInstructions || undefined,
       }));
@@ -143,12 +146,12 @@ export default function CustomerCheckoutPage() {
       {/* Cart Items List */}
       <div className="g" style={{ marginTop: 12 }}>
         {cartItems.map((item) => (
-          <div key={item.menuItem.id} className="cd" style={{ padding: 16 }}>
+          <div key={item.menuItem.id + (item.variant?.id || "")} className="cd" style={{ padding: 16 }}>
             <div className="px">
               <div>
-                <b style={{ fontSize: "1.05rem" }}>{item.menuItem.name}</b>
+                <b style={{ fontSize: "1.05rem" }}>{cartItemDisplayName(item)}</b>
                 <div className="pr" style={{ marginTop: 2, color: "var(--ac)" }}>
-                  {formatMoney(item.menuItem.price.amount_minor_units * item.quantity)}
+                  {formatMoney(cartItemUnitPriceMinor(item) * item.quantity)}
                 </div>
               </div>
 
@@ -160,6 +163,7 @@ export default function CustomerCheckoutPage() {
                     dispatch(
                       updateQuantity({
                         menuItemId: item.menuItem.id,
+                        variantId: item.variant?.id,
                         quantity: item.quantity - 1,
                       })
                     )
@@ -177,6 +181,7 @@ export default function CustomerCheckoutPage() {
                     dispatch(
                       updateQuantity({
                         menuItemId: item.menuItem.id,
+                        variantId: item.variant?.id,
                         quantity: item.quantity + 1,
                       })
                     )
@@ -201,6 +206,7 @@ export default function CustomerCheckoutPage() {
                 dispatch(
                   updateInstructions({
                     menuItemId: item.menuItem.id,
+                    variantId: item.variant?.id,
                     instructions: e.target.value,
                   })
                 )

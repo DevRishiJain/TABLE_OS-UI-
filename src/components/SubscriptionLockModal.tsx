@@ -2,12 +2,24 @@
 
 import React, { useState } from "react";
 import { useGetSubscriptionInfoQuery, useRenewSubscriptionMutation } from "@/store/api/staffApi";
-import { Lock, ShieldAlert, CheckCircle2, ArrowRight, Sparkles } from "lucide-react";
+import { useAppSelector } from "@/store";
+import { Lock, CheckCircle2, ArrowRight, KeyRound } from "lucide-react";
+
+const RENEW_ROLES = new Set([
+  "RESTAURANT_OWNER",
+  "RESTAURANT_ADMIN",
+  "FRANCHISE_OWNER",
+  "MANAGER",
+  "SUPER_ADMIN",
+]);
 
 export function SubscriptionLockModal() {
-  const { data: subInfo, isLoading } = useGetSubscriptionInfoQuery();
+  const { data: subInfo, isLoading, refetch } = useGetSubscriptionInfoQuery();
   const [renewSubscription, { isLoading: isRenewing }] = useRenewSubscriptionMutation();
+  const userRole = useAppSelector((state) => state.auth.staffRole);
+  const [otp, setOtp] = useState("");
   const [msg, setMsg] = useState("");
+  const [err, setErr] = useState("");
 
   if (isLoading || !subInfo) {
     return null; // Let app load normally
@@ -18,13 +30,28 @@ export function SubscriptionLockModal() {
     return null;
   }
 
-  const handleRenew = async () => {
+  const canRenew = RENEW_ROLES.has((userRole || "").toUpperCase());
+
+  const handleRenew = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    const code = otp.trim();
+    if (!/^\d{6}$/.test(code)) {
+      setErr("Enter the 6-digit activation OTP shared by TableOS support.");
+      return;
+    }
+    setErr("");
+    setMsg("");
     try {
-      const res = await renewSubscription({ days: 30 }).unwrap();
+      const res = await renewSubscription({ otp: code }).unwrap();
       setMsg(res.message || "Subscription successfully renewed!");
-    } catch (err: any) {
-      console.error("Renewal failed:", err);
-      setMsg("Renewal failed. Please try again.");
+      refetch();
+    } catch (e2: any) {
+      setErr(
+        e2?.data?.error ||
+          (e2?.status === 429
+            ? "Too many failed attempts — OTP locked. Request a new one."
+            : "Renewal failed. Please try again.")
+      );
     }
   };
 
@@ -45,7 +72,7 @@ export function SubscriptionLockModal() {
         </div>
 
         <p className="text-sm text-slate-300 mb-6 leading-relaxed">
-          Your restaurant's <span className="font-semibold text-white">{subInfo.subscription_plan || "PRO"}</span> subscription ended. 
+          Your restaurant's <span className="font-semibold text-white">{subInfo.subscription_plan || "PRO"}</span> subscription ended.
           Floor staff, POS ordering, and kitchen operations are paused until payment renewal.
         </p>
 
@@ -71,22 +98,47 @@ export function SubscriptionLockModal() {
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={handleRenew}
-          disabled={isRenewing}
-          className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-bold text-sm shadow-lg shadow-amber-500/20 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-        >
-          {isRenewing ? (
-            "Processing Renewal..."
-          ) : (
-            <>
-              <Sparkles className="h-4 w-4" />
-              Renew Subscription (30 Days)
-              <ArrowRight className="h-4 w-4" />
-            </>
-          )}
-        </button>
+        {canRenew ? (
+          <form onSubmit={handleRenew} className="space-y-3">
+            <p className="text-[11px] text-slate-400 leading-relaxed">
+              Pay TableOS for the selected plan; our team will share a 6-digit activation OTP.
+            </p>
+            <input
+              type="text"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              maxLength={6}
+              value={otp}
+              onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
+              placeholder="Activation OTP"
+              className="w-full py-2.5 px-4 rounded-xl bg-slate-950/60 border border-slate-700 text-center text-lg tracking-[0.4em] font-mono text-amber-300 focus:outline-none focus:border-amber-400"
+            />
+            {err && (
+              <div className="p-2.5 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-xs">
+                {err}
+              </div>
+            )}
+            <button
+              type="submit"
+              disabled={isRenewing || otp.length !== 6}
+              className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-bold text-sm shadow-lg shadow-amber-500/20 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+            >
+              {isRenewing ? (
+                "Activating..."
+              ) : (
+                <>
+                  <KeyRound className="h-4 w-4" />
+                  Activate Subscription
+                  <ArrowRight className="h-4 w-4" />
+                </>
+              )}
+            </button>
+          </form>
+        ) : (
+          <div className="p-3.5 rounded-xl bg-slate-950/60 border border-slate-700 text-xs text-slate-400 text-center">
+            Contact your restaurant owner or manager to activate the subscription with a TableOS OTP.
+          </div>
+        )}
       </div>
     </div>
   );

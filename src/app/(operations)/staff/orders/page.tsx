@@ -14,7 +14,9 @@ import {
   useStaffDismissAssistanceMutation,
   useStartStaffSessionMutation,
   useVerifyFirstOrderMutation,
+  useAssignWaiterMutation,
 } from "@/store/api/staffApi";
+import { useGetStaffRosterQuery } from "@/store/api/restaurantApi";
 import {
   useGetKitchenQueueQuery,
   useUpdateKitchenStatusMutation,
@@ -129,6 +131,9 @@ interface TableModel {
   plate?: string;
   col?: string;
   sessionId?: string;
+  assignedWaiterId?: string | null;
+  assignedWaiterName?: string;
+  isAssignedToMe?: boolean;
   orders: Array<{
     id: string;
     rawId: string;
@@ -192,6 +197,8 @@ export default function WaiterFloorScreenPage() {
   const [startStaffSession, { isLoading: isStartingSession }] =
     useStartStaffSessionMutation();
   const [verifyFirstOrder] = useVerifyFirstOrderMutation();
+  const [assignWaiter] = useAssignWaiterMutation();
+  const { data: staffRoster } = useGetStaffRosterQuery();
 
   // Screen State
   const [view, setView] = useState<"floor" | "queue">("floor");
@@ -223,6 +230,12 @@ export default function WaiterFloorScreenPage() {
   // OTP Verification for unverified tables
   const [otpVerifyInput, setOtpVerifyInput] = useState<string>("");
   const [isVerifyingOtp, setIsVerifyingOtp] = useState<boolean>(false);
+
+  const isWaiter = (auth.staffRole || "").toUpperCase() === "WAITER";
+  const canManageWaiter = Boolean(auth.staffRole) && !isWaiter;
+  const waiterStaff = (staffRoster || []).filter(
+    (st: { is_active: boolean; role: string }) => st.is_active && st.role === "WAITER"
+  );
 
   const toastTimerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -368,6 +381,9 @@ export default function WaiterFloorScreenPage() {
         plate: (t as any).vehicle_plate || (isCar ? "" : undefined),
         col: isCar ? "#ece8df" : undefined,
         sessionId: t.active_session_id || undefined,
+        assignedWaiterId: t.assigned_waiter_id,
+        assignedWaiterName: t.assigned_waiter_name,
+        isAssignedToMe: t.is_assigned_to_me,
         orders: associatedOrders,
       };
     });
@@ -617,6 +633,7 @@ export default function WaiterFloorScreenPage() {
       category: string;
       categoryId?: string;
       isVeg: boolean;
+      variantId?: string;
     }> = [];
 
     for (const item of raw) {
@@ -669,13 +686,14 @@ export default function WaiterFloorScreenPage() {
         }
       }
 
-      dishes.push({
-        id: item.id,
-        name: item.name.trim(),
-        price: (item.price?.amount_minor_units || 0) / 100,
-        category: cat,
-        categoryId: item.category_id,
-        isVeg: Boolean(
+      const pushDish = (name: string, price: number, variantId?: string) =>
+        dishes.push({
+          id: item.id,
+          name,
+          price,
+          category: cat,
+          categoryId: item.category_id,
+          isVeg: Boolean(
           (item as any).is_vegetarian ??
             !(
               normalizedName.includes("chicken") ||
@@ -684,8 +702,18 @@ export default function WaiterFloorScreenPage() {
               normalizedName.includes("fish") ||
               normalizedName.includes("egg")
             )
-        ),
-      });
+          ),
+          variantId
+        });
+
+      // Base item line
+      pushDish(item.name.trim(), (item.price?.amount_minor_units || 0) / 100);
+      // Portion lines (Half / Full etc.)
+      (item.variants || [])
+        .filter((v) => v.is_available !== false)
+        .forEach((v) =>
+          pushDish(`${item.name.trim()} (${v.name})`, (v.price?.amount_minor_units || 0) / 100, v.id)
+        );
     }
 
     return dishes;
@@ -888,6 +916,8 @@ export default function WaiterFloorScreenPage() {
       refetchTables();
     } catch (err) {
       showToast(translateBackendError(err) || "Failed to accept order");
+      refetchPending();
+      refetchTables();
     }
   };
 
@@ -1017,6 +1047,7 @@ export default function WaiterFloorScreenPage() {
       refetchTables();
     } catch (err) {
       showToast(translateBackendError(err) || "Invalid OTP code");
+      refetchTables();
     } finally {
       setIsVerifyingOtp(false);
     }
@@ -1090,6 +1121,7 @@ export default function WaiterFloorScreenPage() {
       const dish = availableMenuDishes.find((m) => m.name === dishName);
       return {
         menu_item_id: dish?.id || "",
+        variant_id: dish?.variantId || undefined,
         quantity: qty,
       };
     });
@@ -1155,6 +1187,8 @@ export default function WaiterFloorScreenPage() {
       refetchKitchen();
     } catch (err) {
       showToast(translateBackendError(err) || "Failed to place order");
+      refetchPending();
+      refetchTables();
     }
   };
 
@@ -1437,6 +1471,9 @@ export default function WaiterFloorScreenPage() {
                 const isFree = statusKey === "free";
                 const isPulsing = statusKey === "call";
                 const activeTs = t.call ? t.callT : t.bill ? t.billT : 0;
+                // Waiter ownership: another waiter's table renders locked
+                const lockedForMe = isWaiter && Boolean(t.assignedWaiterId) && t.isAssignedToMe === false;
+                const mine = isWaiter && t.isAssignedToMe === true;
 
                 return (
                   <button
@@ -1447,9 +1484,16 @@ export default function WaiterFloorScreenPage() {
                     style={
                       {
                         "--c": `var(${statusColor})`,
+                        ...(lockedForMe ? { opacity: 0.55, cursor: "not-allowed" } : {}),
                       } as React.CSSProperties
                     }
-                    onClick={() => handleOpenTableSheet(t.id)}
+                    onClick={() => {
+                      if (lockedForMe) {
+                        showToast(`This table is being served by ${t.assignedWaiterName || "another waiter"}`);
+                        return;
+                      }
+                      handleOpenTableSheet(t.id);
+                    }}
                     aria-label={`${getTableDisplayName(t)}, ${statusLabel}`}
                   >
                     <div className="hd">
@@ -1467,7 +1511,11 @@ export default function WaiterFloorScreenPage() {
                       >
                         {t.cap} {t.cap === 1 ? "seat" : "seats"}
                       </span>
-                      <span className="pill">{statusLabel}</span>
+                      {mine ? (
+                        <span className="pill" style={{ color: "var(--grn)", borderColor: "var(--grn)" }}>Mine</span>
+                      ) : (
+                        <span className="pill">{statusLabel}</span>
+                      )}
                     </div>
 
                     <div className="stage">
@@ -1476,7 +1524,11 @@ export default function WaiterFloorScreenPage() {
                         : renderTableGraphic(t)}
                     </div>
 
-                    {isFree ? (
+                    {lockedForMe ? (
+                      <div className="who">
+                        🔒 Served by {t.assignedWaiterName || "another waiter"}
+                      </div>
+                    ) : isFree ? (
                       <div className="who">
                         {isCarTable(t)
                           ? "Tap when a car arrives"
@@ -1491,6 +1543,11 @@ export default function WaiterFloorScreenPage() {
                           {isCarTable(t) && t.plate ? `${t.plate} · ` : ""}
                           {t.pax}/{t.cap} guests
                         </div>
+                        {canManageWaiter && t.assignedWaiterName && (
+                          <div className="sub" style={{ color: "var(--b)", fontWeight: 700 }}>
+                            Waiter: {t.assignedWaiterName}
+                          </div>
+                        )}
                         <div className="ft">
                           <span>{R0(totalTable(t))}</span>
                           <span className="sub">
@@ -1563,6 +1620,9 @@ export default function WaiterFloorScreenPage() {
                             : "Cooking");
 
                         const rowDesc =
+                          (x.t.assignedWaiterName
+                            ? `Waiter ${x.t.assignedWaiterName} · `
+                            : "") +
                           (isCar && x.t.plate ? x.t.plate + " · " : "") +
                           (x.k === "call"
                             ? x.t.call
@@ -1701,6 +1761,12 @@ export default function WaiterFloorScreenPage() {
                     ? `Capacity: ${currentTable.cap} guests · Waiting for a car`
                     : `Capacity: ${currentTable.cap} guests · Ready to seat`}
                 </small>
+                {currentTable.st === "dining" && currentTable.assignedWaiterName && (
+                  <small style={{ display: "block", color: "var(--b)", fontWeight: 700, marginTop: 2 }}>
+                    Waiter: {currentTable.assignedWaiterName}
+                    {isWaiter && currentTable.isAssignedToMe ? " (you)" : ""}
+                  </small>
+                )}
               </div>
               <button
                 className="ib x"
@@ -1712,6 +1778,48 @@ export default function WaiterFloorScreenPage() {
             </div>
 
             <div className="sbody">
+              {/* Waiter reassignment (managers/admins only) */}
+              {canManageWaiter && currentTable.sessionId && (
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    padding: "10px 12px",
+                    borderRadius: 14,
+                    background: "var(--paper, #f5f3ee)",
+                    border: "1px solid var(--line)",
+                    marginBottom: 8,
+                  }}
+                >
+                  <span style={{ fontSize: "0.8rem", fontWeight: 700 }}>Waiter:</span>
+                  <select
+                    value={currentTable.assignedWaiterId || ""}
+                    onChange={async (e) => {
+                      const val = e.target.value;
+                      try {
+                        await assignWaiter({
+                          sessionId: currentTable.sessionId!,
+                          staff_id: val === "" ? null : val,
+                        }).unwrap();
+                        showToast(val === "" ? "Table unassigned" : "Waiter reassigned");
+                        refetchTables();
+                      } catch (err) {
+                        showToast(translateBackendError(err) || "Failed to reassign waiter");
+                      }
+                    }}
+                    style={{ flex: 1, fontSize: "0.8rem", padding: "6px 8px", borderRadius: 8, border: "1px solid var(--line)" }}
+                  >
+                    <option value="">Unassigned</option>
+                    {waiterStaff.map((st: { id: string; name: string }) => (
+                      <option key={st.id} value={st.id}>
+                        {st.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
               {/* Optional plate input for car bay */}
               {isCarTable(currentTable) && currentTable.st === "free" && (
                 <input

@@ -6,6 +6,7 @@ import {
   useGetMenuItemsQuery,
   useCreateMenuCategoryMutation,
   useCreateMenuItemMutation,
+  useReplaceMenuItemVariantsMutation,
   useUploadAiMenuCatalogMutation,
 } from "@/store/api/restaurantApi";
 import { formatMoney } from "@/lib/money";
@@ -19,6 +20,7 @@ export default function RestaurantMenuStudioPage() {
   const [createCategory, { isLoading: isCreatingCat }] = useCreateMenuCategoryMutation();
   const [createItem, { isLoading: isCreatingItem }] = useCreateMenuItemMutation();
   const [uploadAiMenu, { isLoading: isOcrUploading }] = useUploadAiMenuCatalogMutation();
+  const [replaceVariants, { isLoading: isSavingVariants }] = useReplaceMenuItemVariantsMutation();
 
   const [activeCategoryId, setActiveCategoryId] = useState<string>("ALL");
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
@@ -30,6 +32,16 @@ export default function RestaurantMenuStudioPage() {
   const [itemName, setItemName] = useState("");
   const [itemPriceRupees, setItemPriceRupees] = useState("");
   const [itemCategorySelect, setItemCategorySelect] = useState("");
+  const [itemHasPortions, setItemHasPortions] = useState(false);
+  const [itemPortions, setItemPortions] = useState<{ name: string; priceRupees: string; is_available: boolean }[]>([
+    { name: "Half", priceRupees: "", is_available: true },
+    { name: "Full", priceRupees: "", is_available: true },
+  ]);
+
+  // Portions editor state
+  const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
+  const [editPortions, setEditPortions] = useState<{ name: string; priceRupees: string; is_available: boolean }[]>([]);
+  const [portionError, setPortionError] = useState<string | null>(null);
 
   // AI OCR state
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -50,22 +62,75 @@ export default function RestaurantMenuStudioPage() {
 
   const handleCreateItem = async (e: React.FormEvent) => {
     e.preventDefault();
+    const portions = itemHasPortions
+      ? itemPortions
+          .filter((v) => v.name.trim())
+          .map((v) => ({
+            name: v.name.trim(),
+            price_minor: Math.round((parseFloat(v.priceRupees) || 0) * 100),
+            is_available: v.is_available,
+          }))
+          .filter((v) => v.price_minor > 0)
+      : undefined;
     const priceMinor = Math.round((parseFloat(itemPriceRupees) || 0) * 100);
-    if (!itemName.trim() || priceMinor <= 0) return;
+    if (!itemName.trim()) return;
+    if (priceMinor <= 0 && (!portions || portions.length === 0)) return;
 
     try {
       await createItem({
         name: itemName.trim(),
         price_minor: priceMinor,
         category_id: itemCategorySelect || categories[0]?.id || "",
+        variants: portions && portions.length > 0 ? portions : undefined,
       }).unwrap();
 
       setIsNewItemModalOpen(false);
       setItemName("");
       setItemPriceRupees("");
+      setItemHasPortions(false);
+      setItemPortions([
+        { name: "Half", priceRupees: "", is_available: true },
+        { name: "Full", priceRupees: "", is_available: true },
+      ]);
       refetchItems();
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const openPortionsEditor = (item: MenuItem) => {
+    setEditingItem(item);
+    setPortionError(null);
+    setEditPortions(
+      (item.variants || []).map((v) => ({
+        name: v.name,
+        priceRupees: ((v.price?.amount_minor_units || 0) / 100).toString(),
+        is_available: v.is_available !== false,
+      }))
+    );
+  };
+
+  const handleSavePortions = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingItem) return;
+    const variants = editPortions
+      .filter((v) => v.name.trim())
+      .map((v, i) => ({
+        name: v.name.trim(),
+        price_minor: Math.round((parseFloat(v.priceRupees) || 0) * 100),
+        is_available: v.is_available,
+        display_order: i,
+      }));
+    if (variants.some((v) => v.price_minor <= 0)) {
+      setPortionError("Every portion needs a price greater than 0.");
+      return;
+    }
+    try {
+      await replaceVariants({ id: editingItem.id, variants }).unwrap();
+      setEditingItem(null);
+      refetchItems();
+    } catch (err: any) {
+      setPortionError(err?.data?.error || "Failed to save portions");
     }
   };
 
@@ -171,17 +236,35 @@ export default function RestaurantMenuStudioPage() {
                 <div className="pr">
                   {formatMoney(item.price?.amount_minor_units || 0)}
                 </div>
-                <button
-                  className="chip"
-                  aria-pressed={isAvail}
-                  onClick={() => {
-                    // Toggle local state
-                    item.is_available = !isAvail;
-                    refetchItems();
-                  }}
-                >
-                  {isAvail ? "Available" : "Paused"}
-                </button>
+                {item.variants && item.variants.length > 0 && (
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 4, margin: "6px 0" }}>
+                    {item.variants.map((v) => (
+                      <span
+                        key={v.id}
+                        className="pill"
+                        style={{ fontSize: "0.68rem", opacity: v.is_available === false ? 0.5 : 1 }}
+                      >
+                        {v.name} {formatMoney(v.price?.amount_minor_units || 0)}
+                      </span>
+                    ))}
+                  </div>
+                )}
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                  <button
+                    className="chip"
+                    aria-pressed={isAvail}
+                    onClick={() => {
+                      // Toggle local state
+                      item.is_available = !isAvail;
+                      refetchItems();
+                    }}
+                  >
+                    {isAvail ? "Available" : "Paused"}
+                  </button>
+                  <button className="chip" onClick={() => openPortionsEditor(item)}>
+                    Edit portions
+                  </button>
+                </div>
               </div>
             );
           })
@@ -250,9 +333,9 @@ export default function RestaurantMenuStudioPage() {
                 </label>
 
                 <label>
-                  Price (₹)
+                  Price (₹){itemHasPortions ? " (optional — max portion price used)" : ""}
                   <input
-                    required
+                    required={!itemHasPortions}
                     type="number"
                     step="0.01"
                     placeholder="e.g. 280"
@@ -260,6 +343,64 @@ export default function RestaurantMenuStudioPage() {
                     onChange={(e) => setItemPriceRupees(e.target.value)}
                   />
                 </label>
+
+                <label className="w" style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                  <input
+                    type="checkbox"
+                    checked={itemHasPortions}
+                    onChange={(e) => setItemHasPortions(e.target.checked)}
+                    style={{ width: "auto" }}
+                  />
+                  Has portions (Half / Full)
+                </label>
+
+                {itemHasPortions && (
+                  <div className="w" style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    {itemPortions.map((v, idx) => (
+                      <div key={idx} style={{ display: "flex", gap: 6 }}>
+                        <input
+                          placeholder="Portion name"
+                          value={v.name}
+                          onChange={(e) =>
+                            setItemPortions((prev) =>
+                              prev.map((x, i) => (i === idx ? { ...x, name: e.target.value } : x))
+                            )
+                          }
+                          style={{ flex: 1 }}
+                        />
+                        <input
+                          type="number"
+                          step="0.01"
+                          placeholder="₹"
+                          value={v.priceRupees}
+                          onChange={(e) =>
+                            setItemPortions((prev) =>
+                              prev.map((x, i) => (i === idx ? { ...x, priceRupees: e.target.value } : x))
+                            )
+                          }
+                          style={{ width: 90 }}
+                        />
+                        {itemPortions.length > 1 && (
+                          <button
+                            type="button"
+                            className="btn s sm"
+                            onClick={() => setItemPortions((prev) => prev.filter((_, i) => i !== idx))}
+                          >
+                            ×
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      className="btn s sm"
+                      style={{ alignSelf: "flex-start" }}
+                      onClick={() => setItemPortions((prev) => [...prev, { name: "", priceRupees: "", is_available: true }])}
+                    >
+                      + Add portion
+                    </button>
+                  </div>
+                )}
 
                 <label>
                   Category
@@ -286,6 +427,93 @@ export default function RestaurantMenuStudioPage() {
                 </button>
                 <button type="submit" className="btn" disabled={isCreatingItem}>
                   {isCreatingItem ? "Saving…" : "Save"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Portions Modal */}
+      {editingItem && (
+        <div
+          className="ov on"
+          onClick={(e) => {
+            if ((e.target as HTMLElement).classList.contains("ov")) setEditingItem(null);
+          }}
+        >
+          <div className="md">
+            <h3>Portions — {editingItem.name}</h3>
+            <p className="sub" style={{ color: "var(--admin-mute)", marginTop: -6 }}>
+              Define portion sizes with their own prices. Save replaces the full set; empty list removes all portions.
+            </p>
+            <form onSubmit={handleSavePortions}>
+              <div className="mf" style={{ flexDirection: "column" }}>
+                {editPortions.map((v, idx) => (
+                  <div key={idx} style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                    <input
+                      placeholder="Portion name (e.g. Half)"
+                      value={v.name}
+                      onChange={(e) =>
+                        setEditPortions((prev) =>
+                          prev.map((x, i) => (i === idx ? { ...x, name: e.target.value } : x))
+                        )
+                      }
+                      style={{ flex: 1 }}
+                    />
+                    <input
+                      type="number"
+                      step="0.01"
+                      placeholder="₹"
+                      value={v.priceRupees}
+                      onChange={(e) =>
+                        setEditPortions((prev) =>
+                          prev.map((x, i) => (i === idx ? { ...x, priceRupees: e.target.value } : x))
+                        )
+                      }
+                      style={{ width: 90 }}
+                    />
+                    <button
+                      type="button"
+                      className="chip"
+                      aria-pressed={v.is_available}
+                      onClick={() =>
+                        setEditPortions((prev) =>
+                          prev.map((x, i) => (i === idx ? { ...x, is_available: !x.is_available } : x))
+                        )
+                      }
+                    >
+                      {v.is_available ? "On" : "Off"}
+                    </button>
+                    <button
+                      type="button"
+                      className="btn s sm"
+                      onClick={() => setEditPortions((prev) => prev.filter((_, i) => i !== idx))}
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  className="btn s sm"
+                  style={{ alignSelf: "flex-start" }}
+                  onClick={() => setEditPortions((prev) => [...prev, { name: "", priceRupees: "", is_available: true }])}
+                >
+                  + Add portion
+                </button>
+                {portionError && (
+                  <div className="pill c-r" style={{ display: "block", padding: "8px 12px" }}>
+                    {portionError}
+                  </div>
+                )}
+              </div>
+              <div className="ac" style={{ marginTop: 20 }}>
+                <button type="button" className="btn s" onClick={() => setEditingItem(null)}>
+                  Cancel
+                </button>
+                <button type="submit" className="btn" disabled={isSavingVariants}>
+                  {isSavingVariants ? "Saving…" : "Save portions"}
                 </button>
               </div>
             </form>

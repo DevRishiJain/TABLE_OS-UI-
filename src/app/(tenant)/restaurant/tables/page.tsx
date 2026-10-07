@@ -5,6 +5,7 @@ import { useAppSelector } from "@/store";
 import {
   useGetRestaurantTablesQuery,
   useCreateRestaurantTableMutation,
+  useUpdateRestaurantTableMutation,
 } from "@/store/api/restaurantApi";
 import { QRCodeCanvas } from "qrcode.react";
 
@@ -23,6 +24,7 @@ export default function RestaurantTablesQRPage() {
 
   const { data: backendTables, refetch: refetchTables } = useGetRestaurantTablesQuery();
   const [createTableApi, { isLoading: isCreating }] = useCreateRestaurantTableMutation();
+  const [updateTableApi, { isLoading: isUpdating }] = useUpdateRestaurantTableMutation();
 
   const [tables, setTables] = useState<TableItem[]>([]);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -30,6 +32,11 @@ export default function RestaurantTablesQRPage() {
   const [newCapacity, setNewCapacity] = useState(4);
   const [printingTable, setPrintingTable] = useState<TableItem | null>(null);
   const [isPrintingAll, setIsPrintingAll] = useState(false);
+  const [editingTable, setEditingTable] = useState<TableItem | null>(null);
+  const [editCapacity, setEditCapacity] = useState(4);
+  const [editTableNum, setEditTableNum] = useState("");
+  const [editActive, setEditActive] = useState(true);
+  const [addError, setAddError] = useState<string | null>(null);
 
   // Sync and deduplicate tables from backend
   useEffect(() => {
@@ -47,7 +54,7 @@ export default function RestaurantTablesQRPage() {
           deduped.push({
             id: bt.id || `tbl-${idx + 1}`,
             tableNumber: rawNum,
-            capacity: bt.capacity || (idx % 2 === 0 ? 4 : 2),
+            capacity: bt.capacity || 4,
             status: "AVAILABLE",
             token: bt.table_token || `TBL-${String(idx + 1).padStart(3, "0")}`,
           });
@@ -72,7 +79,12 @@ export default function RestaurantTablesQRPage() {
 
   const handleAddTable = async (e: React.FormEvent) => {
     e.preventDefault();
+    setAddError(null);
     if (!newTableNum.trim()) return;
+    if (!newCapacity || newCapacity < 1 || newCapacity > 50) {
+      setAddError("Seating capacity is required (1-50 guests).");
+      return;
+    }
 
     try {
       await createTableApi({
@@ -83,18 +95,36 @@ export default function RestaurantTablesQRPage() {
       setShowAddModal(false);
       setNewTableNum("");
       refetchTables();
-    } catch {
-      // Optimistic local add
-      const newEntry: TableItem = {
-        id: `tbl-local-${Date.now()}`,
-        tableNumber: newTableNum.trim(),
-        capacity: newCapacity,
-        status: "AVAILABLE",
-        token: `TBL-${String(tables.length + 1).padStart(3, "0")}`,
-      };
-      setTables((prev) => [...prev, newEntry]);
-      setShowAddModal(false);
-      setNewTableNum("");
+    } catch (err: any) {
+      setAddError(err?.data?.error || "Failed to add table. Please try again.");
+    }
+  };
+
+  const openEdit = (t: TableItem) => {
+    setEditingTable(t);
+    setEditTableNum(t.tableNumber);
+    setEditCapacity(t.capacity || 4);
+    setEditActive(t.status !== "BILL_REQUESTED");
+  };
+
+  const handleEditTable = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingTable) return;
+    if (!editCapacity || editCapacity < 1 || editCapacity > 50) {
+      setAddError("Seating capacity must be between 1 and 50.");
+      return;
+    }
+    try {
+      await updateTableApi({
+        id: editingTable.id,
+        table_number: editTableNum.trim() || undefined,
+        capacity: editCapacity,
+        is_active: editActive,
+      }).unwrap();
+      setEditingTable(null);
+      refetchTables();
+    } catch (err: any) {
+      setAddError(err?.data?.error || "Failed to update table.");
     }
   };
 
@@ -226,7 +256,7 @@ export default function RestaurantTablesQRPage() {
               </div>
 
               <small style={{ color: "var(--admin-mute)", display: "block" }}>
-                Seats {t.capacity} · preview code
+                {t.capacity} seats · preview code
               </small>
 
               <div
@@ -257,6 +287,16 @@ export default function RestaurantTablesQRPage() {
                 >
                   Print
                 </button>
+                {userRole !== "FRANCHISE_OWNER" && (
+                  <button
+                    type="button"
+                    className="btn s sm"
+                    onClick={() => openEdit(t)}
+                    title={`Edit ${t.tableNumber}`}
+                  >
+                    Edit
+                  </button>
+                )}
               </div>
             </div>
           );
@@ -286,18 +326,22 @@ export default function RestaurantTablesQRPage() {
                 </label>
 
                 <label className="w">
-                  Seating Capacity
-                  <select
+                  Seats (required, 1-50)
+                  <input
+                    required
+                    type="number"
+                    min={1}
+                    max={50}
                     value={newCapacity}
                     onChange={(e) => setNewCapacity(Number(e.target.value))}
-                  >
-                    <option value={2}>2 Guests</option>
-                    <option value={4}>4 Guests</option>
-                    <option value={6}>6 Guests</option>
-                    <option value={8}>8 Guests</option>
-                  </select>
+                  />
                 </label>
               </div>
+              {addError && (
+                <div className="pill c-r" style={{ display: "block", padding: "8px 12px" }}>
+                  {addError}
+                </div>
+              )}
 
               <div className="ac" style={{ marginTop: 20 }}>
                 <button
@@ -309,6 +353,59 @@ export default function RestaurantTablesQRPage() {
                 </button>
                 <button type="submit" className="btn" disabled={isCreating}>
                   {isCreating ? "Adding…" : "Add Table"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Table Modal */}
+      {editingTable && (
+        <div
+          className="ov on"
+          onClick={(e) => {
+            if ((e.target as HTMLElement).classList.contains("ov")) setEditingTable(null);
+          }}
+        >
+          <div className="md">
+            <h3>Edit {editingTable.tableNumber}</h3>
+            <form onSubmit={handleEditTable}>
+              <div className="mf">
+                <label className="w">
+                  Table Identifier
+                  <input
+                    value={editTableNum}
+                    onChange={(e) => setEditTableNum(e.target.value)}
+                  />
+                </label>
+                <label className="w">
+                  Seats (1-50)
+                  <input
+                    required
+                    type="number"
+                    min={1}
+                    max={50}
+                    value={editCapacity}
+                    onChange={(e) => setEditCapacity(Number(e.target.value))}
+                  />
+                </label>
+                <label className="w" style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                  <input
+                    type="checkbox"
+                    checked={editActive}
+                    onChange={(e) => setEditActive(e.target.checked)}
+                    style={{ width: "auto" }}
+                  />
+                  Active
+                </label>
+              </div>
+              <div className="ac" style={{ marginTop: 20 }}>
+                <button type="button" className="btn s" onClick={() => setEditingTable(null)}>
+                  Cancel
+                </button>
+                <button type="submit" className="btn" disabled={isUpdating}>
+                  {isUpdating ? "Saving…" : "Save"}
                 </button>
               </div>
             </form>

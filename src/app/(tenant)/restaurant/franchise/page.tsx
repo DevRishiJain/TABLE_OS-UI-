@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAppDispatch, useAppSelector } from "@/store";
 import { setRestaurantInfo } from "@/store/slices/authSlice";
@@ -8,6 +8,7 @@ import { addFranchiseOutlet } from "@/store/slices/franchiseSlice";
 import {
   useGetFranchiseOutletsQuery,
   useGetFranchiseSummaryQuery,
+  useGenerateFranchiseInviteCodeMutation,
 } from "@/store/api/staffApi";
 import { formatCurrencyMinor } from "@/lib/formatters";
 import { LinkOutletModal } from "@/components/franchise/LinkOutletModal";
@@ -16,28 +17,53 @@ export default function FranchiseDashboardPage() {
   const router = useRouter();
   const dispatch = useAppDispatch();
   
-  const reduxOutlets = useAppSelector((state) => state.franchise.outlets);
   const { data: apiOutlets = [], isLoading: isLoadingOutlets, refetch } = useGetFranchiseOutletsQuery();
   const { data: summary, isLoading: isLoadingSummary } = useGetFranchiseSummaryQuery();
+  const [generateInviteCode, { isLoading: isGeneratingCode }] = useGenerateFranchiseInviteCodeMutation();
 
   const [selectedOutletFilter, setSelectedOutletFilter] = useState<string>("ALL");
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [activeLinkCode, setActiveLinkCode] = useState<string | null>(null);
+  const [linkCodeExpiry, setLinkCodeExpiry] = useState<number | null>(null);
+  const [countdown, setCountdown] = useState<string>("");
   const [isCopied, setIsCopied] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // Combine API outlets with Redux state outlets to keep real-time UI synchronized
-  const combinedOutlets = apiOutlets.length > 0 ? apiOutlets : reduxOutlets;
+  // Outlets come only from the API — no fabricated fallback
+  const combinedOutlets = apiOutlets;
+
+  // Expiry countdown ticker for the active invite code
+  useEffect(() => {
+    if (!linkCodeExpiry) return;
+    const tick = () => {
+      const ms = linkCodeExpiry - Date.now();
+      if (ms <= 0) {
+        setCountdown("expired");
+        return;
+      }
+      const m = Math.floor(ms / 60000);
+      const s = Math.floor((ms % 60000) / 1000);
+      setCountdown(`${m}:${String(s).padStart(2, "0")}`);
+    };
+    tick();
+    const t = setInterval(tick, 1000);
+    return () => clearInterval(t);
+  }, [linkCodeExpiry]);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 2500);
   };
 
-  const handleGenerateLinkCode = () => {
-    const code = `FRN-${Math.floor(100000 + Math.random() * 900000)}`;
-    setActiveLinkCode(code);
-    showToast("Single-use 15-minute Link OTP Code generated!");
+  const handleGenerateLinkCode = async () => {
+    try {
+      const res = await generateInviteCode().unwrap();
+      setActiveLinkCode(res.code);
+      setLinkCodeExpiry(res.expires_at ? new Date(res.expires_at).getTime() : Date.now() + 15 * 60 * 1000);
+      showToast("Single-use 15-minute Link OTP Code generated!");
+    } catch (err: any) {
+      showToast(err?.data?.error || "Failed to generate invite code");
+    }
   };
 
   const handleCopyCode = () => {
@@ -69,7 +95,7 @@ export default function FranchiseDashboardPage() {
 
   const totalActive = summary?.active_subscriptions ?? combinedOutlets.filter((o) => o.is_active).length;
   const totalExpired = summary?.expired_subscriptions ?? combinedOutlets.filter((o) => !o.is_active).length;
-  const totalRev = summary?.total_revenue_minor ?? 24500000;
+  const totalRev = summary?.total_revenue_minor ?? 0;
 
   return (
     <>
@@ -144,8 +170,8 @@ export default function FranchiseDashboardPage() {
 
         <div className="cd st" style={{ "--c": "var(--admin-vio)" } as any}>
           <small>Top Performing Location</small>
-          <b>{summary?.top_performing_outlet || "Spice Route CP"}</b>
-          <span>Highest revenue branch today</span>
+          <b>{summary?.top_performing_outlet || "—"}</b>
+          <span>Highest revenue outlet (30 days)</span>
         </div>
       </div>
 
@@ -159,7 +185,7 @@ export default function FranchiseDashboardPage() {
             </p>
           </div>
 
-          <button className="btn pri s" onClick={handleGenerateLinkCode}>
+          <button className="btn pri s" onClick={handleGenerateLinkCode} disabled={isGeneratingCode}>
             <svg viewBox="0 0 24 24"><path d="M21 2l-2 2m-2-2l2 2M3 7v6h6M21 17v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" /></svg>
             Generate Link OTP Code
           </button>
@@ -188,7 +214,7 @@ export default function FranchiseDashboardPage() {
                 {activeLinkCode}
               </div>
               <small style={{ color: "var(--admin-mute)", fontSize: "0.78rem" }}>
-                ⏱️ Valid for 15 minutes. Transmit to Store Owner to enter under Settings → Franchise Association.
+                ⏱️ Expires in {countdown || "…"}. Transmit to Store Owner to enter under Settings → Franchise Association.
               </small>
             </div>
 
@@ -211,7 +237,7 @@ export default function FranchiseDashboardPage() {
               justifyContent: "space-between",
             }}
           >
-            <span>No active invite link codes generated. Click <b>"Generate Link OTP Code"</b> to issue a new 15-minute token.</span>
+            <span>No active invite link codes. Click <b>"Generate Link OTP Code"</b> to issue a new 15-minute token.</span>
             <span className="pill">Dual-Handshake Protected</span>
           </div>
         )}
@@ -279,6 +305,10 @@ export default function FranchiseDashboardPage() {
                       {outlet.days_remaining ?? 30} Days
                     </b>
                   </td>
+                  <td className="n"><b>{outlet.table_count ?? 0}</b></td>
+                  <td className="n"><b>{outlet.active_sessions ?? 0}</b></td>
+                  <td className="n"><b>{formatCurrencyMinor(outlet.revenue_today_minor ?? 0)}</b></td>
+                  <td className="n"><b>{formatCurrencyMinor(outlet.revenue_30d_minor ?? 0)}</b></td>
                   <td className="ac">
                     <span className={`pill ${outlet.is_active ?? true ? "c-g" : "c-r"}`}>
                       {outlet.subscription_status || (outlet.is_active ?? true ? "ACTIVE" : "EXPIRED")}
@@ -304,6 +334,7 @@ export default function FranchiseDashboardPage() {
       <LinkOutletModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
+        onCreated={() => refetch()}
       />
     </>
   );

@@ -106,6 +106,7 @@ export const restaurantApi = baseApi.injectEndpoints({
         price_minor?: number;
         cgst_rate_bps?: number;
         sgst_rate_bps?: number;
+        variants?: Array<{ name: string; price_minor?: number; price?: number; is_available?: boolean }>;
       }
     >({
       query: (body) => ({
@@ -211,7 +212,7 @@ export const restaurantApi = baseApi.injectEndpoints({
 
     createRestaurantTable: builder.mutation<
       any,
-      { table_number: string; table_token?: string; capacity?: number }
+      { table_number: string; table_token?: string; capacity: number }
     >({
       query: (body) => ({
         url: "/api/v1/restaurant/tables",
@@ -219,6 +220,30 @@ export const restaurantApi = baseApi.injectEndpoints({
         body,
       }),
       invalidatesTags: ["Table"],
+    }),
+
+    updateRestaurantTable: builder.mutation<
+      any,
+      { id: string; capacity?: number; table_number?: string; is_active?: boolean }
+    >({
+      query: ({ id, ...body }) => ({
+        url: `/api/v1/restaurant/tables/${id}`,
+        method: "PUT",
+        body,
+      }),
+      invalidatesTags: ["Table"],
+    }),
+
+    replaceMenuItemVariants: builder.mutation<
+      MenuItem,
+      { id: string; variants: Array<{ name: string; price_minor?: number; price?: number; is_available?: boolean }> }
+    >({
+      query: ({ id, variants }) => ({
+        url: `/api/v1/restaurant/menu/items/${id}/variants`,
+        method: "PUT",
+        body: { variants },
+      }),
+      invalidatesTags: ["MenuItem"],
     }),
 
     getRestaurantOrders: builder.query<
@@ -423,6 +448,8 @@ export const {
   useGoLiveOnboardingMutation,
   useGetRestaurantTablesQuery,
   useCreateRestaurantTableMutation,
+  useUpdateRestaurantTableMutation,
+  useReplaceMenuItemVariantsMutation,
   useGetRestaurantOrdersQuery,
   useOnboardRestaurantMutation,
   useGetExecutiveDashboardAnalyticsQuery,

@@ -52,6 +52,10 @@ export const publicApi = baseApi.injectEndpoints({
       query: (identifier) => `/api/v1/public/restaurant/${identifier}`,
     }),
 
+    checkFranchiseInvite: builder.query<import("@/types/api").FranchiseInviteLookup, string>({
+      query: (code) => `/api/v1/public/franchise/invite/${encodeURIComponent(code)}`,
+    }),
+
     checkHandleAvailability: builder.query<{
       handle: string;
       available: boolean;
@@ -81,4 +85,5 @@ export const {
   useLazyLookupRestaurantQuery,
   useCheckHandleAvailabilityQuery,
   useLazyCheckHandleAvailabilityQuery,
+  useLazyCheckFranchiseInviteQuery,
 } = publicApi;

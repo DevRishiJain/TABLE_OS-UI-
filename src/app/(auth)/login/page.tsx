@@ -240,7 +240,7 @@ function LoginContent() {
 
         const role = res.staff.role;
         if (role === "SUPER_ADMIN" || (res.staff as any).is_platform) {
-          router.push("/admin/restaurants");
+          router.push("/spadmin");
         } else if (role === "FRANCHISE_OWNER") {
           router.push("/restaurant/franchise");
         } else if (role === "WAITER") {
@@ -584,6 +584,10 @@ function LoginContent() {
               <span className="text-gray-600">•</span>
               <Link href="/staff/tables" className="text-blue-400 hover:underline">
                 Waiter
+              </Link>
+              <span className="text-gray-600">•</span>
+              <Link href="/spadmin/login" className="text-gray-500 hover:text-gray-400">
+                Platform admin
               </Link>
             </div>
           </div>

@@ -16,7 +16,7 @@ import {
 } from "@/store/slices/cartSlice";
 import { setAiDrawerOpen, addToast } from "@/store/slices/uiSlice";
 import { formatMoney } from "@/lib/money";
-import { MenuItem } from "@/types/domain";
+import { MenuItem, MenuItemVariant } from "@/types/domain";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Modal } from "@/components/ui/Modal";
@@ -59,6 +59,7 @@ export default function CustomerMenuPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [vegOnly, setVegOnly] = useState(false);
   const [selectedDish, setSelectedDish] = useState<MenuItem | null>(null);
+  const [dishModalVariant, setDishModalVariant] = useState<MenuItemVariant | undefined>(undefined);
   const [dishInstructions, setDishInstructions] = useState("");
   const [dishModalQty, setDishModalQty] = useState(1);
   const [highlightedDishId, setHighlightedDishId] = useState<string | null>(null);
@@ -159,13 +160,21 @@ export default function CustomerMenuPage() {
   const cartQuantityMap = useMemo(() => {
     const map: Record<string, number> = {};
     cartItems.forEach((ci) => {
-      map[ci.menuItem.id] = ci.quantity;
+      map[ci.menuItem.id] = (map[ci.menuItem.id] || 0) + ci.quantity;
     });
     return map;
   }, [cartItems]);
 
+  const dishVariants = (dish: MenuItem) =>
+    (dish.variants || []).filter((v) => v.is_available !== false);
+
   const handleAddDish = (dish: MenuItem, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
+    // Items with portions require choosing a portion first
+    if (dishVariants(dish).length > 0) {
+      handleOpenDishModal(dish);
+      return;
+    }
     dispatch(addItem({ menuItem: dish, quantity: 1 }));
     dispatch(
       addToast({
@@ -176,8 +185,12 @@ export default function CustomerMenuPage() {
     );
   };
 
-  const handleUpdateQty = (dishId: string, newQty: number, e?: React.MouseEvent) => {
+  const handleUpdateQty = (dishId: string, newQty: number, e?: React.MouseEvent, dish?: MenuItem) => {
     if (e) e.stopPropagation();
+    if (dish && dishVariants(dish).length > 0) {
+      handleOpenDishModal(dish);
+      return;
+    }
     dispatch(updateQuantity({ menuItemId: dishId, quantity: newQty }));
   };
 
@@ -186,16 +199,22 @@ export default function CustomerMenuPage() {
     const existing = cartItems.find((ci) => ci.menuItem.id === dish.id);
     setDishInstructions(existing?.specialInstructions || "");
     setDishModalQty(existing?.quantity || 1);
+    const avail = dishVariants(dish);
+    setDishModalVariant(
+      existing?.variant || (avail.length > 0 ? avail[0] : undefined)
+    );
   };
 
   const handleConfirmCustomDish = () => {
     if (selectedDish) {
+      const vid = dishModalVariant?.id;
       if (dishModalQty <= 0) {
-        dispatch(updateQuantity({ menuItemId: selectedDish.id, quantity: 0 }));
+        dispatch(updateQuantity({ menuItemId: selectedDish.id, variantId: vid, quantity: 0 }));
       } else {
         dispatch(
           addItem({
             menuItem: selectedDish,
+            variant: dishModalVariant,
             quantity: dishModalQty,
             specialInstructions: dishInstructions.trim() || undefined,
           })
@@ -545,9 +564,15 @@ export default function CustomerMenuPage() {
               {/* Dish info */}
               <div style={{ padding: "18px 20px 0", display: "grid", gap: 14 }}>
                 <div className="px">
-                  <h2>{selectedDish.name}</h2>
+                  <h2>
+                    {selectedDish.name}
+                    {dishModalVariant ? ` (${dishModalVariant.name})` : ""}
+                  </h2>
                   <span className="pr" style={{ fontSize: "1.8rem" }}>
-                    {formatMoney(selectedDish.price.amount_minor_units)}
+                    {formatMoney(
+                      (dishModalVariant?.price?.amount_minor_units ??
+                        selectedDish.price.amount_minor_units)
+                    )}
                   </span>
                 </div>
 
@@ -569,6 +594,34 @@ export default function CustomerMenuPage() {
                   <p className="mu" style={{ margin: 0 }}>
                     {selectedDish.description}
                   </p>
+                )}
+
+                {dishVariants(selectedDish).length > 0 && (
+                  <div>
+                    <label style={{ fontSize: "0.85rem", color: "var(--mu)" }}>
+                      Portion
+                    </label>
+                    <div className="tags" style={{ marginTop: 6 }}>
+                      {dishVariants(selectedDish).map((v) => (
+                        <button
+                          key={v.id}
+                          type="button"
+                          className="tag"
+                          onClick={() => setDishModalVariant(v)}
+                          style={{
+                            cursor: "pointer",
+                            borderColor:
+                              dishModalVariant?.id === v.id ? "var(--ac)" : undefined,
+                            color:
+                              dishModalVariant?.id === v.id ? "var(--ac)" : undefined,
+                            fontWeight: dishModalVariant?.id === v.id ? 800 : 400,
+                          }}
+                        >
+                          {v.name} {formatMoney(v.price.amount_minor_units)}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 )}
 
                 <div>
@@ -618,8 +671,14 @@ export default function CustomerMenuPage() {
                 {dishModalQty === 0
                   ? "Remove from order"
                   : cartQuantityMap[selectedDish.id]
-                  ? `Update order · ${formatMoney(selectedDish.price.amount_minor_units * dishModalQty)}`
-                  : `Add to order · ${formatMoney(selectedDish.price.amount_minor_units * dishModalQty)}`}
+                  ? `Update order · ${formatMoney(
+                      (dishModalVariant?.price?.amount_minor_units ??
+                        selectedDish.price.amount_minor_units) * dishModalQty
+                    )}`
+                  : `Add to order · ${formatMoney(
+                      (dishModalVariant?.price?.amount_minor_units ??
+                        selectedDish.price.amount_minor_units) * dishModalQty
+                    )}`}
               </button>
             </div>
           </div>

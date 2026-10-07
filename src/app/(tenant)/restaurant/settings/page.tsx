@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useLinkRestaurantToFranchiseMutation } from "@/store/api/staffApi";
 import { useRestaurantTheme, THEME_OPTIONS } from "@/components/providers/RestaurantThemeProvider";
 import { Sun, Moon, Check } from "lucide-react";
 import {
@@ -24,6 +25,10 @@ export default function RestaurantSettingsPage() {
   const [exitPassOtpTtl, setExitPassOtpTtl] = useState(120);
   const [exitMode, setExitMode] = useState("guard");
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [linkFranchise, { isLoading: isLinking }] = useLinkRestaurantToFranchiseMutation();
+  const [franchiseCode, setFranchiseCode] = useState("");
+  const [linkPassword, setLinkPassword] = useState("");
+  const [linkedFranchise, setLinkedFranchise] = useState<string | null>(null);
 
   useEffect(() => {
     if (settings) {
@@ -242,13 +247,26 @@ export default function RestaurantSettingsPage() {
           <p>Link your independent restaurant to a registered Franchise Network using a 6-digit OTP code.</p>
         </div>
 
+        {linkedFranchise && (
+          <div className="pill c-g" style={{ display: "inline-block", padding: "8px 14px", marginTop: 12 }}>
+            ✓ Part of {linkedFranchise}
+          </div>
+        )}
         <form
-          onSubmit={(e) => {
+          onSubmit={async (e) => {
             e.preventDefault();
-            showToast("Verifying Franchise Link OTP Code...");
-            setTimeout(() => {
-              showToast("Restaurant successfully linked to Franchise Network!");
-            }, 800);
+            try {
+              const res = await linkFranchise({
+                code: franchiseCode.trim(),
+                password: linkPassword,
+              }).unwrap();
+              setLinkedFranchise(res.franchise_name || "the franchise");
+              showToast(res.message || "Restaurant successfully linked to Franchise Network!");
+              setFranchiseCode("");
+              setLinkPassword("");
+            } catch (err: any) {
+              showToast(err?.data?.error || "Failed to link — check the code and your password.");
+            }
           }}
           style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 16, maxWidth: 460 }}
         >
@@ -259,6 +277,8 @@ export default function RestaurantSettingsPage() {
             <input
               type="text"
               placeholder="e.g. FRN-982415"
+              value={franchiseCode}
+              onChange={(e) => setFranchiseCode(e.target.value.toUpperCase())}
               required
               className="font-mono text-xs"
               style={{
@@ -279,6 +299,8 @@ export default function RestaurantSettingsPage() {
             <input
               type="password"
               placeholder="••••••••"
+              value={linkPassword}
+              onChange={(e) => setLinkPassword(e.target.value)}
               required
               style={{
                 width: "100%",
@@ -291,8 +313,8 @@ export default function RestaurantSettingsPage() {
             />
           </div>
 
-          <button className="btn pri sm" type="submit" style={{ alignSelf: "flex-start", marginTop: 4 }}>
-            Authorize &amp; Link Restaurant
+          <button className="btn pri sm" type="submit" disabled={isLinking} style={{ alignSelf: "flex-start", marginTop: 4 }}>
+            {isLinking ? "Verifying…" : "Authorize & Link Restaurant"}
           </button>
         </form>
       </div>

@@ -1,14 +1,18 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
-import { MenuItem } from "@/types/domain";
+import { MenuItem, MenuItemVariant } from "@/types/domain";
 
 export interface CartItem {
   menuItem: MenuItem;
+  variant?: MenuItemVariant;
   quantity: number;
   specialInstructions?: string;
 }
 
+export const cartKeyFor = (menuItemId: string, variantId?: string) =>
+  variantId ? `${menuItemId}:${variantId}` : menuItemId;
+
 interface CartState {
-  items: Record<string, CartItem>; // keyed by menuItem.id
+  items: Record<string, CartItem>; // keyed by menuItem.id or menuItem.id:variantId
 }
 
 const loadInitialCart = (): Record<string, CartItem> => {
@@ -44,20 +48,23 @@ const cartSlice = createSlice({
       state,
       action: PayloadAction<{
         menuItem: MenuItem;
+        variant?: MenuItemVariant;
         quantity?: number;
         specialInstructions?: string;
       }>
     ) {
-      const { menuItem, quantity = 1, specialInstructions } = action.payload;
-      const existing = state.items[menuItem.id];
+      const { menuItem, variant, quantity = 1, specialInstructions } = action.payload;
+      const key = cartKeyFor(menuItem.id, variant?.id);
+      const existing = state.items[key];
       if (existing) {
         existing.quantity += quantity;
         if (specialInstructions !== undefined) {
           existing.specialInstructions = specialInstructions;
         }
       } else {
-        state.items[menuItem.id] = {
+        state.items[key] = {
           menuItem,
+          variant,
           quantity,
           specialInstructions,
         };
@@ -66,28 +73,33 @@ const cartSlice = createSlice({
     },
     updateQuantity(
       state,
-      action: PayloadAction<{ menuItemId: string; quantity: number }>
+      action: PayloadAction<{ menuItemId: string; variantId?: string; quantity: number }>
     ) {
-      const { menuItemId, quantity } = action.payload;
+      const key = cartKeyFor(action.payload.menuItemId, action.payload.variantId);
+      const quantity = action.payload.quantity;
       if (quantity <= 0) {
-        delete state.items[menuItemId];
-      } else if (state.items[menuItemId]) {
-        state.items[menuItemId].quantity = quantity;
+        delete state.items[key];
+      } else if (state.items[key]) {
+        state.items[key].quantity = quantity;
       }
       saveCartToStorage(state.items);
     },
     updateInstructions(
       state,
-      action: PayloadAction<{ menuItemId: string; instructions: string }>
+      action: PayloadAction<{ menuItemId: string; variantId?: string; instructions: string }>
     ) {
-      const { menuItemId, instructions } = action.payload;
-      if (state.items[menuItemId]) {
-        state.items[menuItemId].specialInstructions = instructions;
+      const key = cartKeyFor(action.payload.menuItemId, action.payload.variantId);
+      if (state.items[key]) {
+        state.items[key].specialInstructions = action.payload.instructions;
       }
       saveCartToStorage(state.items);
     },
-    removeItem(state, action: PayloadAction<string>) {
-      delete state.items[action.payload];
+    removeItem(state, action: PayloadAction<{ menuItemId: string; variantId?: string } | string>) {
+      const key =
+        typeof action.payload === "string"
+          ? action.payload
+          : cartKeyFor(action.payload.menuItemId, action.payload.variantId);
+      delete state.items[key];
       saveCartToStorage(state.items);
     },
     clearCart(state) {
@@ -112,9 +124,16 @@ export const selectCartItemsList = (state: { cart: CartState }) =>
 export const selectCartTotalCount = (state: { cart: CartState }) =>
   Object.values(state.cart.items).reduce((acc, item) => acc + item.quantity, 0);
 
+export const cartItemUnitPriceMinor = (item: CartItem) =>
+  item.variant?.price?.amount_minor_units ??
+  item.menuItem.price.amount_minor_units;
+
+export const cartItemDisplayName = (item: CartItem) =>
+  item.variant ? `${item.menuItem.name} (${item.variant.name})` : item.menuItem.name;
+
 export const selectCartSubtotalMinor = (state: { cart: CartState }) =>
   Object.values(state.cart.items).reduce(
-    (acc, item) => acc + item.menuItem.price.amount_minor_units * item.quantity,
+    (acc, item) => acc + cartItemUnitPriceMinor(item) * item.quantity,
     0
   );
 

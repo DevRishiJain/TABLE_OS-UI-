@@ -25,6 +25,8 @@ export interface DiningSession {
   device_fingerprint: string;
   last_activity_at: string;
   expiry_deadline: string;
+  assigned_waiter_id?: string;
+  assigned_waiter_name?: string;
   close_reason?: string;
   closed_by_actor_type?: string;
   closed_by_actor_id?: string;
@@ -37,6 +39,7 @@ export interface OrderItem {
   id: string;
   order_id?: string;
   menu_item_id?: string;
+  variant_id?: string;
   item_name_snapshot: string;
   quantity: number;
   unit_price_snapshot: Money;
@@ -106,8 +109,20 @@ export interface ExitPass {
 
 export interface CartItem {
   menu_item_id: string;
+  variant_id?: string;
   quantity: number;
   special_instructions?: string;
+}
+
+export interface MenuItemVariant {
+  id: string;
+  menu_item_id?: string;
+  name: string;
+  price: Money;
+  is_available: boolean;
+  display_order?: number;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface MenuItem {
@@ -122,6 +137,7 @@ export interface MenuItem {
   hsn_sac_code: string;
   cgst_rate_bps: number;
   sgst_rate_bps: number;
+  variants?: MenuItemVariant[];
   created_at: string;
   updated_at: string;
 }
@@ -141,6 +157,7 @@ export interface Table {
   table_number: string;
   table_token: string;
   is_active: boolean;
+  capacity?: number;
   created_at: string;
   updated_at: string;
 }

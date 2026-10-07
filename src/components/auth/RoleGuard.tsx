@@ -75,7 +75,7 @@ export const RoleGuard: React.FC<RoleGuardProps> = ({
       case StaffRole.RESTAURANT_OWNER:
         return "/restaurant/dashboard";
       case StaffRole.SUPER_ADMIN:
-        return "/admin/restaurants";
+        return "/spadmin";
       case StaffRole.GUARD:
         return "/guard/scan";
       default:

@@ -15,6 +15,9 @@ export interface PendingOrderEntry {
   customer_phone?: string;
   guest_count?: number;
   vehicle_number?: string;
+  table_capacity?: number;
+  assigned_waiter_id?: string | null;
+  assigned_waiter_name?: string;
 }
 
 export const staffApi = baseApi.injectEndpoints({
@@ -243,7 +246,7 @@ export const staffApi = baseApi.injectEndpoints({
       is_active: boolean;
     }, void>({
       query: () => "/api/v1/restaurant/subscription",
-      providesTags: ["Subscription" as any],
+      providesTags: ["Subscription"],
     }),
 
     renewSubscription: builder.mutation<
@@ -252,15 +255,17 @@ export const staffApi = baseApi.injectEndpoints({
         subscription_end_at: string;
         days_remaining: number;
         is_active: boolean;
+        plan?: string;
+        days?: number;
       },
-      { days?: number } | void
+      { otp: string; days?: number }
     >({
       query: (body) => ({
         url: "/api/v1/restaurant/subscription/renew",
         method: "POST",
-        body: body || { days: 30 },
+        body,
       }),
-      invalidatesTags: ["Subscription" as any],
+      invalidatesTags: ["Subscription"],
     }),
 
     getFranchiseOutlets: builder.query<
@@ -274,13 +279,24 @@ export const staffApi = baseApi.injectEndpoints({
         subscription_end_at: string;
         days_remaining: number;
         is_active: boolean;
+        franchise_id?: string;
+        franchise_name?: string;
+        ownership_type?: string;
+        venue_type?: string;
+        table_count?: number;
+        active_sessions?: number;
+        revenue_today_minor?: number;
+        revenue_30d_minor?: number;
       }>,
       void
     >({
       query: () => "/api/v1/franchise/outlets",
+      providesTags: ["Franchise"],
     }),
 
     getFranchiseSummary: builder.query<{
+      franchise_id?: string;
+      franchise_name?: string;
       total_outlets: number;
       active_subscriptions: number;
       expired_subscriptions: number;
@@ -288,6 +304,72 @@ export const staffApi = baseApi.injectEndpoints({
       total_revenue_minor: number;
     }, void>({
       query: () => "/api/v1/franchise/summary",
+      providesTags: ["Franchise"],
+    }),
+
+    generateFranchiseInviteCode: builder.mutation<
+      { code: string; expires_at: string; message?: string; franchise_id?: string },
+      void
+    >({
+      query: () => ({
+        url: "/api/v1/franchise/invite-code",
+        method: "POST",
+      }),
+      invalidatesTags: ["Franchise"],
+    }),
+
+    createFranchiseOutlet: builder.mutation<
+      {
+        success: boolean;
+        restaurant_id: string;
+        name: string;
+        slug: string;
+        admin_email: string;
+        franchise_id?: string;
+        message?: string;
+      },
+      {
+        name: string;
+        slug: string;
+        venue_type?: string;
+        admin_name: string;
+        email: string;
+        password: string;
+        phone?: string;
+        table_count?: number;
+        default_capacity?: number;
+      }
+    >({
+      query: (body) => ({
+        url: "/api/v1/franchise/outlets/create",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Franchise"],
+    }),
+
+    linkRestaurantToFranchise: builder.mutation<
+      { status: string; message?: string; franchise_id?: string; franchise_name?: string },
+      { code: string; password: string }
+    >({
+      query: (body) => ({
+        url: "/api/v1/restaurant/link-franchise",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Franchise"],
+    }),
+
+    assignWaiter: builder.mutation<
+      import("@/types/domain").DiningSession,
+      { sessionId: string; staff_id: string | null }
+    >({
+      query: ({ sessionId, staff_id }) => ({
+        url: `/api/v1/staff/sessions/${sessionId}/assign-waiter`,
+        method: "POST",
+        body: { staff_id },
+      }),
+      invalidatesTags: ["Table", "Session", "PendingOrder", "KitchenQueue"],
     }),
   }),
 });
@@ -312,5 +394,9 @@ export const {
   useRenewSubscriptionMutation,
   useGetFranchiseOutletsQuery,
   useGetFranchiseSummaryQuery,
+  useGenerateFranchiseInviteCodeMutation,
+  useCreateFranchiseOutletMutation,
+  useLinkRestaurantToFranchiseMutation,
+  useAssignWaiterMutation,
 } = staffApi;
 

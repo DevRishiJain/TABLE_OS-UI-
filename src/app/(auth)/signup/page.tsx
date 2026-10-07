@@ -10,7 +10,7 @@ import { addToast } from "@/store/slices/uiSlice";
 import { StaffRole } from "@/types/enums";
 import { generateUUID } from "@/lib/idempotency";
 import { QRCodeSVG } from "qrcode.react";
-import { useLazyCheckHandleAvailabilityQuery } from "@/store/api/publicApi";
+import { useLazyCheckHandleAvailabilityQuery, useLazyCheckFranchiseInviteQuery } from "@/store/api/publicApi";
 import { THEME_OPTIONS, ThemeKey } from "@/components/providers/RestaurantThemeProvider";
 import {
   Utensils,
@@ -52,6 +52,7 @@ interface MenuItemDraft {
   price: number;
   dietary: "veg" | "non-veg" | "vegan";
   description: string;
+  variants?: { name: string; price: number }[];
 }
 
 interface StaffDraft {
@@ -77,6 +78,13 @@ export default function RestaurantSignupPage() {
   const [slug, setSlug] = useState("golden-spoon");
   const [triggerCheckHandle, { isFetching: isCheckingHandle }] = useLazyCheckHandleAvailabilityQuery();
   const [handleAvailability, setHandleAvailability] = useState<{ available: boolean; message?: string } | null>(null);
+
+  // Ownership: single restaurant, franchise brand, or franchise outlet
+  const [ownershipType, setOwnershipType] = useState<"SINGLE" | "FRANCHISE" | "FRANCHISE_OUTLET">("SINGLE");
+  const [franchiseName, setFranchiseName] = useState("");
+  const [franchiseInviteCode, setFranchiseInviteCode] = useState("");
+  const [triggerCheckInvite, { isFetching: isCheckingInvite }] = useLazyCheckFranchiseInviteQuery();
+  const [inviteLookup, setInviteLookup] = useState<{ valid: boolean; franchise_name?: string } | null>(null);
 
   useEffect(() => {
     const clean = slug.trim().replace(/^@/, "").toLowerCase();
@@ -155,9 +163,21 @@ export default function RestaurantSignupPage() {
   const [newItemCategory, setNewItemCategory] = useState("Main Course");
   const [newItemPrice, setNewItemPrice] = useState(299);
   const [newItemDietary, setNewItemDietary] = useState<"veg" | "non-veg" | "vegan">("veg");
+  const [newItemHasPortions, setNewItemHasPortions] = useState(false);
+  const [newItemPortions, setNewItemPortions] = useState<{ name: string; price: number }[]>([
+    { name: "Half", price: 150 },
+    { name: "Full", price: 250 },
+  ]);
 
   const handleAddMenuItem = () => {
     if (!newItemName.trim()) return;
+    const portions = newItemHasPortions
+      ? newItemPortions.filter((v) => v.name.trim() && v.price > 0)
+      : undefined;
+    if (newItemHasPortions && (portions?.length || 0) === 0) {
+      dispatch(addToast({ type: "error", title: "Portions Required", message: "Add at least one named portion with a positive price." }));
+      return;
+    }
     const item: MenuItemDraft = {
       id: Date.now().toString(),
       name: newItemName.trim(),
@@ -165,10 +185,13 @@ export default function RestaurantSignupPage() {
       price: Number(newItemPrice) || 199,
       dietary: newItemDietary,
       description: "Handcrafted chef specialty with farm-fresh ingredients",
+      variants: portions,
     };
     setMenuItems((prev) => [...prev, item]);
     setNewItemName("");
     setNewItemPrice(299);
+    setNewItemHasPortions(false);
+    setNewItemPortions([{ name: "Half", price: 150 }, { name: "Full", price: 250 }]);
   };
 
   const handleRemoveMenuItem = (id: string) => {
@@ -177,7 +200,11 @@ export default function RestaurantSignupPage() {
 
   // STEP 3: Tables & QR Code Generator
   const [tableCount, setTableCount] = useState<number>(8);
+  const [defaultCapacity, setDefaultCapacity] = useState<number>(4);
+  const [tableSeatOverrides, setTableSeatOverrides] = useState<Record<number, number>>({});
   const [selectedTableForPreview, setSelectedTableForPreview] = useState<number>(1);
+
+  const seatForTable = (i: number) => tableSeatOverrides[i] ?? defaultCapacity;
 
   // STEP 4: Staff Team Roster
   const generateTemporaryPassword = () =>
@@ -266,6 +293,10 @@ export default function RestaurantSignupPage() {
           venue_type: venueType,
           slug,
           theme: selectedTheme,
+          ownership_type: ownershipType,
+          franchise_name: ownershipType === "FRANCHISE" ? (franchiseName.trim() || restaurantName) : undefined,
+          franchise_invite_code: ownershipType === "FRANCHISE_OUTLET" ? franchiseInviteCode.trim() : undefined,
+          default_capacity: defaultCapacity,
           legal_name: legalName,
           gstin,
           phone,
@@ -289,11 +320,11 @@ export default function RestaurantSignupPage() {
           ] : venueType === "HOTEL" ? Array.from({ length: tableCount }).map((_, i) => ({
             table_number: `Room ${startingRoomNumber + i}`,
             table_token: `ROOM-${slug.substring(0, 4) || "HTL"}-${String(i + 1).padStart(3, "0")}`,
-            capacity: 4,
+            capacity: seatForTable(i + 1),
           })) : Array.from({ length: tableCount }).map((_, i) => ({
             table_number: `Table ${i + 1}`,
             table_token: `TBL-${slug.substring(0, 4) || "REST"}-${String(i + 1).padStart(3, "0")}`,
-            capacity: (i + 1) % 2 === 0 ? 4 : 2,
+            capacity: seatForTable(i + 1),
           })),
           menu_items: menuItems.map((m) => ({
             name: m.name,
@@ -302,6 +333,7 @@ export default function RestaurantSignupPage() {
             price_minor: m.price * 100,
             dietary: m.dietary,
             description: m.description,
+            variants: m.variants?.map((v) => ({ name: v.name, price_minor: v.price * 100 })),
           })),
           staff: staffList.map((s) => ({
             name: s.name,
@@ -778,6 +810,90 @@ export default function RestaurantSignupPage() {
               </div>
             </div>
 
+            {/* Ownership Type */}
+            <div className="flex flex-col gap-2.5">
+              <label className="text-xs font-bold text-gray-300 block">Ownership</label>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {[
+                  { key: "SINGLE" as const, title: "Single Restaurant", desc: "One independent venue" },
+                  { key: "FRANCHISE" as const, title: "Franchise Brand", desc: "Multi-outlet brand you own" },
+                  { key: "FRANCHISE_OUTLET" as const, title: "Franchise Outlet", desc: "Join an existing franchise" },
+                ].map((opt) => (
+                  <button
+                    key={opt.key}
+                    type="button"
+                    onClick={() => setOwnershipType(opt.key)}
+                    className={`p-3 rounded-2xl border text-left transition-all ${
+                      ownershipType === opt.key
+                        ? "bg-primary/10 border-primary ring-1 ring-primary/40"
+                        : "bg-surface-subtle border-surface-border hover:border-gray-500"
+                    }`}
+                  >
+                    <div className="text-xs font-bold text-gray-100">{opt.title}</div>
+                    <div className="text-[10px] text-gray-400 mt-0.5">{opt.desc}</div>
+                  </button>
+                ))}
+              </div>
+
+              {ownershipType === "FRANCHISE" && (
+                <div className="mt-1">
+                  <label className="text-xs font-bold text-gray-300 block mb-1">Franchise Brand Name</label>
+                  <input
+                    type="text"
+                    value={franchiseName}
+                    onChange={(e) => setFranchiseName(e.target.value)}
+                    placeholder={restaurantName || "e.g. Spice Route Group"}
+                    className="w-full px-3.5 py-2 rounded-xl bg-surface-subtle border border-surface-border text-xs text-gray-100 focus:outline-none focus:border-primary"
+                  />
+                  <p className="text-[10px] text-gray-500 mt-1">New outlets you create will be linked under this brand.</p>
+                </div>
+              )}
+
+              {ownershipType === "FRANCHISE_OUTLET" && (
+                <div className="mt-1 flex flex-col gap-1.5">
+                  <label className="text-xs font-bold text-gray-300 block">Franchise Invite Code</label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={franchiseInviteCode}
+                      onChange={(e) => {
+                        setFranchiseInviteCode(e.target.value.toUpperCase());
+                        setInviteLookup(null);
+                      }}
+                      placeholder="FRN-XXXXXX"
+                      className="flex-1 px-3.5 py-2 rounded-xl bg-surface-subtle border border-surface-border text-xs font-mono text-gray-100 focus:outline-none focus:border-primary"
+                    />
+                    <button
+                      type="button"
+                      disabled={!franchiseInviteCode.trim() || isCheckingInvite}
+                      onClick={async () => {
+                        try {
+                          const res = await triggerCheckInvite(franchiseInviteCode.trim()).unwrap();
+                          setInviteLookup(res);
+                        } catch {
+                          setInviteLookup({ valid: false });
+                        }
+                      }}
+                      className="px-4 py-2 rounded-xl bg-primary text-black text-xs font-bold disabled:opacity-40"
+                    >
+                      {isCheckingInvite ? "Checking…" : "Verify"}
+                    </button>
+                  </div>
+                  {inviteLookup && (
+                    inviteLookup.valid ? (
+                      <span className="text-[11px] font-mono text-emerald-400">
+                        ✓ Valid invite — joins {inviteLookup.franchise_name || "the franchise"}
+                      </span>
+                    ) : (
+                      <span className="text-[11px] font-mono text-red-400">
+                        Invalid or expired invite code.
+                      </span>
+                    )
+                  )}
+                </div>
+              )}
+            </div>
+
             {/* Navigation Button */}
             <div className="flex justify-end pt-2">
               <button
@@ -785,6 +901,10 @@ export default function RestaurantSignupPage() {
                 onClick={() => {
                   if (!restaurantName.trim()) {
                     dispatch(addToast({ type: "error", title: "Name Required", message: "Please provide your restaurant name." }));
+                    return;
+                  }
+                  if (ownershipType === "FRANCHISE_OUTLET" && !inviteLookup?.valid) {
+                    dispatch(addToast({ type: "error", title: "Invite Required", message: "Enter and verify a valid franchise invite code first." }));
                     return;
                   }
                   setCurrentStep(2);
@@ -883,6 +1003,63 @@ export default function RestaurantSignupPage() {
                   </button>
                 </div>
               </div>
+
+              {/* Portions (Half / Full) */}
+              <label className="flex items-center gap-2 text-[11px] font-bold text-gray-300 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={newItemHasPortions}
+                  onChange={(e) => setNewItemHasPortions(e.target.checked)}
+                  className="accent-amber-400 w-3.5 h-3.5"
+                />
+                Has portions (Half / Full)
+              </label>
+              {newItemHasPortions && (
+                <div className="flex flex-col gap-2 pl-1">
+                  {newItemPortions.map((v, idx) => (
+                    <div key={idx} className="flex gap-2 items-center">
+                      <input
+                        type="text"
+                        value={v.name}
+                        placeholder="Portion name"
+                        onChange={(e) =>
+                          setNewItemPortions((prev) =>
+                            prev.map((x, i) => (i === idx ? { ...x, name: e.target.value } : x))
+                          )
+                        }
+                        className="w-28 px-2.5 py-1.5 rounded-lg bg-surface border border-surface-border text-xs text-gray-100 focus:outline-none focus:border-primary"
+                      />
+                      <input
+                        type="number"
+                        value={v.price}
+                        placeholder="₹"
+                        onChange={(e) =>
+                          setNewItemPortions((prev) =>
+                            prev.map((x, i) => (i === idx ? { ...x, price: Number(e.target.value) } : x))
+                          )
+                        }
+                        className="w-20 px-2.5 py-1.5 rounded-lg bg-surface border border-surface-border text-xs text-gray-100 focus:outline-none focus:border-primary font-mono"
+                      />
+                      {newItemPortions.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => setNewItemPortions((prev) => prev.filter((_, i) => i !== idx))}
+                          className="text-gray-500 hover:text-red-400 p-1"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => setNewItemPortions((prev) => [...prev, { name: "", price: 0 }])}
+                    className="text-[11px] text-primary font-bold font-mono self-start hover:underline"
+                  >
+                    + Add another portion
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Menu Items List */}
@@ -906,6 +1083,11 @@ export default function RestaurantSignupPage() {
                       <div>
                         <span className="font-bold text-gray-200">{item.name}</span>
                         <span className="text-gray-500 text-[10px] ml-2">({item.category})</span>
+                        {item.variants && item.variants.length > 0 && (
+                          <span className="block text-[10px] font-mono text-amber-400 mt-0.5">
+                            {item.variants.map((v) => `${v.name} ₹${v.price}`).join(" / ")}
+                          </span>
+                        )}
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
@@ -1063,6 +1245,22 @@ export default function RestaurantSignupPage() {
                     </div>
                   </div>
 
+                  {/* Seats per table default */}
+                  <div className="flex items-center gap-3 mt-1 p-3 rounded-xl bg-surface-subtle border border-surface-border text-xs">
+                    <Users className="w-4 h-4 text-primary" />
+                    <span className="text-gray-300 font-bold">Seats per {venueType === "HOTEL" ? "room" : "table"} (required, 1-50):</span>
+                    <input
+                      type="number"
+                      required
+                      min={1}
+                      max={50}
+                      value={defaultCapacity}
+                      onChange={(e) => setDefaultCapacity(Math.max(1, Math.min(50, Number(e.target.value))))}
+                      className="w-20 px-2 py-1 rounded bg-surface border border-surface-border text-gray-100 font-mono text-center font-bold"
+                    />
+                    <span className="text-gray-500 font-mono text-[11px]">Applied to all tables unless overridden below</span>
+                  </div>
+
                   {venueType === "HOTEL" && (
                     <div className="flex items-center gap-3 mt-2 p-3 rounded-xl bg-surface-subtle border border-surface-border text-xs">
                       <BedDouble className="w-4 h-4 text-sky-400" />
@@ -1105,9 +1303,45 @@ export default function RestaurantSignupPage() {
                             }`}
                           >
                             {label}
+                            <span className="block text-[9px] text-gray-500 mt-0.5">{seatForTable(itemNum)} seats</span>
                           </button>
                         );
                       })}
+                    </div>
+
+                    {/* Per-table seat override */}
+                    <div className="flex items-center gap-2 text-xs">
+                      <span className="text-gray-400">
+                        Seats for {venueType === "HOTEL" ? `Room ${startingRoomNumber + selectedTableForPreview - 1}` : `Table ${selectedTableForPreview}`}:
+                      </span>
+                      <input
+                        type="number"
+                        min={1}
+                        max={50}
+                        value={seatForTable(selectedTableForPreview)}
+                        onChange={(e) =>
+                          setTableSeatOverrides((prev) => ({
+                            ...prev,
+                            [selectedTableForPreview]: Math.max(1, Math.min(50, Number(e.target.value))),
+                          }))
+                        }
+                        className="w-16 px-2 py-1 rounded-lg bg-surface-subtle border border-surface-border text-gray-100 font-mono text-center"
+                      />
+                      {tableSeatOverrides[selectedTableForPreview] !== undefined && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setTableSeatOverrides((prev) => {
+                              const next = { ...prev };
+                              delete next[selectedTableForPreview];
+                              return next;
+                            })
+                          }
+                          className="text-[10px] font-mono text-gray-500 hover:text-primary"
+                        >
+                          reset to default
+                        </button>
+                      )}
                     </div>
                   </div>
 
