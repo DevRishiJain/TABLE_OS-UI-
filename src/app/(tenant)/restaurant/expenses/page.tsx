@@ -10,6 +10,7 @@ import {
 import { formatCurrencyMinor } from "@/lib/formatters";
 import { ExpenseCategory, ExpenseType, Expense } from "@/types/domain";
 import { FranchiseOutletFilterSelect } from "@/components/franchise/FranchiseOutletFilterSelect";
+import { Modal } from "@/components/ui/Modal";
 
 type DateFilterPreset = "TODAY" | "THIS_MONTH" | "ALL";
 
@@ -305,14 +306,12 @@ export default function RestaurantExpensesPage() {
 
       {/* Log Expense Modal */}
       {isLogModalOpen && (
-        <div
-          className="ov on"
-          onClick={(e) => {
-            if ((e.target as HTMLElement).classList.contains("ov")) setIsLogModalOpen(false);
-          }}
+        <Modal
+          isOpen={isLogModalOpen}
+          onClose={() => setIsLogModalOpen(false)}
+          title="Log expense"
+          closeDisabled={isCreating}
         >
-          <div className="md">
-            <h3>Log expense</h3>
             <form onSubmit={handleSaveExpense}>
               <div className="mf">
                 <label className="w">
@@ -407,8 +406,7 @@ export default function RestaurantExpensesPage() {
                 </button>
               </div>
             </form>
-          </div>
-        </div>
+        </Modal>
       )}
 
       {/* Invoice Items Modal */}
@@ -434,17 +432,12 @@ function InvoiceItemsModal({
   });
 
   return (
-    <div
-      className="ov on"
-      onClick={(e) => {
-        if ((e.target as HTMLElement).classList.contains("ov")) onClose();
-      }}
+    <Modal
+      isOpen
+      onClose={onClose}
+      title="Invoice Items"
+      description={`${expense.title} · ${expense.vendor_name || "Internal"}`}
     >
-      <div className="md">
-        <h3>Invoice Items</h3>
-        <p className="sub" style={{ marginTop: -6, color: "var(--admin-mute)" }}>
-          {expense.title} · {expense.vendor_name || "Internal"}
-        </p>
 
         {isLoading ? (
           <div className="em">Loading item details…</div>
@@ -491,7 +484,6 @@ function InvoiceItemsModal({
             Close
           </button>
         </div>
-      </div>
-    </div>
+    </Modal>
   );
 }

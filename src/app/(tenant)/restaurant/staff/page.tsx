@@ -8,6 +8,7 @@ import {
 } from "@/store/api/restaurantApi";
 import { StaffUser } from "@/types/domain";
 import { FranchiseOutletFilterSelect } from "@/components/franchise/FranchiseOutletFilterSelect";
+import { Modal } from "@/components/ui/Modal";
 
 export default function RestaurantStaffPage() {
   const { data: staffList, isLoading, refetch } = useGetStaffRosterQuery();
@@ -180,14 +181,12 @@ export default function RestaurantStaffPage() {
 
       {/* Add Staff Modal */}
       {isModalOpen && (
-        <div
-          className="ov on"
-          onClick={(e) => {
-            if ((e.target as HTMLElement).classList.contains("ov")) setIsModalOpen(false);
-          }}
+        <Modal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          title="Add staff member"
+          closeDisabled={isCreating}
         >
-          <div className="md">
-            <h3>Add staff member</h3>
             <form onSubmit={handleCreateStaff}>
               <div className="mf">
                 <label className="w">
@@ -258,23 +257,18 @@ export default function RestaurantStaffPage() {
                 </button>
               </div>
             </form>
-          </div>
-        </div>
+        </Modal>
       )}
 
       {/* Reset Password Modal */}
       {passwordModalStaff && (
-        <div
-          className="ov on"
-          onClick={(e) => {
-            if ((e.target as HTMLElement).classList.contains("ov")) setPasswordModalStaff(null);
-          }}
+        <Modal
+          isOpen={!!passwordModalStaff}
+          onClose={() => setPasswordModalStaff(null)}
+          title="Reset password"
+          description={`${passwordModalStaff.name} (${passwordModalStaff.employee_id || "Staff"})`}
+          closeDisabled={isUpdatingPassword}
         >
-          <div className="md">
-            <h3>Reset password</h3>
-            <p className="sub" style={{ marginTop: -6, color: "var(--admin-mute)" }}>
-              {passwordModalStaff.name} ({passwordModalStaff.employee_id || "Staff"})
-            </p>
             <form onSubmit={handleResetPassword}>
               <div className="mf">
                 <label className="w">
@@ -306,8 +300,7 @@ export default function RestaurantStaffPage() {
                 </button>
               </div>
             </form>
-          </div>
-        </div>
+        </Modal>
       )}
     </>
   );

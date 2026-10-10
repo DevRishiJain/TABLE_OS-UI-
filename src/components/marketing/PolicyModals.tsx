@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
-import { X, ShieldCheck, Lock, FileText, Phone, Mail, Clock, CheckCircle2 } from "lucide-react";
+import React, { useEffect } from "react";
+import { X, ShieldCheck, Lock, FileText, Phone, Mail } from "lucide-react";
 
 export type ModalType = "privacy" | "security" | "terms" | null;
 
@@ -11,11 +11,36 @@ interface PolicyModalsProps {
 }
 
 export function PolicyModals({ activeModal, onClose }: PolicyModalsProps) {
+  useEffect(() => {
+    if (!activeModal) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [activeModal, onClose]);
+
   if (!activeModal) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto animate-fade-in">
-      <div className="bg-[#12151B] border border-surface-border rounded-3xl w-full max-w-2xl p-6 sm:p-8 shadow-2xl relative text-gray-200 space-y-6 my-8">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto animate-fade-in"
+      style={{ background: "rgba(8,6,4,0.6)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)" }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        className="bg-[#12151B] border border-surface-border rounded-3xl w-full max-w-2xl p-6 sm:p-8 shadow-2xl relative text-gray-200 space-y-6 my-8"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex items-center justify-between pb-4 border-b border-surface-border">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/30 flex items-center justify-center text-primary">

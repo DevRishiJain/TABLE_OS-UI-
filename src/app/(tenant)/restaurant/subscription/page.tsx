@@ -6,6 +6,7 @@ import {
   useRenewSubscriptionMutation,
 } from "@/store/api/staffApi";
 import { useAppSelector } from "@/store";
+import { Modal } from "@/components/ui/Modal";
 
 const RENEW_ROLES = new Set([
   "RESTAURANT_OWNER",
@@ -310,18 +311,13 @@ export default function RestaurantSubscriptionPage() {
 
       {/* Activation OTP Modal */}
       {otpModalOpen && (
-        <div
-          className="ov on"
-          onClick={(e) => {
-            if ((e.target as HTMLElement).classList.contains("ov")) setOtpModalOpen(false);
-          }}
+        <Modal
+          isOpen={otpModalOpen}
+          onClose={() => setOtpModalOpen(false)}
+          title="Enter activation OTP"
+          description={`Pay TableOS for the selected ${selectedPlanDays}-day plan; our team will share a 6-digit activation OTP. Enter it below to activate your subscription.`}
+          closeDisabled={isRenewing}
         >
-          <div className="md">
-            <h3>Enter activation OTP</h3>
-            <p className="sub" style={{ marginBottom: 14 }}>
-              Pay TableOS for the selected {selectedPlanDays}-day plan; our team will share a
-              6-digit activation OTP. Enter it below to activate your subscription.
-            </p>
             <form onSubmit={handleConfirmOtp}>
               <div className="mf">
                 <label className="w">
@@ -364,8 +360,7 @@ export default function RestaurantSubscriptionPage() {
                 </button>
               </div>
             </form>
-          </div>
-        </div>
+        </Modal>
       )}
     </>
   );

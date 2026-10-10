@@ -861,6 +861,20 @@ export default function WaiterFloorScreenPage() {
     setOtpVerifyInput("");
   };
 
+  useEffect(() => {
+    if (!activeSheet) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") handleCloseSheet();
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [activeSheet]);
+
   const handleOpenOrderPad = (tableId: string) => {
     setSelectedTableId(tableId);
     setCart({});

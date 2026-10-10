@@ -10,6 +10,7 @@ import { StaffRole } from "@/types/enums";
 import { LogOut } from "lucide-react";
 import { useRestaurantTheme } from "@/components/providers/RestaurantThemeProvider";
 import { SubscriptionLockModal } from "@/components/SubscriptionLockModal";
+import { Modal } from "@/components/ui/Modal";
 import "./admin.css";
 
 const SVGIcons: Record<string, string> = {
@@ -238,15 +239,12 @@ export default function RestaurantAdminLayout({
         </main>
 
         {/* Quick Add Modal */}
-        <div
-          className={`ov ${quickOpen ? "on" : ""}`}
-          onClick={(e) => {
-            if ((e.target as HTMLElement).classList.contains("ov")) setQuickOpen(false);
-          }}
+        <Modal
+          isOpen={quickOpen}
+          onClose={() => setQuickOpen(false)}
+          title="What would you like to do?"
         >
-          <div className="md">
-            <h3>What would you like to do?</h3>
-            <div className="big">
+          <div className="big">
               {[
                 {
                   title: "Quick Billing / POS",
@@ -298,19 +296,15 @@ export default function RestaurantAdminLayout({
                 Close
               </button>
             </div>
-          </div>
-        </div>
+        </Modal>
 
         {/* Mobile More Sheet Modal */}
-        <div
-          className={`ov ${moreOpen ? "on" : ""}`}
-          onClick={(e) => {
-            if ((e.target as HTMLElement).classList.contains("ov")) setMoreOpen(false);
-          }}
+        <Modal
+          isOpen={moreOpen}
+          onClose={() => setMoreOpen(false)}
+          title="More"
         >
-          <div className="md">
-            <h3>More</h3>
-            <div className="big t">
+          <div className="big t">
               {[
                 { label: "Expenses", icon: "ex", href: "/restaurant/expenses" },
                 { label: "Stock", icon: "st", href: "/restaurant/inventory" },
@@ -347,10 +341,10 @@ export default function RestaurantAdminLayout({
                 Close
               </button>
             </div>
-          </div>
-        </div>
+        </Modal>
+
+        <SubscriptionLockModal />
       </div>
-      <SubscriptionLockModal />
     </RoleGuard>
   );
 }

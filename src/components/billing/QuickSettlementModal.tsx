@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect, useMemo } from "react";
 import { formatMoney } from "@/lib/money";
-import { Banknote, QrCode, CreditCard, X, Check, Loader2 } from "lucide-react";
+import { Banknote, QrCode, CreditCard, Check, Loader2 } from "lucide-react";
+import { Modal } from "@/components/ui/Modal";
 
 export interface QuickSettlementModalProps {
   isOpen: boolean;
@@ -68,33 +69,14 @@ export const QuickSettlementModal: React.FC<QuickSettlementModalProps> = ({
   };
 
   return (
-    <div
-      className="ov on"
-      onClick={(e) => {
-        if ((e.target as HTMLElement).classList.contains("ov")) onClose();
-      }}
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Settle Payment"
+      description="Select payment tender & print customer bill"
+      size="lg"
+      closeDisabled={isLoading}
     >
-      <div className="md" style={{ width: "min(500px, 100%)" }} onClick={(e) => e.stopPropagation()}>
-        {/* Header */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "14px" }}>
-          <div>
-            <h3 style={{ margin: 0, font: "400 1.9rem/1 var(--admin-serif)", color: "var(--admin-ink)" }}>
-              Settle Payment
-            </h3>
-            <p style={{ margin: "4px 0 0", fontSize: "0.86rem", color: "var(--admin-mute)" }}>
-              Select payment tender & print customer bill
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={isLoading}
-            className="btn s sm"
-            style={{ padding: "0 10px", height: "32px" }}
-          >
-            <X size={16} />
-          </button>
-        </div>
 
         {/* Bill Total Display */}
         <div
@@ -296,7 +278,6 @@ export const QuickSettlementModal: React.FC<QuickSettlementModalProps> = ({
             )}
           </button>
         </div>
-      </div>
-    </div>
+    </Modal>
   );
 };

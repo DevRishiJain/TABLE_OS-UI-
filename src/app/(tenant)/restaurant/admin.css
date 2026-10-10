@@ -1010,12 +1010,111 @@ html.dark .admin-screen:before {
 }
 
 /* Modals & Quick Actions */
+.ov {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: rgba(8, 6, 4, 0.6);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.ov.on {
+  display: flex;
+}
+
+.md {
+  width: min(480px, 100%);
+  background: var(--admin-pa);
+  color: var(--admin-ink);
+  border-radius: 22px;
+  border: 1.5px solid var(--admin-ln);
+  padding: 22px;
+  max-height: 90svh;
+  overflow: auto;
+  box-shadow: 0 24px 60px -20px rgba(0, 0, 0, 0.45);
+}
+
+.md h3 {
+  font: 400 1.8rem var(--admin-serif);
+  margin: 0 0 12px;
+}
+
+.ov .btn {
+  height: 46px;
+  padding: 0 20px;
+  border-radius: 14px;
+  border: 0;
+  background: var(--admin-ink);
+  color: var(--admin-pa);
+  font-weight: 800;
+  font-size: 0.88rem;
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.15s, background 0.15s, color 0.15s;
+}
+
+.ov .btn:active {
+  transform: scale(0.97);
+}
+
+.ov .btn:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.ov .btn.s {
+  background: transparent;
+  border: 1.5px solid var(--admin-ln);
+  color: var(--admin-ink);
+}
+
+.ov .btn.s:hover {
+  background: var(--admin-s2);
+}
+
+.ov .btn.sm {
+  height: 38px;
+  padding: 0 14px;
+  font-size: 0.84rem;
+  border-radius: 12px;
+}
+
+.ov .btn.r {
+  background: var(--admin-red);
+  color: #fff;
+}
+
+.ov .btn.g {
+  background: var(--admin-grn);
+  color: #fff;
+}
+
+.md input,
+.md select {
+  height: 48px;
+  border-radius: 12px;
+  border: 1.5px solid var(--admin-ln);
+  background: var(--admin-s2);
+  color: var(--admin-ink);
+  padding: 0 14px;
+  font: inherit;
+}
+
 .admin-screen .ov {
   position: fixed;
   inset: 0;
   z-index: 50;
-  background: #1b140988;
-  backdrop-filter: blur(3px);
+  background: rgba(8, 6, 4, 0.6);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
   display: none;
   align-items: center;
   justify-content: center;
@@ -1032,7 +1131,7 @@ html.dark .admin-screen:before {
   border-radius: 22px;
   border: 1.5px solid var(--admin-ln);
   padding: 22px;
-  max-height: 92svh;
+  max-height: 90svh;
   overflow: auto;
 }
 
@@ -1124,11 +1223,13 @@ html.dark .admin-screen:before {
   .admin-screen .g2 {
     grid-template-columns: 1fr;
   }
-  .admin-screen .ov {
+  .admin-screen .ov,
+  .ov {
     align-items: flex-end;
     padding: 0;
   }
-  .admin-screen .md {
+  .admin-screen .md,
+  .md {
     width: 100%;
     border-radius: 30px 30px 0 0;
     animation: up 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);

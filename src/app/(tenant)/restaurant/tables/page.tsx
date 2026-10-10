@@ -8,6 +8,7 @@ import {
   useUpdateRestaurantTableMutation,
 } from "@/store/api/restaurantApi";
 import { QRCodeCanvas } from "qrcode.react";
+import { Modal } from "@/components/ui/Modal";
 
 interface TableItem {
   id: string;
@@ -305,14 +306,12 @@ export default function RestaurantTablesQRPage() {
 
       {/* Add Table Modal */}
       {showAddModal && (
-        <div
-          className="ov on"
-          onClick={(e) => {
-            if ((e.target as HTMLElement).classList.contains("ov")) setShowAddModal(false);
-          }}
+        <Modal
+          isOpen={showAddModal}
+          onClose={() => setShowAddModal(false)}
+          title="Add table"
+          closeDisabled={isCreating}
         >
-          <div className="md">
-            <h3>Add table</h3>
             <form onSubmit={handleAddTable}>
               <div className="mf">
                 <label className="w">
@@ -356,20 +355,17 @@ export default function RestaurantTablesQRPage() {
                 </button>
               </div>
             </form>
-          </div>
-        </div>
+        </Modal>
       )}
 
       {/* Edit Table Modal */}
       {editingTable && (
-        <div
-          className="ov on"
-          onClick={(e) => {
-            if ((e.target as HTMLElement).classList.contains("ov")) setEditingTable(null);
-          }}
+        <Modal
+          isOpen={!!editingTable}
+          onClose={() => setEditingTable(null)}
+          title={`Edit ${editingTable.tableNumber}`}
+          closeDisabled={isUpdating}
         >
-          <div className="md">
-            <h3>Edit {editingTable.tableNumber}</h3>
             <form onSubmit={handleEditTable}>
               <div className="mf">
                 <label className="w">
@@ -409,8 +405,7 @@ export default function RestaurantTablesQRPage() {
                 </button>
               </div>
             </form>
-          </div>
-        </div>
+        </Modal>
       )}
 
       {/* Print-Only Single Table QR Standee Tent Card */}

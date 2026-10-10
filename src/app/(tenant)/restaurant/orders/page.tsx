@@ -10,6 +10,7 @@ import { Order, OrderItem } from "@/types/domain";
 import { OrderState } from "@/types/enums";
 import { formatDestination } from "@/lib/location";
 import { FranchiseOutletFilterSelect } from "@/components/franchise/FranchiseOutletFilterSelect";
+import { Modal } from "@/components/ui/Modal";
 
 const formatDateInput = (date: Date) => {
   const y = date.getFullYear();
@@ -387,19 +388,19 @@ export default function RestaurantOrderHistoryPage() {
 
       {/* Ticket Details Modal */}
       {selectedOrder && (
-        <div className="ov on" onClick={(e) => {
-          if ((e.target as HTMLElement).classList.contains("ov")) setSelectedOrder(null);
-        }}>
-          <div className="md">
-            <h3>Ticket #{selectedOrder.sequence_number}</h3>
-            <p className="sub" style={{ color: "var(--admin-mute)", fontSize: "0.85rem", marginTop: -6 }}>
-              {selectedOrder.placed_at
-                ? new Date(selectedOrder.placed_at).toLocaleString([], {
-                    dateStyle: "medium",
-                    timeStyle: "short",
-                  })
-                : ""}
-            </p>
+        <Modal
+          isOpen={!!selectedOrder}
+          onClose={() => setSelectedOrder(null)}
+          title={`Ticket #${selectedOrder.sequence_number}`}
+          description={
+            selectedOrder.placed_at
+              ? new Date(selectedOrder.placed_at).toLocaleString([], {
+                  dateStyle: "medium",
+                  timeStyle: "short",
+                })
+              : undefined
+          }
+        >
 
             <div className="row" style={{ borderTop: 0 }}>
               <div>
@@ -479,8 +480,7 @@ export default function RestaurantOrderHistoryPage() {
                 Close
               </button>
             </div>
-          </div>
-        </div>
+        </Modal>
       )}
     </>
   );

@@ -15,6 +15,7 @@ import {
 import { formatCurrencyMinor } from "@/lib/formatters";
 import { InventoryChangeType, InventoryItem } from "@/types/domain";
 import { FranchiseOutletFilterSelect } from "@/components/franchise/FranchiseOutletFilterSelect";
+import { Modal } from "@/components/ui/Modal";
 
 type TabMode = "STOCK" | "LOGS" | "RECIPES";
 
@@ -427,14 +428,12 @@ export default function RestaurantInventoryPage() {
 
       {/* Add Ingredient Modal */}
       {isAddItemOpen && (
-        <div
-          className="ov on"
-          onClick={(e) => {
-            if ((e.target as HTMLElement).classList.contains("ov")) setIsAddItemOpen(false);
-          }}
+        <Modal
+          isOpen={isAddItemOpen}
+          onClose={() => setIsAddItemOpen(false)}
+          title="Add ingredient"
+          closeDisabled={isCreatingItem}
         >
-          <div className="md">
-            <h3>Add ingredient</h3>
             <form onSubmit={handleAddItem}>
               <div className="mf">
                 <label className="w">
@@ -524,26 +523,18 @@ export default function RestaurantInventoryPage() {
                 </button>
               </div>
             </form>
-          </div>
-        </div>
+        </Modal>
       )}
 
       {/* Quick Stock Movement Modal */}
       {isStockMoveOpen && selectedStockItem && (
-        <div
-          className="ov on"
-          onClick={(e) => {
-            if ((e.target as HTMLElement).classList.contains("ov")) setIsStockMoveOpen(false);
-          }}
+        <Modal
+          isOpen={isStockMoveOpen && !!selectedStockItem}
+          onClose={() => setIsStockMoveOpen(false)}
+          title={moveType === "STOCK_IN" ? "Receive Stock" : "Log Stock Wastage"}
+          description={`${selectedStockItem.name} · Current: ${selectedStockItem.current_stock} ${selectedStockItem.unit}`}
+          closeDisabled={isLoggingStock}
         >
-          <div className="md">
-            <h3>
-              {moveType === "STOCK_IN" ? "Receive Stock" : "Log Stock Wastage"}
-            </h3>
-            <p className="sub" style={{ marginTop: -6, color: "var(--admin-mute)" }}>
-              {selectedStockItem.name} · Current: {selectedStockItem.current_stock} {selectedStockItem.unit}
-            </p>
-
             <form onSubmit={handleStockMoveSubmit}>
               <div className="mf">
                 <label className="w">
@@ -585,8 +576,7 @@ export default function RestaurantInventoryPage() {
                 </button>
               </div>
             </form>
-          </div>
-        </div>
+        </Modal>
       )}
     </>
   );

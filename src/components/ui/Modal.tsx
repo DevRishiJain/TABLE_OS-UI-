@@ -1,5 +1,9 @@
-import React, { useEffect } from "react";
+"use client";
+
+import React, { useEffect, useId } from "react";
 import { X } from "lucide-react";
+
+export type ModalSize = "sm" | "md" | "lg" | "xl" | "2xl";
 
 export interface ModalProps {
   isOpen: boolean;
@@ -7,8 +11,24 @@ export interface ModalProps {
   title?: string;
   description?: string;
   children: React.ReactNode;
-  maxWidth?: "sm" | "md" | "lg" | "xl" | "2xl";
+  size?: ModalSize;
+  /** @deprecated use size */
+  maxWidth?: ModalSize;
+  dismissible?: boolean;
+  closeDisabled?: boolean;
+  showCloseButton?: boolean;
+  className?: string;
+  style?: React.CSSProperties;
+  overlayStyle?: React.CSSProperties;
 }
+
+const SIZE_WIDTHS: Record<ModalSize, number> = {
+  sm: 380,
+  md: 480,
+  lg: 620,
+  xl: 760,
+  "2xl": 920,
+};
 
 export const Modal: React.FC<ModalProps> = ({
   isOpen,
@@ -16,60 +36,95 @@ export const Modal: React.FC<ModalProps> = ({
   title,
   description,
   children,
-  maxWidth = "md",
+  size,
+  maxWidth,
+  dismissible = true,
+  closeDisabled = false,
+  showCloseButton = true,
+  className,
+  style,
+  overlayStyle,
 }) => {
+  const titleId = useId();
+  const canDismiss = dismissible && !closeDisabled;
+
   useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+    if (!isOpen) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && canDismiss) onClose();
     };
-    if (isOpen) {
-      document.body.style.overflow = "hidden";
-      window.addEventListener("keydown", handleEscape);
-    }
+    window.addEventListener("keydown", handleKeyDown);
     return () => {
-      document.body.style.overflow = "unset";
-      window.removeEventListener("keydown", handleEscape);
+      document.body.style.overflow = prevOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [isOpen, onClose]);
+  }, [isOpen, canDismiss, onClose]);
 
   if (!isOpen) return null;
 
-  const maxWidthStyles = {
-    sm: "max-w-sm",
-    md: "max-w-md",
-    lg: "max-w-lg",
-    xl: "max-w-xl",
-    "2xl": "max-w-2xl",
-  };
+  const width = SIZE_WIDTHS[size || maxWidth || "md"];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+    <div
+      className="ov on"
+      role="presentation"
+      onClick={(e) => {
+        if (e.target === e.currentTarget && canDismiss) onClose();
+      }}
+      style={overlayStyle}
+    >
       <div
-        className="fixed inset-0"
-        onClick={onClose}
-        aria-hidden="true"
-      />
-      <div
-        className={`relative w-full ${maxWidthStyles[maxWidth]} rounded-2xl bg-surface border border-surface-border p-6 shadow-2xl z-10 animate-in zoom-in-95 duration-200`}
+        className={`md${className ? ` ${className}` : ""}`}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={title ? titleId : undefined}
+        style={{ width: `min(${width}px, 100%)`, ...style }}
+        onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-start justify-between mb-4">
-          <div>
-            {title && (
-              <h3 className="text-lg font-bold text-gray-100 font-display">
-                {title}
-              </h3>
-            )}
-            {description && (
-              <p className="text-xs text-gray-400 mt-1">{description}</p>
+        {(title || description || (dismissible && showCloseButton)) && (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "flex-start",
+              justifyContent: "space-between",
+              gap: 12,
+              marginBottom: 14,
+            }}
+          >
+            <div style={{ minWidth: 0, flex: 1 }}>
+              {title && (
+                <h3 id={titleId} style={{ margin: 0 }}>
+                  {title}
+                </h3>
+              )}
+              {description && (
+                <p
+                  style={{
+                    margin: "4px 0 0",
+                    fontSize: "0.85rem",
+                    color: "var(--admin-mute, #6F6350)",
+                  }}
+                >
+                  {description}
+                </p>
+              )}
+            </div>
+            {dismissible && showCloseButton && (
+              <button
+                type="button"
+                className="btn s sm"
+                onClick={onClose}
+                disabled={closeDisabled}
+                aria-label="Close dialog"
+                style={{ height: 32, padding: "0 10px", flexShrink: 0 }}
+              >
+                <X size={16} />
+              </button>
             )}
           </div>
-          <button
-            onClick={onClose}
-            className="p-1.5 text-gray-400 hover:text-gray-200 rounded-lg hover:bg-surface-hover transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+        )}
         {children}
       </div>
     </div>

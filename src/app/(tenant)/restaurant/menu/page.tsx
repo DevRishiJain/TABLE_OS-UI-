@@ -12,6 +12,7 @@ import {
 import { formatMoney } from "@/lib/money";
 import { MenuItem } from "@/types/domain";
 import { FranchiseOutletFilterSelect } from "@/components/franchise/FranchiseOutletFilterSelect";
+import { Modal } from "@/components/ui/Modal";
 
 export default function RestaurantMenuStudioPage() {
   const { data: categories = [], refetch: refetchCategories } = useGetMenuCategoriesQuery();
@@ -273,14 +274,12 @@ export default function RestaurantMenuStudioPage() {
 
       {/* Add Category Modal */}
       {isNewCategoryModalOpen && (
-        <div
-          className="ov on"
-          onClick={(e) => {
-            if ((e.target as HTMLElement).classList.contains("ov")) setIsNewCategoryModalOpen(false);
-          }}
+        <Modal
+          isOpen={isNewCategoryModalOpen}
+          onClose={() => setIsNewCategoryModalOpen(false)}
+          title="Add category"
+          closeDisabled={isCreatingCat}
         >
-          <div className="md">
-            <h3>Add category</h3>
             <form onSubmit={handleCreateCategory}>
               <div className="mf">
                 <label className="w">
@@ -306,20 +305,17 @@ export default function RestaurantMenuStudioPage() {
                 </button>
               </div>
             </form>
-          </div>
-        </div>
+        </Modal>
       )}
 
       {/* Add Dish Modal */}
       {isNewItemModalOpen && (
-        <div
-          className="ov on"
-          onClick={(e) => {
-            if ((e.target as HTMLElement).classList.contains("ov")) setIsNewItemModalOpen(false);
-          }}
+        <Modal
+          isOpen={isNewItemModalOpen}
+          onClose={() => setIsNewItemModalOpen(false)}
+          title="Add dish"
+          closeDisabled={isCreatingItem}
         >
-          <div className="md">
-            <h3>Add dish</h3>
             <form onSubmit={handleCreateItem}>
               <div className="mf">
                 <label className="w">
@@ -430,23 +426,18 @@ export default function RestaurantMenuStudioPage() {
                 </button>
               </div>
             </form>
-          </div>
-        </div>
+        </Modal>
       )}
 
       {/* Edit Portions Modal */}
       {editingItem && (
-        <div
-          className="ov on"
-          onClick={(e) => {
-            if ((e.target as HTMLElement).classList.contains("ov")) setEditingItem(null);
-          }}
+        <Modal
+          isOpen={!!editingItem}
+          onClose={() => setEditingItem(null)}
+          title={`Portions — ${editingItem.name}`}
+          description="Define portion sizes with their own prices. Save replaces the full set; empty list removes all portions."
+          closeDisabled={isSavingVariants}
         >
-          <div className="md">
-            <h3>Portions — {editingItem.name}</h3>
-            <p className="sub" style={{ color: "var(--admin-mute)", marginTop: -6 }}>
-              Define portion sizes with their own prices. Save replaces the full set; empty list removes all portions.
-            </p>
             <form onSubmit={handleSavePortions}>
               <div className="mf" style={{ flexDirection: "column" }}>
                 {editPortions.map((v, idx) => (
@@ -517,23 +508,18 @@ export default function RestaurantMenuStudioPage() {
                 </button>
               </div>
             </form>
-          </div>
-        </div>
+        </Modal>
       )}
 
       {/* Scan Menu Photo Modal */}
       {isAiModalOpen && (
-        <div
-          className="ov on"
-          onClick={(e) => {
-            if ((e.target as HTMLElement).classList.contains("ov")) setIsAiModalOpen(false);
-          }}
+        <Modal
+          isOpen={isAiModalOpen}
+          onClose={() => setIsAiModalOpen(false)}
+          title="Scan menu photo"
+          description="Upload a physical photo of your restaurant menu. Gemini 3.6 Flash will extract dishes, categories, and prices automatically."
+          closeDisabled={isOcrUploading}
         >
-          <div className="md">
-            <h3>Scan menu photo</h3>
-            <p className="sub" style={{ marginTop: -6, color: "var(--admin-mute)" }}>
-              Upload a physical photo of your restaurant menu. Gemini 3.6 Flash will extract dishes, categories, and prices automatically.
-            </p>
 
             <div style={{ marginTop: 14 }}>
               <input
@@ -579,8 +565,7 @@ export default function RestaurantMenuStudioPage() {
                 {isOcrUploading ? "Scanning…" : "Scan & Extract"}
               </button>
             </div>
-          </div>
-        </div>
+        </Modal>
       )}
     </>
   );
