@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useEffect, useCallback } from "react";
+import React, { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { useAppSelector } from "@/store";
 import {
   useGetMenuCategoriesQuery,
@@ -8,9 +8,7 @@ import {
   useGetRestaurantTablesQuery,
 } from "@/store/api/restaurantApi";
 import {
-  useStartStaffSessionMutation,
-  usePlaceStaffOrderMutation,
-  useConfirmPaymentMutation,
+  useQuickBillingCheckoutMutation,
 } from "@/store/api/staffApi";
 import { MenuItem, MenuCategory } from "@/types/domain";
 import { PaymentMethod } from "@/types/enums";
@@ -85,6 +83,12 @@ function getDishPortions(item: MenuItem): PortionOption[] {
   return options;
 }
 
+function getPortionTabLabel(name: string): string {
+  const lower = name.toLowerCase().trim();
+  if (lower === "quarter") return "Qtr";
+  return name;
+}
+
 export default function QuickBillingPage() {
   const restaurantName = useAppSelector((state) => state.auth.restaurantName) || "TableOS Restaurant";
   const userName = useAppSelector((state) => state.auth.userName) || "Manager";
@@ -95,9 +99,7 @@ export default function QuickBillingPage() {
   const { data: tables = [], isLoading: isTablesLoading } = useGetRestaurantTablesQuery();
 
   // API Mutations
-  const [startSession, { isLoading: isStartingSession }] = useStartStaffSessionMutation();
-  const [placeOrder, { isLoading: isPlacingOrder }] = usePlaceStaffOrderMutation();
-  const [confirmPayment, { isLoading: isPaying }] = useConfirmPaymentMutation();
+  const [quickBillingCheckout, { isLoading: isCheckingOut }] = useQuickBillingCheckoutMutation();
 
   // Component States
   const [searchQuery, setSearchQuery] = useState("");
@@ -108,6 +110,10 @@ export default function QuickBillingPage() {
   const [customerPhone, setCustomerPhone] = useState("");
   const [cart, setCart] = useState<CartLine[]>([]);
   const [paperSize, setPaperSize] = useState<"80mm" | "58mm">("80mm");
+  const [selectedPortions, setSelectedPortions] = useState<Record<string, string>>({});
+
+  // Refs
+  const searchRef = useRef<HTMLInputElement>(null);
 
   // Modals & Feedback
   const [isSettleModalOpen, setIsSettleModalOpen] = useState(false);
@@ -129,6 +135,30 @@ export default function QuickBillingPage() {
       return () => clearTimeout(timer);
     }
   }, [successToast]);
+
+  // POS Fast Keyboard Shortcuts: / to search, F2 or Ctrl+Enter to settle
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (
+        e.key === "/" &&
+        document.activeElement?.tagName !== "INPUT" &&
+        document.activeElement?.tagName !== "TEXTAREA"
+      ) {
+        e.preventDefault();
+        searchRef.current?.focus();
+      }
+      if (
+        (e.key === "F2" || (e.ctrlKey && e.key === "Enter")) &&
+        cart.length > 0 &&
+        !isSettleModalOpen
+      ) {
+        e.preventDefault();
+        setIsSettleModalOpen(true);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [cart.length, isSettleModalOpen]);
 
   // Filtered Menu Items
   const filteredItems = useMemo(() => {
@@ -180,6 +210,27 @@ export default function QuickBillingPage() {
           quantity: 1,
         },
       ];
+    });
+  };
+
+  // Decrement or remove specific portion from cart directly from card
+  const handleDecrementPortion = (item: MenuItem, portion: PortionOption, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+
+    const isBaseFull = portion.id === "base" || portion.id === "base-full";
+    const variantIdToUse = isBaseFull ? undefined : portion.id;
+
+    setCart((prev) => {
+      const existing = prev.find(
+        (line) => line.menuItemId === item.id && line.variantId === variantIdToUse
+      );
+      if (!existing) return prev;
+      if (existing.quantity <= 1) {
+        return prev.filter((line) => line !== existing);
+      }
+      return prev.map((line) =>
+        line === existing ? { ...line, quantity: line.quantity - 1 } : line
+      );
     });
   };
 
@@ -393,7 +444,7 @@ export default function QuickBillingPage() {
     triggerPrint(kotData);
   };
 
-  // Settle Payment Execution
+  // Settle Payment Execution (Atomic Dedicated Quick Billing API)
   const handleSettlePayment = async (payment: {
     method: "CASH" | "UPI" | "CARD";
     tenderedMinor: number;
@@ -403,88 +454,75 @@ export default function QuickBillingPage() {
     setErrorMessage(null);
 
     try {
-      // 1. Determine or start session
       let targetTableObj = selectedTable;
       if (!targetTableObj && tables.length > 0) {
         targetTableObj = tables[0];
       }
 
       const tableIdToUse = targetTableObj?.id;
-      const tableNumToUse = targetTableObj?.table_number || targetTableObj?.tableNumber || "1";
+      const tableNumToUse = targetTableObj?.table_number || targetTableObj?.tableNumber;
 
-      const sessionResp = await startSession({
+      const resp = await quickBillingCheckout({
+        order_type: orderType,
         table_id: tableIdToUse,
         table_number: tableNumToUse,
         customer_name: customerName || (orderType === "TAKEAWAY" ? "Takeaway Guest" : "Dine-in Guest"),
         customer_phone: customerPhone || undefined,
-        guest_count: 1,
-      }).unwrap();
-
-      const sessionId = sessionResp.id;
-
-      // 2. Place Order
-      const orderPayloadItems = cart.map((c) => ({
-        menu_item_id: c.menuItemId,
-        variant_id: c.variantId,
-        quantity: c.quantity,
-        instructions: c.notes,
-      }));
-
-      const orderResp = await placeOrder({
-        sessionId,
-        items: orderPayloadItems,
-      }).unwrap();
-
-      const createdOrderId = orderResp.order?.id || "ORD-" + Date.now();
-
-      // 3. Confirm Payment
-      const backendPaymentMethod =
-        payment.method === "CASH"
-          ? PaymentMethod.CASH
-          : payment.method === "UPI"
-          ? PaymentMethod.UPI_QR
-          : PaymentMethod.POS_CARD;
-
-      await confirmPayment({
-        data: {
-          session_id: sessionId,
+        items: cart.map((c) => ({
+          menu_item_id: c.menuItemId,
+          variant_id: c.variantId,
+          quantity: c.quantity,
+          instructions: c.notes,
+        })),
+        payment: {
+          method: payment.method,
           amount_minor: grandTotalMinor,
-          method: backendPaymentMethod,
+          tendered_minor: payment.tenderedMinor,
+          change_minor: payment.changeMinor,
         },
       }).unwrap();
 
-      // 4. Generate Thermal Receipt Data
+      // Generate Thermal Receipt Data using authoritative server-calculated figures
       const receiptData: ThermalReceiptProps = {
         type: "BILL",
         paperSize,
         restaurantName: restaurantName,
-        orderNumber: createdOrderId,
-        orderType,
-        tableNumber: tableNumToUse,
-        customerName: customerName || undefined,
-        customerPhone: customerPhone || undefined,
-        cashierName: userName,
-        date: new Date(),
-        items: cart.map((c) => ({
-          name: c.name,
-          variantName: c.variantName,
-          quantity: c.quantity,
-          unitPriceMinor: c.unitPriceMinor,
-          totalMinor: c.unitPriceMinor * c.quantity,
-          notes: c.notes,
-        })),
-        subtotalMinor,
-        cgstMinor,
-        sgstMinor,
-        grandTotalMinor,
+        orderNumber: resp.order_number || resp.order_id,
+        orderType: (resp.order_type as "TAKEAWAY" | "DINE_IN") || orderType,
+        tableNumber: resp.table_number || tableNumToUse,
+        customerName: resp.customer_name || customerName || undefined,
+        customerPhone: resp.customer_phone || customerPhone || undefined,
+        cashierName: resp.cashier_name || userName,
+        date: new Date(resp.created_at || Date.now()),
+        items: resp.items?.length
+          ? resp.items.map((i) => ({
+              name: i.name,
+              variantName: i.variant_name,
+              quantity: i.quantity,
+              unitPriceMinor: i.unit_price_minor,
+              totalMinor: i.total_minor,
+              notes: i.notes,
+            }))
+          : cart.map((c) => ({
+              name: c.name,
+              variantName: c.variantName,
+              quantity: c.quantity,
+              unitPriceMinor: c.unitPriceMinor,
+              totalMinor: c.unitPriceMinor * c.quantity,
+              notes: c.notes,
+            })),
+        subtotalMinor: resp.subtotal_minor ?? subtotalMinor,
+        cgstMinor: resp.cgst_minor ?? cgstMinor,
+        sgstMinor: resp.sgst_minor ?? sgstMinor,
+        grandTotalMinor: resp.grand_total_minor ?? grandTotalMinor,
         paymentMethod: payment.method,
-        tenderedMinor: payment.tenderedMinor,
-        changeMinor: payment.changeMinor,
+        tenderedMinor: resp.tendered_minor ?? payment.tenderedMinor,
+        changeMinor: resp.change_minor ?? payment.changeMinor,
       };
 
-      // 5. Close Modal, Trigger Print, & Reset Cart
+      // Close Modal, Trigger Print, & Reset Cart
       setIsSettleModalOpen(false);
-      setSuccessToast(`Bill settled successfully (${formatMoney(grandTotalMinor)})!`);
+      setSuccessToast(`Bill settled successfully (${formatMoney(resp.grand_total_minor || grandTotalMinor)})!`);
       triggerPrint(receiptData);
 
       setCart([]);
@@ -496,7 +534,7 @@ export default function QuickBillingPage() {
     }
   };
 
-  const isMutating = isStartingSession || isPlacingOrder || isPaying;
+  const isMutating = isCheckingOut;
 
   return (
     <div className="pos-fullwidth">
@@ -588,8 +626,9 @@ export default function QuickBillingPage() {
           <div className="pos-search-bar">
             <Search className="pos-search-icon-pos" size={18} />
             <input
+              ref={searchRef}
               type="text"
-              placeholder="Search dishes, starters, desserts, beverages..."
+              placeholder="Search dishes, starters, desserts, beverages... (press '/' to focus)"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -658,75 +697,114 @@ export default function QuickBillingPage() {
                   .filter((c) => c.menuItemId === item.id)
                   .reduce((sum, c) => sum + c.quantity, 0);
 
+                const currentPortionId = selectedPortions[item.id] || portions[0]?.id || "base";
+                const currentPortion = portions.find((p) => p.id === currentPortionId) || portions[0];
+
+                const currentPortionCount = cart
+                  .filter(
+                    (c) =>
+                      c.menuItemId === item.id &&
+                      (c.variantId === currentPortion?.id || (currentPortion?.id.startsWith("base") && !c.variantId))
+                  )
+                  .reduce((sum, c) => sum + c.quantity, 0);
+
                 return (
-                  <div
-                    key={item.id}
-                    className="pos-dish-card"
-                    onClick={() => handleCardClick(item)}
-                  >
-                    <div>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                  <div key={item.id} className="pos-dish-card">
+                    {/* Dish Info Header */}
+                    <div className="pos-dish-card-header">
+                      <div>
                         <div className="pos-dish-name">{item.name}</div>
-                        {inCartTotalCount > 0 && (
-                          <span
-                            className="pill c-b"
-                            style={{
-                              marginLeft: "6px",
-                              padding: "2px 7px",
-                              fontSize: "0.75rem",
-                              fontWeight: "900",
-                            }}
-                          >
-                            {inCartTotalCount}
-                          </span>
-                        )}
+                        <div className="pos-dish-cat">
+                          {item.category_name || (categories.find((c) => c.id === item.category_id)?.name) || "General"}
+                        </div>
                       </div>
-                      <div className="pos-dish-cat">
-                        {item.category_name || (categories.find((c) => c.id === item.category_id)?.name) || "General"}
-                      </div>
+                      {inCartTotalCount > 0 && (
+                        <span className="pos-dish-total-badge" title={`${inCartTotalCount} items in order`}>
+                          {inCartTotalCount}
+                        </span>
+                      )}
                     </div>
 
-                    {/* Portions Available Right On Card (No Modal Popup!) */}
-                    {hasMultiplePortions ? (
-                      <div className="pos-portion-list">
+                    {/* Middle: Segmented Portion Selector if multiple portions exist */}
+                    {hasMultiplePortions && (
+                      <div className="pos-portion-segmented-bar" onClick={(e) => e.stopPropagation()}>
                         {portions.map((p) => {
-                          const portionCartCount = cart
-                            .filter((c) => c.menuItemId === item.id && (c.variantId === p.id || (p.id.startsWith("base") && !c.variantId)))
+                          const isSelected = p.id === currentPortion?.id;
+                          const pCount = cart
+                            .filter(
+                              (c) =>
+                                c.menuItemId === item.id &&
+                                (c.variantId === p.id || (p.id.startsWith("base") && !c.variantId))
+                            )
                             .reduce((sum, c) => sum + c.quantity, 0);
 
                           return (
                             <button
                               key={p.id}
                               type="button"
-                              className="pos-portion-btn"
-                              onClick={(e) => handleAddPortion(item, p, e)}
-                              title={`Add ${p.name} ${item.name}`}
+                              className={`pos-segment-tab ${isSelected ? "active" : ""}`}
+                              title={p.name}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedPortions((prev) => ({ ...prev, [item.id]: p.id }));
+                              }}
                             >
-                              <span>{p.name}</span>
-                              <em>{formatMoney(p.priceMinor)}</em>
-                              {portionCartCount > 0 && (
-                                <b style={{ color: "var(--admin-ink)", marginLeft: "2px" }}>
-                                  ({portionCartCount})
-                                </b>
-                              )}
+                              <span>{getPortionTabLabel(p.name)}</span>
+                              {pCount > 0 && <span className="pos-tab-dot">{pCount}</span>}
                             </button>
                           );
                         })}
                       </div>
-                    ) : (
-                      <button
-                        type="button"
-                        className="pos-single-add-btn"
-                        onClick={(e) => handleAddPortion(item, portions[0], e)}
-                      >
-                        <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                          <Plus size={15} /> Add
-                        </span>
-                        <span className="price-tag">
-                          {formatMoney(portions[0]?.priceMinor || 0)}
-                        </span>
-                      </button>
                     )}
+
+                    {/* Bottom: Dedicated Full-Width Action Row */}
+                    <div className="pos-card-action-bar">
+                      {currentPortionCount > 0 && currentPortion ? (
+                        <div className="pos-action-stepper" onClick={(e) => e.stopPropagation()}>
+                          <button
+                            type="button"
+                            className="pos-stepper-btn-action"
+                            onClick={(e) => handleDecrementPortion(item, currentPortion, e)}
+                            title={`Remove 1 ${currentPortion.name}`}
+                          >
+                            <Minus size={15} />
+                          </button>
+                          <div className="pos-stepper-center-info">
+                            <span className="action-portion-tag">
+                              {hasMultiplePortions ? currentPortion.name : "Qty"}
+                            </span>
+                            <span className="action-portion-qty">{currentPortionCount}</span>
+                            <span className="action-portion-price">
+                              ({formatMoney(currentPortion.priceMinor * currentPortionCount)})
+                            </span>
+                          </div>
+                          <button
+                            type="button"
+                            className="pos-stepper-btn-action"
+                            onClick={(e) => handleAddPortion(item, currentPortion, e)}
+                            title={`Add 1 more ${currentPortion.name}`}
+                          >
+                            <Plus size={15} />
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          className="pos-action-add-btn"
+                          onClick={(e) => {
+                            if (currentPortion) handleAddPortion(item, currentPortion, e);
+                          }}
+                        >
+                          <span className="action-add-label">
+                            <Plus size={15} />
+                            <span>Add {hasMultiplePortions && currentPortion ? currentPortion.name : ""}</span>
+                          </span>
+                          <span className="action-add-price">
+                            {formatMoney(currentPortion?.priceMinor || 0)}
+                          </span>
+                        </button>
+                      )}
+                    </div>
                   </div>
                 );
               })}
@@ -736,6 +814,24 @@ export default function QuickBillingPage() {
 
         {/* Right Cart & Bill Panel */}
         <div className="pos-cart-box">
+          {/* Cart Header */}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ fontWeight: "800", fontSize: "0.95rem", color: "var(--admin-ink)" }}>
+              Current Order {cart.length > 0 && `(${cart.reduce((a, b) => a + b.quantity, 0)})`}
+            </div>
+            {cart.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setCart([])}
+                className="btn r sm"
+                style={{ height: "26px", padding: "0 8px", fontSize: "0.72rem", gap: "4px" }}
+                title="Clear all items from cart"
+              >
+                <Trash2 size={12} /> Clear
+              </button>
+            )}
+          </div>
+
           {/* Order Type Toggle using TableOS chips */}
           <div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px", marginBottom: "12px" }}>

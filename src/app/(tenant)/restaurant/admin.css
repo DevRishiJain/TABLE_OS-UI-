@@ -1295,7 +1295,7 @@ html.dark .admin-screen:before {
 /* Dishes Grid */
 .pos-dish-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
   gap: 14px;
 }
 
@@ -1311,6 +1311,8 @@ html.dark .admin-screen:before {
   cursor: pointer;
   user-select: none;
   position: relative;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .pos-dish-card:hover {
@@ -1339,87 +1341,233 @@ html.dark .admin-screen:before {
   font-weight: 600;
 }
 
-/* Inline Portion Buttons on Dish Cards */
-.pos-portion-list {
+/* Dish Card Header & Total Badge */
+.pos-dish-card-header {
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 12px;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 8px;
 }
 
-.pos-portion-btn {
-  padding: 5px 10px;
+.pos-dish-total-badge {
+  min-width: 22px;
+  height: 22px;
   border-radius: 99px;
-  border: 1.5px solid var(--admin-ln);
-  background: var(--admin-pa);
-  color: var(--admin-ink);
-  font-size: 0.78rem;
-  font-weight: 800;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  transition: all 0.15s ease;
-}
-
-.pos-portion-btn:hover {
   background: var(--admin-ink);
   color: var(--admin-pa);
-  border-color: var(--admin-ink);
-  transform: translateY(-1px);
-}
-
-.admin-screen.dark .pos-portion-btn:hover,
-[data-color-mode="dark"] .admin-screen .pos-portion-btn:hover {
-  background: var(--admin-am);
-  color: #120E0A;
-  border-color: var(--admin-am);
-}
-
-.pos-portion-btn em {
-  font-style: normal;
-  color: var(--admin-mute);
-  font-weight: 600;
-}
-
-.pos-portion-btn:hover em {
-  color: inherit;
-}
-
-.pos-single-add-btn {
+  font-size: 0.72rem;
+  font-weight: 900;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
+  padding: 0 6px;
+  flex-shrink: 0;
+}
+
+.admin-screen.dark .pos-dish-total-badge,
+[data-color-mode="dark"] .admin-screen .pos-dish-total-badge {
+  background: var(--admin-am);
+  color: #120E0A;
+}
+
+/* Segmented Portion Tabs Selector */
+.pos-portion-segmented-bar {
+  display: flex;
   width: 100%;
-  margin-top: 12px;
-  padding: 8px 12px;
+  box-sizing: border-box;
+  background: var(--admin-pa);
+  border: 1.5px solid var(--admin-ln);
+  border-radius: 12px;
+  padding: 2.5px;
+  gap: 2px;
+  margin-top: 4px;
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+
+.pos-segment-tab {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  color: var(--admin-mute);
+  font-size: 0.74rem;
+  font-weight: 800;
+  padding: 6px 3px;
+  border-radius: 9px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  transition: all 0.15s ease;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.pos-segment-tab span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pos-segment-tab:hover {
+  color: var(--admin-ink);
+  background: var(--admin-s2);
+}
+
+.pos-segment-tab.active {
+  background: var(--admin-ink);
+  color: var(--admin-pa);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+.admin-screen.dark .pos-segment-tab.active,
+[data-color-mode="dark"] .admin-screen .pos-segment-tab.active {
+  background: var(--admin-am);
+  color: #120E0A;
+}
+
+.pos-segment-tab .pos-tab-dot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  border-radius: 99px;
+  font-size: 0.68rem;
+  font-weight: 900;
+  background: var(--admin-am);
+  color: #120E0A;
+  padding: 0 4px;
+  line-height: 1;
+}
+
+.pos-segment-tab.active .pos-tab-dot {
+  background: var(--admin-pa);
+  color: var(--admin-ink);
+}
+
+.admin-screen.dark .pos-segment-tab.active .pos-tab-dot,
+[data-color-mode="dark"] .admin-screen .pos-segment-tab.active .pos-tab-dot {
+  background: #120E0A;
+  color: var(--admin-am);
+}
+
+/* Card Bottom Action Bar */
+.pos-card-action-bar {
+  margin-top: auto;
+  width: 100%;
+}
+
+.pos-action-add-btn {
+  width: 100%;
+  height: 40px;
   border-radius: 12px;
   border: 1.5px solid var(--admin-ln);
   background: var(--admin-pa);
   color: var(--admin-ink);
-  font-weight: 800;
-  font-size: 0.88rem;
+  padding: 0 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
-.pos-single-add-btn:hover {
+.pos-action-add-btn:hover {
+  border-color: var(--admin-ink);
   background: var(--admin-ink);
   color: var(--admin-pa);
-  border-color: var(--admin-ink);
 }
 
-.admin-screen.dark .pos-single-add-btn:hover,
-[data-color-mode="dark"] .admin-screen .pos-single-add-btn:hover {
+.admin-screen.dark .pos-action-add-btn:hover,
+[data-color-mode="dark"] .admin-screen .pos-action-add-btn:hover {
+  border-color: var(--admin-am);
   background: var(--admin-am);
   color: #120E0A;
-  border-color: var(--admin-am);
 }
 
-.pos-single-add-btn .price-tag {
+.pos-action-add-btn .action-add-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.84rem;
+  font-weight: 800;
+}
+
+.pos-action-add-btn .action-add-price {
   font-family: var(--admin-serif);
   font-size: 1.15rem;
   font-weight: 400;
+}
+
+/* Active Stepper on Card */
+.pos-action-stepper {
+  width: 100%;
+  height: 40px;
+  border-radius: 12px;
+  border: 1.5px solid var(--admin-am);
+  background: color-mix(in srgb, var(--admin-am) 18%, var(--admin-pa));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2px 4px;
+  user-select: none;
+}
+
+.pos-stepper-btn-action {
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  border: 1px solid var(--admin-am);
+  background: var(--admin-am);
+  color: #1B1409;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.1s ease, background 0.15s ease;
+}
+
+.pos-stepper-btn-action:hover {
+  background: var(--admin-am-hover);
+  transform: scale(1.05);
+}
+
+.pos-stepper-btn-action:active {
+  transform: scale(0.95);
+}
+
+.pos-stepper-center-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: var(--admin-ink);
+}
+
+.pos-stepper-center-info .action-portion-tag {
+  color: var(--admin-mute);
+  font-size: 0.74rem;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+.pos-stepper-center-info .action-portion-qty {
+  font-size: 1rem;
+  font-weight: 900;
+  min-width: 16px;
+  text-align: center;
+  color: var(--admin-ink);
+}
+
+.pos-stepper-center-info .action-portion-price {
+  font-family: var(--admin-serif);
+  font-size: 0.95rem;
+  color: var(--admin-mute);
 }
 
 /* Cart Pane */

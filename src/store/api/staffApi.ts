@@ -371,8 +371,75 @@ export const staffApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ["Table", "Session", "PendingOrder", "KitchenQueue"],
     }),
+
+    quickBillingCheckout: builder.mutation<QuickBillingResponse, QuickBillingRequest>({
+      query: (body) => ({
+        url: "/api/v1/staff/billing/quick",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Table", "Session", "PendingOrder", "KitchenQueue"],
+    }),
   }),
 });
+
+export interface QuickBillingItemPayload {
+  menu_item_id: string;
+  variant_id?: string;
+  quantity: number;
+  instructions?: string;
+  special_instructions?: string;
+}
+
+export interface QuickBillingPaymentPayload {
+  method: "CASH" | "UPI" | "CARD" | string;
+  amount_minor: number;
+  tendered_minor?: number;
+  change_minor?: number;
+}
+
+export interface QuickBillingRequest {
+  order_type: "TAKEAWAY" | "DINE_IN" | string;
+  table_id?: string;
+  table_number?: string;
+  table_token?: string;
+  customer_name?: string;
+  customer_phone?: string;
+  items: QuickBillingItemPayload[];
+  payment: QuickBillingPaymentPayload;
+}
+
+export interface QuickBillingReceiptItem {
+  menu_item_id: string;
+  name: string;
+  variant_name?: string;
+  quantity: number;
+  unit_price_minor: number;
+  total_minor: number;
+  notes?: string;
+}
+
+export interface QuickBillingResponse {
+  success: boolean;
+  session_id: string;
+  order_id: string;
+  order_number: string;
+  invoice_number: string;
+  created_at: string;
+  order_type: string;
+  table_number?: string;
+  customer_name?: string;
+  customer_phone?: string;
+  cashier_name?: string;
+  subtotal_minor: number;
+  cgst_minor: number;
+  sgst_minor: number;
+  grand_total_minor: number;
+  tendered_minor?: number;
+  change_minor?: number;
+  payment_method: string;
+  items: QuickBillingReceiptItem[];
+}
 
 export const {
   useGetStaffTablesQuery,
@@ -398,5 +465,7 @@ export const {
   useCreateFranchiseOutletMutation,
   useLinkRestaurantToFranchiseMutation,
   useAssignWaiterMutation,
+  useQuickBillingCheckoutMutation,
 } = staffApi;
+
 
