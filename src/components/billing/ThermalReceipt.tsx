@@ -13,7 +13,7 @@ export interface ThermalReceiptItem {
 }
 
 export interface ThermalReceiptProps {
-  type?: "BILL" | "KOT";
+  type?: "BILL" | "KOT" | "COMBINED";
   paperSize?: "80mm" | "58mm";
   restaurantName: string;
   restaurantAddress?: string;
@@ -81,69 +81,66 @@ export const ThermalReceipt: React.FC<ThermalReceiptProps> = ({
     ? `receipt-preview-card ${is58mm ? "size-58mm" : "size-80mm"}`
     : `tableos-thermal-receipt ${is58mm ? "size-58mm" : ""}`;
 
-  if (type === "KOT") {
-    return (
-      <div className={baseClassName} aria-hidden={!isPreview}>
-        <div style={{ textAlign: "center", borderBottom: "2px dashed #000", paddingBottom: "6px", marginBottom: "8px" }}>
-          <div style={{ fontSize: is58mm ? "14px" : "16px", fontWeight: "900", letterSpacing: "1px" }}>
-            *** K.O.T. TICKET ***
-          </div>
-          <div style={{ fontSize: is58mm ? "10px" : "12px", marginTop: "2px" }}>
-            {orderType === "DINE_IN" ? `TABLE: ${tableNumber || "DINE-IN"}` : "TAKEAWAY / COUNTER"}
-          </div>
+  const renderKOTSection = () => (
+    <div className="receipt-kot-section">
+      <div style={{ textAlign: "center", borderBottom: "2px dashed #000", paddingBottom: "6px", marginBottom: "8px" }}>
+        <div style={{ fontSize: is58mm ? "14px" : "16px", fontWeight: "900", letterSpacing: "1px" }}>
+          *** K.O.T. TICKET ***
         </div>
-
-        <div style={{ display: "flex", justifyContent: "space-between", fontSize: is58mm ? "9px" : "10px", marginBottom: "6px" }}>
-          <span>Order: #{orderNumber.slice(-6).toUpperCase()}</span>
-          <span>{formattedTime}</span>
-        </div>
-
-        {customerName && (
-          <div style={{ fontSize: is58mm ? "9px" : "10px", marginBottom: "6px" }}>
-            Guest: {customerName}
-          </div>
-        )}
-
-        <div style={{ borderTop: "1px dashed #000", borderBottom: "1px dashed #000", padding: "4px 0", margin: "6px 0", display: "flex", justifyContent: "space-between", fontWeight: "bold" }}>
-          <span style={{ flex: 1 }}>ITEM</span>
-          <span style={{ width: "35px", textAlign: "right" }}>QTY</span>
-        </div>
-
-        <div style={{ display: "flex", flexDirection: "column", gap: "6px", margin: "8px 0" }}>
-          {items.map((item, idx) => (
-            <div key={idx} style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-              <div style={{ flex: 1, paddingRight: "6px" }}>
-                <div style={{ fontWeight: "bold", fontSize: is58mm ? "10px" : "12px" }}>
-                  {item.name}
-                </div>
-                {item.variantName && (
-                  <div style={{ fontSize: is58mm ? "8.5px" : "9.5px", opacity: 0.85 }}>
-                    ({item.variantName})
-                  </div>
-                )}
-                {item.notes && (
-                  <div style={{ fontSize: is58mm ? "8px" : "9px", fontStyle: "italic", marginTop: "1px" }}>
-                    *Note: {item.notes}
-                  </div>
-                )}
-              </div>
-              <div style={{ width: "35px", textAlign: "right", fontWeight: "900", fontSize: is58mm ? "12px" : "14px" }}>
-                x{item.quantity}
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <div style={{ borderTop: "2px dashed #000", paddingTop: "6px", marginTop: "10px", textAlign: "center", fontSize: is58mm ? "8px" : "9px" }}>
-          Items: {items.reduce((acc, it) => acc + it.quantity, 0)} · Kitchen Dispatch
+        <div style={{ fontSize: is58mm ? "10px" : "12px", marginTop: "2px", fontWeight: "700" }}>
+          {orderType === "DINE_IN" ? `TABLE: ${tableNumber || "DINE-IN"}` : "TAKEAWAY / COUNTER"}
         </div>
       </div>
-    );
-  }
 
-  // Tax Invoice / Customer Bill
-  return (
-    <div className={baseClassName} aria-hidden={!isPreview}>
+      <div style={{ display: "flex", justifyContent: "space-between", fontSize: is58mm ? "9px" : "10px", marginBottom: "6px" }}>
+        <span>Order: #{orderNumber.slice(-6).toUpperCase()}</span>
+        <span>{formattedTime}</span>
+      </div>
+
+      {customerName && (
+        <div style={{ fontSize: is58mm ? "9px" : "10px", marginBottom: "6px" }}>
+          Guest: {customerName}
+        </div>
+      )}
+
+      <div style={{ borderTop: "1px dashed #000", borderBottom: "1px dashed #000", padding: "4px 0", margin: "6px 0", display: "flex", justifyContent: "space-between", fontWeight: "bold", fontSize: is58mm ? "9px" : "10.5px" }}>
+        <span style={{ flex: 1 }}>ITEM</span>
+        <span style={{ width: "35px", textAlign: "right" }}>QTY</span>
+      </div>
+
+      <div style={{ display: "flex", flexDirection: "column", gap: "6px", margin: "8px 0" }}>
+        {items.map((item, idx) => (
+          <div key={idx} style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+            <div style={{ flex: 1, paddingRight: "6px" }}>
+              <div style={{ fontWeight: "bold", fontSize: is58mm ? "10px" : "12px" }}>
+                {item.name}
+              </div>
+              {item.variantName && (
+                <div style={{ fontSize: is58mm ? "8.5px" : "9.5px", opacity: 0.85 }}>
+                  ({item.variantName})
+                </div>
+              )}
+              {item.notes && (
+                <div style={{ fontSize: is58mm ? "8px" : "9px", fontStyle: "italic", marginTop: "1px" }}>
+                  *Note: {item.notes}
+                </div>
+              )}
+            </div>
+            <div style={{ width: "35px", textAlign: "right", fontWeight: "900", fontSize: is58mm ? "12px" : "14px" }}>
+              x{item.quantity}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ borderTop: "2px dashed #000", paddingTop: "6px", marginTop: "10px", textAlign: "center", fontSize: is58mm ? "8px" : "9px", fontWeight: "700" }}>
+        Items: {items.reduce((acc, it) => acc + it.quantity, 0)} · Kitchen Dispatch
+      </div>
+    </div>
+  );
+
+  const renderBillSection = () => (
+    <div className="receipt-bill-section">
       {/* Restaurant Header */}
       <div style={{ textAlign: "center", borderBottom: "1px dashed #000", paddingBottom: "8px", marginBottom: "6px" }}>
         <div style={{ fontSize: is58mm ? "14px" : "16px", fontWeight: "900", textTransform: "uppercase", letterSpacing: "0.5px" }}>
@@ -307,6 +304,34 @@ export const ThermalReceipt: React.FC<ThermalReceiptProps> = ({
         <div>Thank you for dining with us!</div>
         <div style={{ marginTop: "2px", opacity: 0.75 }}>Powered by TableOS</div>
       </div>
+    </div>
+  );
+
+  return (
+    <div className={baseClassName} aria-hidden={!isPreview}>
+      {type === "KOT" && renderKOTSection()}
+      {type === "BILL" && renderBillSection()}
+      {type === "COMBINED" && (
+        <>
+          {renderKOTSection()}
+          <div
+            className="receipt-tear-divider"
+            style={{
+              borderTop: "2px dashed #000",
+              borderBottom: "2px dashed #000",
+              padding: "6px 0",
+              margin: "16px 0",
+              textAlign: "center",
+              fontSize: is58mm ? "8.5px" : "10px",
+              fontWeight: "900",
+              letterSpacing: "0.5px",
+            }}
+          >
+            - - - ✂ TEAR HERE (KITCHEN COPY) ✂ - - -
+          </div>
+          {renderBillSection()}
+        </>
+      )}
     </div>
   );
 };

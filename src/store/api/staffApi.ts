@@ -405,6 +405,7 @@ export interface QuickBillingRequest {
   table_token?: string;
   customer_name?: string;
   customer_phone?: string;
+  send_to_kitchen?: boolean;
   items: QuickBillingItemPayload[];
   payment: QuickBillingPaymentPayload;
 }

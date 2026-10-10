@@ -28,6 +28,7 @@ import {
   X,
   FileText,
   Printer,
+  Loader2,
 } from "lucide-react";
 
 interface CartLine {
@@ -111,6 +112,24 @@ export default function QuickBillingPage() {
   const [cart, setCart] = useState<CartLine[]>([]);
   const [paperSize, setPaperSize] = useState<"80mm" | "58mm">("80mm");
   const [selectedPortions, setSelectedPortions] = useState<Record<string, string>>({});
+  const [paymentMethod, setPaymentMethod] = useState<"CASH" | "UPI" | "CARD">("CASH");
+  const [sendToKitchen, setSendToKitchen] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("tableos_pos_send_to_kitchen");
+      return saved !== null ? saved === "true" : true;
+    }
+    return true;
+  });
+
+  const toggleSendToKitchen = () => {
+    setSendToKitchen((prev) => {
+      const next = !prev;
+      if (typeof window !== "undefined") {
+        localStorage.setItem("tableos_pos_send_to_kitchen", String(next));
+      }
+      return next;
+    });
+  };
 
   // Refs
   const searchRef = useRef<HTMLInputElement>(null);
@@ -136,29 +155,6 @@ export default function QuickBillingPage() {
     }
   }, [successToast]);
 
-  // POS Fast Keyboard Shortcuts: / to search, F2 or Ctrl+Enter to settle
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (
-        e.key === "/" &&
-        document.activeElement?.tagName !== "INPUT" &&
-        document.activeElement?.tagName !== "TEXTAREA"
-      ) {
-        e.preventDefault();
-        searchRef.current?.focus();
-      }
-      if (
-        (e.key === "F2" || (e.ctrlKey && e.key === "Enter")) &&
-        cart.length > 0 &&
-        !isSettleModalOpen
-      ) {
-        e.preventDefault();
-        setIsSettleModalOpen(true);
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [cart.length, isSettleModalOpen]);
 
   // Filtered Menu Items
   const filteredItems = useMemo(() => {
@@ -337,7 +333,7 @@ export default function QuickBillingPage() {
   // Quick Test Print Sample Slip
   const handleTestPrint = () => {
     const testData: ThermalReceiptProps = {
-      type: "BILL",
+      type: "COMBINED",
       paperSize,
       restaurantName,
       restaurantAddress: "Shop 12, Ground Floor, Sector 18\nNoida, Uttar Pradesh - 201301",
@@ -454,13 +450,21 @@ export default function QuickBillingPage() {
     setErrorMessage(null);
 
     try {
-      let targetTableObj = selectedTable;
-      if (!targetTableObj && tables.length > 0) {
-        targetTableObj = tables[0];
-      }
+      let tableIdToUse: string | undefined = undefined;
+      let tableNumToUse: string | undefined = undefined;
 
-      const tableIdToUse = targetTableObj?.id;
-      const tableNumToUse = targetTableObj?.table_number || targetTableObj?.tableNumber;
+      if (orderType === "DINE_IN") {
+        let targetTableObj = selectedTable;
+        if (!targetTableObj && tables.length > 0) {
+          targetTableObj = tables[0];
+        }
+        tableIdToUse = targetTableObj?.id;
+        tableNumToUse = targetTableObj?.table_number || targetTableObj?.tableNumber || "Dine-In";
+      } else {
+        // Takeaway orders must NOT block or link to dining room tables
+        tableIdToUse = undefined;
+        tableNumToUse = "Takeaway";
+      }
 
       const resp = await quickBillingCheckout({
         order_type: orderType,
@@ -468,6 +472,7 @@ export default function QuickBillingPage() {
         table_number: tableNumToUse,
         customer_name: customerName || (orderType === "TAKEAWAY" ? "Takeaway Guest" : "Dine-in Guest"),
         customer_phone: customerPhone || undefined,
+        send_to_kitchen: sendToKitchen,
         items: cart.map((c) => ({
           menu_item_id: c.menuItemId,
           variant_id: c.variantId,
@@ -484,12 +489,12 @@ export default function QuickBillingPage() {
 
       // Generate Thermal Receipt Data using authoritative server-calculated figures
       const receiptData: ThermalReceiptProps = {
-        type: "BILL",
+        type: sendToKitchen ? "COMBINED" : "BILL",
         paperSize,
         restaurantName: restaurantName,
         orderNumber: resp.order_number || resp.order_id,
         orderType: (resp.order_type as "TAKEAWAY" | "DINE_IN") || orderType,
-        tableNumber: resp.table_number || tableNumToUse,
+        tableNumber: orderType === "TAKEAWAY" ? undefined : (resp.table_number || tableNumToUse),
         customerName: resp.customer_name || customerName || undefined,
         customerPhone: resp.customer_phone || customerPhone || undefined,
         cashierName: resp.cashier_name || userName,
@@ -533,6 +538,40 @@ export default function QuickBillingPage() {
       setErrorMessage(err?.data?.message || err?.message || "Failed to complete billing transaction.");
     }
   };
+
+  // Direct 1-Click Settle & Print with attached backend API call
+  const handleDirectSettleAndPrint = async () => {
+    if (cart.length === 0 || isCheckingOut) return;
+    await handleSettlePayment({
+      method: paymentMethod,
+      tenderedMinor: grandTotalMinor,
+      changeMinor: 0,
+    });
+  };
+
+  // POS Fast Keyboard Shortcuts: / to search, F2 or Ctrl+Enter to settle
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (
+        e.key === "/" &&
+        document.activeElement?.tagName !== "INPUT" &&
+        document.activeElement?.tagName !== "TEXTAREA"
+      ) {
+        e.preventDefault();
+        searchRef.current?.focus();
+      }
+      if (
+        (e.key === "F2" || (e.ctrlKey && e.key === "Enter")) &&
+        cart.length > 0 &&
+        !isCheckingOut
+      ) {
+        e.preventDefault();
+        handleDirectSettleAndPrint();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [cart.length, isCheckingOut, handleDirectSettleAndPrint]);
 
   const isMutating = isCheckingOut;
 
@@ -709,7 +748,13 @@ export default function QuickBillingPage() {
                   .reduce((sum, c) => sum + c.quantity, 0);
 
                 return (
-                  <div key={item.id} className="pos-dish-card">
+                  <div
+                    key={item.id}
+                    className="pos-dish-card"
+                    onClick={() => {
+                      if (currentPortion) handleAddPortion(item, currentPortion);
+                    }}
+                  >
                     {/* Dish Info Header */}
                     <div className="pos-dish-card-header">
                       <div>
@@ -747,6 +792,7 @@ export default function QuickBillingPage() {
                               onClick={(e) => {
                                 e.stopPropagation();
                                 setSelectedPortions((prev) => ({ ...prev, [item.id]: p.id }));
+                                handleAddPortion(item, p, e);
                               }}
                             >
                               <span>{getPortionTabLabel(p.name)}</span>
@@ -987,41 +1033,93 @@ export default function QuickBillingPage() {
               </span>
             </div>
 
-            {/* Action Buttons */}
-            <div style={{ display: "flex", gap: "8px" }}>
+            {/* Kitchen Dispatch / KOT Toggle Flag */}
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: "10px",
+                padding: "8px 10px",
+                borderRadius: "10px",
+                background: sendToKitchen ? "color-mix(in srgb, var(--admin-am) 14%, var(--admin-pa))" : "var(--admin-pa)",
+                border: "1.5px solid var(--admin-ln)",
+                transition: "all 0.15s ease",
+              }}
+            >
+              <div>
+                <div style={{ fontSize: "0.82rem", fontWeight: "800", color: "var(--admin-ink)" }}>
+                  Kitchen Ticket (KOT)
+                </div>
+                <div style={{ fontSize: "0.72rem", color: "var(--admin-mute)" }}>
+                  {sendToKitchen ? "Combined KOT + Bill & kitchen dispatch" : "Customer bill only (kitchen skipped)"}
+                </div>
+              </div>
               <button
                 type="button"
-                className="btn s"
-                onClick={handlePrintBill}
-                disabled={cart.length === 0 || isMutating}
-                title="Print current bill without settling"
-                style={{ flex: 1, padding: "0 8px", fontSize: "0.85rem", gap: "5px" }}
+                className={`chip ${sendToKitchen ? "active" : ""}`}
+                onClick={toggleSendToKitchen}
+                style={{ height: "30px", padding: "0 10px", fontSize: "0.76rem", fontWeight: "800" }}
               >
-                <Printer size={15} />
-                Bill
+                {sendToKitchen ? "🍳 KOT ON" : "🚫 KOT OFF"}
               </button>
+            </div>
 
-              <button
-                type="button"
-                className="btn s"
-                onClick={handlePrintKOT}
-                disabled={cart.length === 0 || isMutating}
-                title="Print Kitchen Order Ticket"
-                style={{ flex: 1, padding: "0 8px", fontSize: "0.85rem", gap: "5px" }}
-              >
-                <FileText size={15} />
-                KOT
-              </button>
+            {/* Payment Method Selector */}
+            <div style={{ display: "flex", gap: "6px", marginBottom: "10px" }}>
+              {(["CASH", "UPI", "CARD"] as const).map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  className={`btn s ${paymentMethod === m ? "" : "outline"}`}
+                  style={{
+                    flex: 1,
+                    padding: "6px 4px",
+                    fontSize: "0.82rem",
+                    fontWeight: "800",
+                    background: paymentMethod === m ? "var(--admin-ink)" : "var(--admin-pa)",
+                    color: paymentMethod === m ? "var(--admin-pa)" : "var(--admin-ink)",
+                    borderColor: paymentMethod === m ? "var(--admin-ink)" : "var(--admin-ln)",
+                    transition: "all 0.15s ease",
+                  }}
+                  onClick={() => setPaymentMethod(m)}
+                >
+                  {m === "CASH" ? "💵 Cash" : m === "UPI" ? "📱 UPI" : "💳 Card"}
+                </button>
+              ))}
+            </div>
 
+            {/* Action Buttons: Settle & Print (Direct Backend Call) */}
+            <div>
               <button
                 type="button"
                 className="btn"
-                onClick={() => setIsSettleModalOpen(true)}
+                onClick={handleDirectSettleAndPrint}
                 disabled={cart.length === 0 || isMutating}
-                style={{ flex: 2, padding: "0 10px", fontSize: "0.88rem" }}
+                style={{
+                  width: "100%",
+                  height: "46px",
+                  fontSize: "0.95rem",
+                  fontWeight: "800",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "8px",
+                }}
               >
-                <Zap size={17} />
-                Settle & Print ({formatMoney(grandTotalMinor)})
+                {isMutating ? (
+                  <>
+                    <Loader2 className="spinner" size={18} />
+                    <span>Settling & Printing...</span>
+                  </>
+                ) : (
+                  <>
+                    <Zap size={18} />
+                    <span>
+                      Settle & Print {sendToKitchen ? "(KOT + Bill)" : "(Bill Only)"} ({formatMoney(grandTotalMinor)})
+                    </span>
+                  </>
+                )}
               </button>
             </div>
           </div>

@@ -3,6 +3,7 @@
 import React, { useState, useMemo } from "react";
 import Link from "next/link";
 import { useGetRestaurantOrdersQuery } from "@/store/api/restaurantApi";
+import { useUpdateKitchenStatusMutation } from "@/store/api/kitchenApi";
 import { useAppSelector } from "@/store";
 import { formatMoney } from "@/lib/money";
 import { Order, OrderItem } from "@/types/domain";
@@ -65,6 +66,22 @@ export default function RestaurantOrderHistoryPage() {
   const { data: orders, isLoading, refetch, isFetching } = useGetRestaurantOrdersQuery(
     queryArgs
   );
+  const [updateKitchenStatus, { isLoading: isUpdatingStatus }] = useUpdateKitchenStatusMutation();
+
+  const handleCompleteOrder = async (orderId: string) => {
+    try {
+      await updateKitchenStatus({
+        orderId,
+        data: { status: OrderState.SERVED },
+      }).unwrap();
+      refetch();
+      if (selectedOrder?.id === orderId) {
+        setSelectedOrder(null);
+      }
+    } catch (err) {
+      console.error("Failed to complete order:", err);
+    }
+  };
 
   const allOrders = orders || [];
 
@@ -80,7 +97,11 @@ export default function RestaurantOrderHistoryPage() {
       if (o.status !== OrderState.CANCELLED && (o.status as string) !== "CANCELLED") {
         totalGmvMinor += amount;
       }
-      if (o.status === OrderState.SERVED || (o.status as string) === "SERVED") {
+      if (
+        o.status === OrderState.SERVED ||
+        (o.status as string) === "SERVED" ||
+        (o.status as string) === "COMPLETED"
+      ) {
         completedCount++;
       }
       if (
@@ -123,7 +144,10 @@ export default function RestaurantOrderHistoryPage() {
 
       const matchesStatus =
         selectedStatus === "ALL" ||
-        (selectedStatus === "SERVED" && (ord.status === OrderState.SERVED || (ord.status as string) === "SERVED")) ||
+        (selectedStatus === "SERVED" &&
+          (ord.status === OrderState.SERVED ||
+            (ord.status as string) === "SERVED" ||
+            (ord.status as string) === "COMPLETED")) ||
         (selectedStatus === "READY" && (ord.status === OrderState.READY || (ord.status as string) === "READY")) ||
         (selectedStatus === "PREPARING" &&
           (ord.status === OrderState.PREPARING ||
@@ -139,7 +163,8 @@ export default function RestaurantOrderHistoryPage() {
   const renderStatusPill = (status: string) => {
     switch (status) {
       case "SERVED":
-        return <span className="pill c-g">Served</span>;
+      case "COMPLETED":
+        return <span className="pill c-g">{status === "COMPLETED" ? "Completed" : "Served"}</span>;
       case "READY":
         return <span className="pill c-a">Ready</span>;
       case "PREPARING":
@@ -328,7 +353,23 @@ export default function RestaurantOrderHistoryPage() {
                           : ""}
                       </small>
                     </td>
-                    <td className="ac">
+                    <td className="ac" style={{ display: "flex", gap: "6px", justifyContent: "flex-end", alignItems: "center" }}>
+                      {(ord.status === OrderState.READY || (ord.status as string) === "READY") && (
+                        <button
+                          className="btn s sm"
+                          style={{
+                            background: "#2F8F5B",
+                            color: "#ffffff",
+                            borderColor: "#2F8F5B",
+                            fontWeight: 700,
+                          }}
+                          disabled={isUpdatingStatus}
+                          onClick={() => handleCompleteOrder(ord.id)}
+                          title="Mark Handed Over / Completed"
+                        >
+                          ✓ Complete
+                        </button>
+                      )}
                       <button
                         className="btn s sm"
                         onClick={() => setSelectedOrder(ord)}
@@ -418,7 +459,22 @@ export default function RestaurantOrderHistoryPage() {
               </div>
             </div>
 
-            <div className="ac" style={{ marginTop: 18 }}>
+            <div className="ac" style={{ marginTop: 18, display: "flex", gap: "10px", justifyContent: "center" }}>
+              {(selectedOrder.status === OrderState.READY || (selectedOrder.status as string) === "READY") && (
+                <button
+                  className="btn pr"
+                  style={{
+                    background: "#2F8F5B",
+                    borderColor: "#2F8F5B",
+                    color: "#ffffff",
+                    fontWeight: 700,
+                  }}
+                  disabled={isUpdatingStatus}
+                  onClick={() => handleCompleteOrder(selectedOrder.id)}
+                >
+                  ✓ Complete & Hand Over
+                </button>
+              )}
               <button className="btn s" onClick={() => setSelectedOrder(null)}>
                 Close
               </button>

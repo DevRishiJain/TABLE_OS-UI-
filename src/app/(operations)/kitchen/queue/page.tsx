@@ -253,13 +253,20 @@ export default function KitchenQueuePage() {
     c.fillStyle = l === "late" ? "#fff" : INK;
     c.fillText(tt, LW - 18 - pw + 13, 46);
 
-    // Vehicle / Dine-in pill
+    // Vehicle / Dine-in / Takeaway pill
     const cr = !!o.car;
+    const isTakeaway =
+      o.tb.toLowerCase().includes("takeaway") ||
+      o.guest.toLowerCase().includes("takeaway");
     rr(c, 20, 134, LW - 40, 28, 14);
     if (cr) {
       c.fillStyle = INK;
       c.fill();
       c.fillStyle = "#FBF6EA";
+    } else if (isTakeaway) {
+      c.fillStyle = "#8C4A00";
+      c.fill();
+      c.fillStyle = "#FFFFFF";
     } else {
       c.strokeStyle = "#1B140966";
       c.lineWidth = 1.5;
@@ -267,7 +274,7 @@ export default function KitchenQueuePage() {
       c.fillStyle = MUTE;
     }
     c.font = '700 13px "Hanken Grotesk", sans-serif';
-    let ct = cr ? "CAR · " + o.car : "DINE-IN";
+    let ct = cr ? "CAR · " + o.car : isTakeaway ? "🥡 TAKEAWAY PICKUP" : "DINE-IN";
     while (c.measureText(ct).width > LW - 64) ct = ct.slice(0, -2);
     c.fillText(ct, 32, 152);
 
@@ -377,17 +384,22 @@ export default function KitchenQueuePage() {
         M.ay + 35
       );
     } else if (o.s === "ready") {
-      // Waiting for pickup indicator - NO button for operator to click, just informational banner
+      // Clickable Handed Over / Complete button for ready tickets
+      const isTakeaway =
+        o.tb.toLowerCase().includes("takeaway") ||
+        o.guest.toLowerCase().includes("takeaway");
       rr(c, 16, M.ay, LW - 32, M.ah, 16);
-      c.fillStyle = "#1b14090d";
+      c.fillStyle = hv && hrow === -2 ? "#1E6B3F" : "#2F8F5B";
       c.fill();
-      c.strokeStyle = "#1b14092b";
-      c.lineWidth = 1.5;
-      c.stroke();
-      c.fillStyle = MUTE;
+      c.fillStyle = "#FFFFFF";
       c.textAlign = "center";
-      c.font = '700 17px "Hanken Grotesk", sans-serif';
-      c.fillText(cr ? "Waiting for car pickup" : "Waiting for pickup", LW / 2, M.ay + 35);
+      c.font = '800 17px "Hanken Grotesk", sans-serif';
+      const readyLabel = cr
+        ? "Handed over to car ✓"
+        : isTakeaway
+        ? "Complete Takeaway ✓"
+        : "Handed over ✓";
+      c.fillText(readyLabel, LW / 2, M.ay + 36);
     } else {
       // Clickable Start Cooking button for new tickets
       rr(c, 16, M.ay, LW - 32, M.ah, 16);
@@ -703,8 +715,8 @@ export default function KitchenQueuePage() {
 
   const act = useCallback(
     (o: KitchenTicket) => {
-      // In ready stage, no clickable button for the operator
-      if (o.moving || o.s === "cook" || o.s === "ready") return;
+      // In cooking stage, ticking individual dishes advances to ready when all items done
+      if (o.moving || o.s === "cook") return;
       advance(o);
     },
     [advance]
@@ -737,8 +749,8 @@ export default function KitchenQueuePage() {
     if (ly >= M.iy && ly < M.ay - 6) {
       row = Math.min(o.items.length - 1, Math.floor((ly - M.iy) / M.rh));
     } else if (ly >= M.ay && ly <= M.ay + M.ah) {
-      // Only clickable for "new" tickets ("Start cooking")
-      if (o.s === "new") {
+      // Clickable for "new" tickets ("Start cooking") and "ready" tickets ("Complete / Handed over")
+      if (o.s === "new" || o.s === "ready") {
         row = -2;
       }
     }
@@ -887,7 +899,7 @@ export default function KitchenQueuePage() {
         cv.style.cursor =
           p &&
           ((p.row >= 0 && p.o.s === "cook") ||
-            (p.row === -2 && p.o.s === "new"))
+            (p.row === -2 && (p.o.s === "new" || p.o.s === "ready")))
             ? "pointer"
             : "default";
         if (po !== hovRef.current || pr !== hrowRef.current) {
@@ -1000,10 +1012,19 @@ export default function KitchenQueuePage() {
           changed = true;
         }
       } else {
+        const isTakeawayOrder =
+          (qo.table_number && qo.table_number.toLowerCase().includes("takeaway")) ||
+          (qo.customer_name && qo.customer_name.toLowerCase().includes("takeaway"));
         const newTicket: KitchenTicket = {
           id: qo.sequence_number || (qo.id ? qo.id.slice(-4) : "1"),
           rawId: qo.id,
-          tb: qo.table_number ? `T${qo.table_number}` : qo.vehicle_number ? "C1" : "T1",
+          tb: isTakeawayOrder
+            ? "Takeaway"
+            : qo.table_number
+            ? `T${qo.table_number}`
+            : qo.vehicle_number
+            ? "C1"
+            : "T1",
           car: qo.vehicle_number ? `Car · ${qo.vehicle_number}` : undefined,
           guest: qo.customer_name || "Guest Diner",
           pax: qo.guest_count || 2,

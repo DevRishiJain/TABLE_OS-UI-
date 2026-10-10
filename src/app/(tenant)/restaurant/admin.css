@@ -1321,6 +1321,10 @@ html.dark .admin-screen:before {
   box-shadow: 0 4px 14px -2px rgba(27, 20, 9, 0.08);
 }
 
+.pos-dish-card:active {
+  transform: scale(0.985);
+}
+
 .admin-screen.dark .pos-dish-card:hover,
 [data-color-mode="dark"] .admin-screen .pos-dish-card:hover {
   border-color: var(--admin-am);
@@ -1783,6 +1787,12 @@ html.dark .admin-screen:before {
     border-color: #000000 !important;
     box-shadow: none !important;
     text-shadow: none !important;
+  }
+
+  /* Trigger Hardware Auto-Cutter on POS printers supporting page breaks */
+  .receipt-tear-divider {
+    page-break-after: always !important;
+    break-after: page !important;
   }
 }
 
