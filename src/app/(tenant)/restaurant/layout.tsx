@@ -26,6 +26,7 @@ const SVGIcons: Record<string, string> = {
   pl: '<path d="M12 5v14M5 12h14"/>',
   ob: '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>',
   sb: '<path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><path d="M2 10h20"/><path d="M7 15h3"/>',
+  pos: '<rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/><path d="M7 8h10M7 12h4"/>',
 };
 
 function Icon({ name }: { name: string }) {
@@ -75,6 +76,7 @@ export default function RestaurantAdminLayout({
       group: "Run service",
       items: [
         { key: "home", label: "Home", href: "/restaurant/dashboard", icon: "home", exact: true },
+        { key: "billing", label: "Quick Billing", href: "/restaurant/billing", icon: "pos", exact: true },
         { key: "orders", label: "Orders", href: "/restaurant/orders", icon: "ord", exact: true },
       ],
     },
@@ -246,6 +248,11 @@ export default function RestaurantAdminLayout({
             <h3>What would you like to do?</h3>
             <div className="big">
               {[
+                {
+                  title: "Quick Billing / POS",
+                  sub: "Rapid counter order & thermal bill",
+                  href: "/restaurant/billing",
+                },
                 {
                   title: "Log an expense",
                   sub: "Bill, purchase or wastage",
