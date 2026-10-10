@@ -231,8 +231,8 @@ export default function RestaurantAdminLayout({
         </nav>
 
         {/* Main Work Area */}
-        <main>
-          <div className="in" id="v">
+        <main className={pathname === "/restaurant/billing" ? "pos-main" : undefined}>
+          <div className={`in ${pathname === "/restaurant/billing" ? "pos-in" : ""}`} id="v">
             {children}
           </div>
         </main>

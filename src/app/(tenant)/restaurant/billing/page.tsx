@@ -6,7 +6,6 @@ import {
   useGetMenuCategoriesQuery,
   useGetMenuItemsQuery,
   useGetRestaurantTablesQuery,
-  useGetRestaurantSettingsQuery,
 } from "@/store/api/restaurantApi";
 import {
   useStartStaffSessionMutation,
@@ -30,6 +29,7 @@ import {
   AlertCircle,
   X,
   FileText,
+  Printer,
 } from "lucide-react";
 
 interface CartLine {
@@ -93,7 +93,6 @@ export default function QuickBillingPage() {
   const { data: categories = [], isLoading: isCatLoading } = useGetMenuCategoriesQuery();
   const { data: menuItems = [], isLoading: isMenuLoading } = useGetMenuItemsQuery();
   const { data: tables = [], isLoading: isTablesLoading } = useGetRestaurantTablesQuery();
-  const { data: settings } = useGetRestaurantSettingsQuery();
 
   // API Mutations
   const [startSession, { isLoading: isStartingSession }] = useStartStaffSessionMutation();
@@ -219,10 +218,148 @@ export default function QuickBillingPage() {
   // Clean Print Trigger
   const triggerPrint = useCallback((receiptData: ThermalReceiptProps) => {
     setActiveReceipt(receiptData);
+    // Allow DOM to fully paint the receipt before opening browser print dialog
     setTimeout(() => {
       window.print();
-    }, 100);
+    }, 200);
   }, []);
+
+  // Ensure activeReceipt is never empty when browser print is triggered directly (e.g. Ctrl+P)
+  useEffect(() => {
+    const handleBeforePrint = () => {
+      setActiveReceipt((current) => {
+        if (current) return current;
+        if (cart.length > 0) {
+          return {
+            type: "BILL",
+            paperSize,
+            restaurantName,
+            orderNumber: "BILL-" + Math.floor(1000 + Math.random() * 9000),
+            orderType,
+            tableNumber: selectedTable?.table_number || selectedTable?.tableNumber,
+            customerName: customerName || undefined,
+            customerPhone: customerPhone || undefined,
+            cashierName: userName,
+            date: new Date(),
+            items: cart.map((c) => ({
+              name: c.name,
+              variantName: c.variantName,
+              quantity: c.quantity,
+              unitPriceMinor: c.unitPriceMinor,
+              totalMinor: c.unitPriceMinor * c.quantity,
+              notes: c.notes,
+            })),
+            subtotalMinor,
+            cgstMinor,
+            sgstMinor,
+            grandTotalMinor,
+            paymentMethod: "CASH",
+          };
+        }
+        return {
+          type: "BILL",
+          paperSize,
+          restaurantName,
+          orderNumber: "SAMPLE-9901",
+          orderType: "TAKEAWAY",
+          cashierName: userName,
+          date: new Date(),
+          items: [
+            { name: "Paneer Butter Masala (Full)", quantity: 1, unitPriceMinor: 28000, totalMinor: 28000 },
+            { name: "Butter Naan", quantity: 2, unitPriceMinor: 4500, totalMinor: 9000 },
+          ],
+          subtotalMinor: 37000,
+          cgstMinor: 925,
+          sgstMinor: 925,
+          grandTotalMinor: 38850,
+          paymentMethod: "CASH",
+        };
+      });
+    };
+
+    window.addEventListener("beforeprint", handleBeforePrint);
+    return () => {
+      window.removeEventListener("beforeprint", handleBeforePrint);
+    };
+  }, [cart, paperSize, restaurantName, orderType, selectedTable, customerName, customerPhone, userName, subtotalMinor, cgstMinor, sgstMinor, grandTotalMinor]);
+
+  // Quick Test Print Sample Slip
+  const handleTestPrint = () => {
+    const testData: ThermalReceiptProps = {
+      type: "BILL",
+      paperSize,
+      restaurantName,
+      restaurantAddress: "Shop 12, Ground Floor, Sector 18\nNoida, Uttar Pradesh - 201301",
+      restaurantPhone: "+91 98765 43210",
+      gstin: "07AAAAA0000A1Z5",
+      fssai: "10019011000123",
+      orderNumber: "TEST-" + Math.floor(1000 + Math.random() * 9000),
+      orderType: "TAKEAWAY",
+      cashierName: userName,
+      date: new Date(),
+      items: [
+        {
+          name: "Paneer Butter Masala (Full)",
+          quantity: 1,
+          unitPriceMinor: 28000,
+          totalMinor: 28000,
+        },
+        {
+          name: "Butter Naan",
+          quantity: 3,
+          unitPriceMinor: 4500,
+          totalMinor: 13500,
+        },
+        {
+          name: "Fresh Lime Soda",
+          quantity: 2,
+          unitPriceMinor: 7000,
+          totalMinor: 14000,
+        },
+      ],
+      subtotalMinor: 55500,
+      cgstMinor: 1388,
+      sgstMinor: 1388,
+      grandTotalMinor: 58276,
+      paymentMethod: "CASH",
+      tenderedMinor: 60000,
+      changeMinor: 1724,
+    };
+    triggerPrint(testData);
+  };
+
+  // Quick Bill Print without settlement (pro-forma / estimate bill)
+  const handlePrintBill = () => {
+    if (cart.length === 0) return;
+
+    const billData: ThermalReceiptProps = {
+      type: "BILL",
+      paperSize,
+      restaurantName,
+      orderNumber: "BILL-" + Math.floor(100000 + Math.random() * 900000),
+      orderType,
+      tableNumber: selectedTable?.table_number || selectedTable?.tableNumber,
+      customerName: customerName || undefined,
+      customerPhone: customerPhone || undefined,
+      cashierName: userName,
+      date: new Date(),
+      items: cart.map((c) => ({
+        name: c.name,
+        variantName: c.variantName,
+        quantity: c.quantity,
+        unitPriceMinor: c.unitPriceMinor,
+        totalMinor: c.unitPriceMinor * c.quantity,
+        notes: c.notes,
+      })),
+      subtotalMinor,
+      cgstMinor,
+      sgstMinor,
+      grandTotalMinor,
+      paymentMethod: "CASH",
+    };
+
+    triggerPrint(billData);
+  };
 
   // Quick KOT Print
   const handlePrintKOT = () => {
@@ -362,7 +499,7 @@ export default function QuickBillingPage() {
   const isMutating = isStartingSession || isPlacingOrder || isPaying;
 
   return (
-    <>
+    <div className="pos-fullwidth">
       {/* Toast Alert */}
       {successToast && (
         <div className="toast on" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
@@ -379,17 +516,28 @@ export default function QuickBillingPage() {
         </div>
         <div className="sp"></div>
 
-        {/* Thermal Roll Selector */}
-        <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
-          <span style={{ fontSize: "0.82rem", fontWeight: "700", color: "var(--admin-mute)", marginRight: "4px" }}>
-            Thermal Roll:
+        {/* Test Print Button & Thermal Roll Selector */}
+        <div style={{ display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" }}>
+          <button
+            type="button"
+            className="btn s sm"
+            onClick={handleTestPrint}
+            title="Print a sample receipt to test printer alignment and font rendering"
+            style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
+          >
+            <Printer size={15} />
+            Test Print
+          </button>
+
+          <span style={{ fontSize: "0.82rem", fontWeight: "700", color: "var(--admin-mute)", marginLeft: "4px" }}>
+            Roll:
           </span>
           <button
             type="button"
             className="chip"
             aria-pressed={paperSize === "80mm"}
             onClick={() => setPaperSize("80mm")}
-            style={{ height: "36px", padding: "0 12px", fontSize: "0.8rem" }}
+            style={{ height: "34px", padding: "0 12px", fontSize: "0.8rem" }}
           >
             80mm (3")
           </button>
@@ -398,7 +546,7 @@ export default function QuickBillingPage() {
             className="chip"
             aria-pressed={paperSize === "58mm"}
             onClick={() => setPaperSize("58mm")}
-            style={{ height: "36px", padding: "0 12px", fontSize: "0.8rem" }}
+            style={{ height: "34px", padding: "0 12px", fontSize: "0.8rem" }}
           >
             58mm (2")
           </button>
@@ -748,12 +896,24 @@ export default function QuickBillingPage() {
               <button
                 type="button"
                 className="btn s"
+                onClick={handlePrintBill}
+                disabled={cart.length === 0 || isMutating}
+                title="Print current bill without settling"
+                style={{ flex: 1, padding: "0 8px", fontSize: "0.85rem", gap: "5px" }}
+              >
+                <Printer size={15} />
+                Bill
+              </button>
+
+              <button
+                type="button"
+                className="btn s"
                 onClick={handlePrintKOT}
                 disabled={cart.length === 0 || isMutating}
                 title="Print Kitchen Order Ticket"
-                style={{ flex: 1, padding: "0 10px" }}
+                style={{ flex: 1, padding: "0 8px", fontSize: "0.85rem", gap: "5px" }}
               >
-                <FileText size={16} />
+                <FileText size={15} />
                 KOT
               </button>
 
@@ -762,9 +922,9 @@ export default function QuickBillingPage() {
                 className="btn"
                 onClick={() => setIsSettleModalOpen(true)}
                 disabled={cart.length === 0 || isMutating}
-                style={{ flex: 2 }}
+                style={{ flex: 2, padding: "0 10px", fontSize: "0.88rem" }}
               >
-                <Zap size={18} />
+                <Zap size={17} />
                 Settle & Print ({formatMoney(grandTotalMinor)})
               </button>
             </div>
@@ -782,9 +942,11 @@ export default function QuickBillingPage() {
       />
 
       {/* Thermal Print Slip Output */}
-      {activeReceipt && (
-        <ThermalReceipt {...activeReceipt} />
-      )}
-    </>
+      <div id="pos-thermal-print-area">
+        {activeReceipt && (
+          <ThermalReceipt {...activeReceipt} />
+        )}
+      </div>
+    </div>
   );
 }
