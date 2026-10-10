@@ -68,112 +68,105 @@ export const QuickSettlementModal: React.FC<QuickSettlementModalProps> = ({
   };
 
   return (
-    <div className="pos-variant-modal-overlay" onClick={onClose}>
-      <div
-        className="pos-variant-modal"
-        style={{ maxWidth: "460px" }}
-        onClick={(e) => e.stopPropagation()}
-      >
+    <div
+      className="ov on"
+      onClick={(e) => {
+        if ((e.target as HTMLElement).classList.contains("ov")) onClose();
+      }}
+    >
+      <div className="md" style={{ width: "min(500px, 100%)" }} onClick={(e) => e.stopPropagation()}>
         {/* Header */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid var(--border)", paddingBottom: "12px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "14px" }}>
           <div>
-            <h3 style={{ fontSize: "1.2rem", fontWeight: "800", margin: 0, color: "var(--text)" }}>
+            <h3 style={{ margin: 0, font: "400 1.9rem/1 var(--admin-serif)", color: "var(--admin-ink)" }}>
               Settle Payment
             </h3>
-            <span style={{ fontSize: "0.85rem", color: "var(--text-sub)" }}>
-              Select payment method & complete bill
-            </span>
+            <p style={{ margin: "4px 0 0", fontSize: "0.86rem", color: "var(--admin-mute)" }}>
+              Select payment tender & print customer bill
+            </p>
           </div>
           <button
             type="button"
             onClick={onClose}
             disabled={isLoading}
-            style={{
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              color: "var(--text-sub)",
-              padding: "4px",
-            }}
+            className="btn s sm"
+            style={{ padding: "0 10px", height: "32px" }}
           >
-            <X size={20} />
+            <X size={16} />
           </button>
         </div>
 
-        {/* Bill Total Card */}
+        {/* Bill Total Display */}
         <div
           style={{
-            background: "var(--bg)",
-            border: "1.5px solid var(--border)",
-            borderRadius: "12px",
+            background: "var(--admin-s2)",
+            border: "1.5px solid var(--admin-ln)",
+            borderRadius: "16px",
             padding: "16px",
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
+            marginBottom: "16px",
           }}
         >
-          <span style={{ fontSize: "0.95rem", fontWeight: "600", color: "var(--text-sub)" }}>
-            Total Net Payable
-          </span>
-          <span style={{ fontSize: "1.6rem", fontWeight: "900", color: "var(--accent)" }}>
+          <div>
+            <span style={{ fontSize: "0.8rem", fontWeight: "800", color: "var(--admin-mute)", textTransform: "uppercase", letterSpacing: "0.08em", display: "block" }}>
+              Net Bill Amount
+            </span>
+            <span style={{ fontSize: "0.82rem", color: "var(--admin-mute)" }}>
+              Incl. 2.5% CGST + 2.5% SGST
+            </span>
+          </div>
+          <span style={{ font: "400 2.2rem/1 var(--admin-serif)", color: "var(--admin-ink)" }}>
             {formatMoney(totalMinorUnits)}
           </span>
         </div>
 
         {/* Payment Methods */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "8px" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "8px", marginBottom: "16px" }}>
           <button
             type="button"
-            className={`btn ${method === "CASH" ? "p" : "s"}`}
+            className={`chip ${method === "CASH" ? "active" : ""}`}
+            aria-pressed={method === "CASH"}
             onClick={() => setMethod("CASH")}
             style={{
-              padding: "10px 8px",
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              gap: "6px",
-              fontSize: "0.85rem",
-              fontWeight: "700",
+              height: "44px",
+              justifyContent: "center",
+              borderRadius: "14px",
             }}
           >
-            <Banknote size={20} />
+            <Banknote size={18} />
             Cash
           </button>
 
           <button
             type="button"
-            className={`btn ${method === "UPI" ? "p" : "s"}`}
+            className={`chip ${method === "UPI" ? "active" : ""}`}
+            aria-pressed={method === "UPI"}
             onClick={() => setMethod("UPI")}
             style={{
-              padding: "10px 8px",
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              gap: "6px",
-              fontSize: "0.85rem",
-              fontWeight: "700",
+              height: "44px",
+              justifyContent: "center",
+              borderRadius: "14px",
             }}
           >
-            <QrCode size={20} />
+            <QrCode size={18} />
             UPI / QR
           </button>
 
           <button
             type="button"
-            className={`btn ${method === "CARD" ? "p" : "s"}`}
+            className={`chip ${method === "CARD" ? "active" : ""}`}
+            aria-pressed={method === "CARD"}
             onClick={() => setMethod("CARD")}
             style={{
-              padding: "10px 8px",
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              gap: "6px",
-              fontSize: "0.85rem",
-              fontWeight: "700",
+              height: "44px",
+              justifyContent: "center",
+              borderRadius: "14px",
             }}
           >
-            <CreditCard size={20} />
-            Card / POS
+            <CreditCard size={18} />
+            Card
           </button>
         </div>
 
@@ -181,15 +174,25 @@ export const QuickSettlementModal: React.FC<QuickSettlementModalProps> = ({
         {method === "CASH" ? (
           <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
             <div>
-              <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "600", color: "var(--text-sub)", marginBottom: "6px" }}>
+              <label style={{ display: "block", fontSize: "0.82rem", fontWeight: "700", color: "var(--admin-mute)", marginBottom: "6px" }}>
                 Amount Tendered by Customer (₹)
               </label>
               <input
                 type="number"
                 min="0"
                 step="1"
-                className="pos-search-input"
-                style={{ padding: "10px 14px", fontSize: "1.1rem", fontWeight: "700" }}
+                style={{
+                  width: "100%",
+                  height: "48px",
+                  borderRadius: "12px",
+                  border: "1.5px solid var(--admin-ln)",
+                  background: "var(--admin-s2)",
+                  color: "var(--admin-ink)",
+                  padding: "0 14px",
+                  fontSize: "1.2rem",
+                  fontWeight: "800",
+                  outline: "none",
+                }}
                 value={tenderedMajorStr}
                 onChange={(e) => setTenderedMajorStr(e.target.value)}
                 autoFocus
@@ -202,14 +205,10 @@ export const QuickSettlementModal: React.FC<QuickSettlementModalProps> = ({
                 <button
                   key={denom}
                   type="button"
-                  className="pos-cat-pill"
-                  style={{
-                    fontWeight: "700",
-                    background: Number(tenderedMajorStr) === denom ? "var(--accent)" : "var(--bg)",
-                    color: Number(tenderedMajorStr) === denom ? "#FFFFFF" : "var(--text)",
-                    borderColor: Number(tenderedMajorStr) === denom ? "var(--accent)" : "var(--border)",
-                  }}
+                  className="chip"
+                  aria-pressed={Number(tenderedMajorStr) === denom}
                   onClick={() => setTenderedMajorStr(String(denom))}
+                  style={{ height: "34px", padding: "0 12px", fontSize: "0.8rem" }}
                 >
                   {denom === totalMajor ? `Exact (₹${denom})` : `₹${denom}`}
                 </button>
@@ -219,23 +218,22 @@ export const QuickSettlementModal: React.FC<QuickSettlementModalProps> = ({
             {/* Change / Due Feedback */}
             <div
               style={{
-                background: changeMinor > 0 ? "rgba(16, 185, 129, 0.1)" : "var(--bg)",
-                border: `1.5px solid ${changeMinor > 0 ? "#10B981" : "var(--border)"}`,
-                borderRadius: "10px",
-                padding: "12px 14px",
+                background: changeMinor > 0 ? "rgba(47, 154, 98, 0.12)" : "var(--admin-s2)",
+                border: `1.5px solid ${changeMinor > 0 ? "var(--admin-grn)" : "var(--admin-ln)"}`,
+                borderRadius: "12px",
+                padding: "12px 16px",
                 display: "flex",
                 justifyContent: "space-between",
                 alignItems: "center",
               }}
             >
-              <span style={{ fontSize: "0.9rem", fontWeight: "600", color: changeMinor > 0 ? "#065F46" : "var(--text-sub)" }}>
+              <span style={{ fontSize: "0.88rem", fontWeight: "700", color: changeMinor > 0 ? "var(--admin-grn)" : "var(--admin-mute)" }}>
                 {remainingMinor > 0 ? "Short by / Due:" : "Change to Return:"}
               </span>
               <span
                 style={{
-                  fontSize: "1.2rem",
-                  fontWeight: "900",
-                  color: remainingMinor > 0 ? "#DC2626" : "#059669",
+                  font: "400 1.6rem/1 var(--admin-serif)",
+                  color: remainingMinor > 0 ? "var(--admin-red)" : changeMinor > 0 ? "var(--admin-grn)" : "var(--admin-ink)",
                 }}
               >
                 {remainingMinor > 0 ? formatMoney(remainingMinor) : formatMoney(changeMinor)}
@@ -245,41 +243,40 @@ export const QuickSettlementModal: React.FC<QuickSettlementModalProps> = ({
         ) : (
           <div
             style={{
-              padding: "20px",
+              padding: "24px 16px",
               textAlign: "center",
-              background: "var(--bg)",
-              borderRadius: "10px",
-              border: "1px dashed var(--border)",
-              color: "var(--text-sub)",
-              fontSize: "0.9rem",
+              background: "var(--admin-s2)",
+              borderRadius: "14px",
+              border: "1.5px dashed var(--admin-ln)",
+              color: "var(--admin-mute)",
+              fontSize: "0.88rem",
             }}
           >
             {method === "UPI"
-              ? "Confirm customer scanned outlet UPI QR code or completed UPI transaction."
-              : "Confirm EDC Card swipe / tap completed on credit/debit POS terminal."}
+              ? "Confirm customer scanned counter UPI QR code or completed UPI transaction."
+              : "Confirm EDC Card swipe / tap completed on credit/debit card terminal."}
           </div>
         )}
 
-        {/* Footer Actions */}
-        <div style={{ display: "flex", gap: "10px", marginTop: "8px" }}>
+        {/* Modal Actions */}
+        <div style={{ display: "flex", gap: "10px", marginTop: "20px" }}>
           <button
             type="button"
             className="btn s"
             onClick={onClose}
             disabled={isLoading}
-            style={{ flex: 1, padding: "12px" }}
+            style={{ flex: 1 }}
           >
             Cancel
           </button>
 
           <button
             type="button"
-            className="btn p"
+            className="btn"
             onClick={handleSubmit}
             disabled={isLoading || (method === "CASH" && remainingMinor > 0)}
             style={{
               flex: 2,
-              padding: "12px",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -289,12 +286,12 @@ export const QuickSettlementModal: React.FC<QuickSettlementModalProps> = ({
             {isLoading ? (
               <>
                 <Loader2 size={18} className="animate-spin" />
-                Processing...
+                Settling...
               </>
             ) : (
               <>
                 <Check size={18} />
-                Settle & Print Receipt
+                Settle & Print Slip
               </>
             )}
           </button>

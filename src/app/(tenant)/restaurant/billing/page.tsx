@@ -13,7 +13,7 @@ import {
   usePlaceStaffOrderMutation,
   useConfirmPaymentMutation,
 } from "@/store/api/staffApi";
-import { MenuItem, MenuCategory, MenuItemVariant } from "@/types/domain";
+import { MenuItem, MenuCategory } from "@/types/domain";
 import { PaymentMethod } from "@/types/enums";
 import { formatMoney } from "@/lib/money";
 import { ThermalReceipt, ThermalReceiptProps } from "@/components/billing/ThermalReceipt";
@@ -23,13 +23,11 @@ import {
   Plus,
   Minus,
   Trash2,
-  Printer,
   Zap,
   ShoppingBag,
   Utensils,
   CheckCircle2,
   AlertCircle,
-  Eye,
   X,
   FileText,
 } from "lucide-react";
@@ -42,6 +40,49 @@ interface CartLine {
   unitPriceMinor: number;
   quantity: number;
   notes?: string;
+}
+
+interface PortionOption {
+  id: string;
+  name: string;
+  priceMinor: number;
+}
+
+// Computes portion options ensuring "Full" is always available alongside "Half", "Quarter", etc.
+function getDishPortions(item: MenuItem): PortionOption[] {
+  const basePriceMinor = item.price?.amount_minor_units || 0;
+  const variants = item.variants || [];
+
+  if (variants.length === 0) {
+    return [{ id: "base", name: "Full", priceMinor: basePriceMinor }];
+  }
+
+  const hasFullVariant = variants.some(
+    (v) => v.name.toLowerCase().trim() === "full"
+  );
+
+  const options: PortionOption[] = [];
+
+  // If no variant is named "Full", provide "Full" using the base item's price
+  if (!hasFullVariant && basePriceMinor > 0) {
+    options.push({
+      id: "base-full",
+      name: "Full",
+      priceMinor: basePriceMinor,
+    });
+  }
+
+  // Add all other configured portions (Half, Quarter, etc.)
+  variants.forEach((v) => {
+    const pMinor = v.price?.amount_minor_units || basePriceMinor;
+    options.push({
+      id: v.id,
+      name: v.name,
+      priceMinor: pMinor,
+    });
+  });
+
+  return options;
 }
 
 export default function QuickBillingPage() {
@@ -69,11 +110,9 @@ export default function QuickBillingPage() {
   const [cart, setCart] = useState<CartLine[]>([]);
   const [paperSize, setPaperSize] = useState<"80mm" | "58mm">("80mm");
 
-  // Modals & Print States
-  const [variantItem, setVariantItem] = useState<MenuItem | null>(null);
+  // Modals & Feedback
   const [isSettleModalOpen, setIsSettleModalOpen] = useState(false);
   const [activeReceipt, setActiveReceipt] = useState<ThermalReceiptProps | null>(null);
-  const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
   const [successToast, setSuccessToast] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -114,40 +153,17 @@ export default function QuickBillingPage() {
   const sgstMinor = Math.round(subtotalMinor * 0.025);
   const grandTotalMinor = subtotalMinor + cgstMinor + sgstMinor;
 
-  // Add Item to Cart
-  const handleItemClick = (item: MenuItem) => {
-    if (item.variants && item.variants.length > 0) {
-      setVariantItem(item);
-      return;
-    }
+  // Add Specific Portion directly to cart (1 tap, NO MODAL)
+  const handleAddPortion = (item: MenuItem, portion: PortionOption, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
 
-    const priceMinor = item.price?.amount_minor_units || 0;
-    setCart((prev) => {
-      const existing = prev.find((line) => line.menuItemId === item.id && !line.variantId);
-      if (existing) {
-        return prev.map((line) =>
-          line === existing ? { ...line, quantity: line.quantity + 1 } : line
-        );
-      }
-      return [
-        ...prev,
-        {
-          menuItemId: item.id,
-          name: item.name,
-          unitPriceMinor: priceMinor,
-          quantity: 1,
-        },
-      ];
-    });
-  };
-
-  // Add Variant Item to Cart
-  const handleAddVariant = (item: MenuItem, variant: MenuItemVariant) => {
-    const priceMinor = variant.price?.amount_minor_units || item.price?.amount_minor_units || 0;
+    const isBaseFull = portion.id === "base" || portion.id === "base-full";
+    const variantIdToUse = isBaseFull ? undefined : portion.id;
+    const variantNameToUse = portion.name;
 
     setCart((prev) => {
       const existing = prev.find(
-        (line) => line.menuItemId === item.id && line.variantId === variant.id
+        (line) => line.menuItemId === item.id && line.variantId === variantIdToUse
       );
       if (existing) {
         return prev.map((line) =>
@@ -159,14 +175,22 @@ export default function QuickBillingPage() {
         {
           menuItemId: item.id,
           name: item.name,
-          variantId: variant.id,
-          variantName: variant.name,
-          unitPriceMinor: priceMinor,
+          variantId: variantIdToUse,
+          variantName: variantNameToUse,
+          unitPriceMinor: portion.priceMinor,
           quantity: 1,
         },
       ];
     });
-    setVariantItem(null);
+  };
+
+  // Default click on dish card: adds the primary portion (Full) directly to cart
+  const handleCardClick = (item: MenuItem) => {
+    const portions = getDishPortions(item);
+    const primaryPortion = portions[0];
+    if (primaryPortion) {
+      handleAddPortion(item, primaryPortion);
+    }
   };
 
   // Quantity Stepper
@@ -338,135 +362,116 @@ export default function QuickBillingPage() {
   const isMutating = isStartingSession || isPlacingOrder || isPaying;
 
   return (
-    <div>
-      {/* Toast & Error Banner */}
+    <>
+      {/* Toast Alert */}
       {successToast && (
-        <div
-          style={{
-            position: "fixed",
-            top: "20px",
-            right: "24px",
-            background: "#10B981",
-            color: "#FFFFFF",
-            padding: "12px 20px",
-            borderRadius: "10px",
-            boxShadow: "0 8px 24px rgba(16, 185, 129, 0.3)",
-            display: "flex",
-            alignItems: "center",
-            gap: "10px",
-            fontWeight: "700",
-            zIndex: 9999,
-          }}
-        >
-          <CheckCircle2 size={20} />
+        <div className="toast on" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <CheckCircle2 size={18} />
           {successToast}
         </div>
       )}
 
+      {/* Header Bar matching standard TableOS style */}
+      <div className="hd">
+        <div>
+          <h1>Quick Billing</h1>
+          <p>Instant counter orders, fast size selection & thermal slip printing</p>
+        </div>
+        <div className="sp"></div>
+
+        {/* Thermal Roll Selector */}
+        <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+          <span style={{ fontSize: "0.82rem", fontWeight: "700", color: "var(--admin-mute)", marginRight: "4px" }}>
+            Thermal Roll:
+          </span>
+          <button
+            type="button"
+            className="chip"
+            aria-pressed={paperSize === "80mm"}
+            onClick={() => setPaperSize("80mm")}
+            style={{ height: "36px", padding: "0 12px", fontSize: "0.8rem" }}
+          >
+            80mm (3")
+          </button>
+          <button
+            type="button"
+            className="chip"
+            aria-pressed={paperSize === "58mm"}
+            onClick={() => setPaperSize("58mm")}
+            style={{ height: "36px", padding: "0 12px", fontSize: "0.8rem" }}
+          >
+            58mm (2")
+          </button>
+        </div>
+      </div>
+
+      {/* Error Banner */}
       {errorMessage && (
         <div
+          className="al r mt"
           style={{
-            marginBottom: "14px",
-            background: "rgba(220, 38, 38, 0.1)",
-            border: "1.5px solid #DC2626",
-            borderRadius: "10px",
-            padding: "10px 16px",
+            marginBottom: "16px",
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            color: "#DC2626",
-            fontWeight: "600",
-            fontSize: "0.9rem",
+            background: "rgba(192, 57, 43, 0.1)",
+            borderColor: "var(--admin-red)",
+            color: "var(--admin-red)",
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", fontWeight: "700" }}>
             <AlertCircle size={18} />
             {errorMessage}
           </div>
           <button
             onClick={() => setErrorMessage(null)}
-            style={{ background: "none", border: "none", color: "#DC2626", cursor: "pointer" }}
+            style={{ background: "none", border: "none", color: "inherit", cursor: "pointer" }}
           >
             <X size={16} />
           </button>
         </div>
       )}
 
-      {/* POS Workspace Container */}
-      <div className="pos-workspace">
-        {/* Left Catalog Pane */}
-        <div className="pos-catalog-pane">
-          {/* Header Bar */}
-          <div className="pos-catalog-header">
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <div>
-                <h1 style={{ fontSize: "1.3rem", fontWeight: "900", margin: 0, color: "var(--text)" }}>
-                  Quick Billing Point-of-Sale
-                </h1>
-                <span style={{ fontSize: "0.82rem", color: "var(--text-sub)" }}>
-                  Fast counter billing & instant thermal receipt generation
-                </span>
-              </div>
+      {/* Main Split Layout */}
+      <div className="pos-layout">
+        {/* Left Catalog Section */}
+        <div className="pos-catalog-box">
+          {/* Search Bar */}
+          <div className="pos-search-bar">
+            <Search className="pos-search-icon-pos" size={18} />
+            <input
+              type="text"
+              placeholder="Search dishes, starters, desserts, beverages..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery("")}
+                style={{
+                  position: "absolute",
+                  right: "12px",
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  color: "var(--admin-mute)",
+                }}
+              >
+                <X size={16} />
+              </button>
+            )}
+          </div>
 
-              {/* Thermal Paper Toggle */}
-              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <span style={{ fontSize: "0.82rem", fontWeight: "700", color: "var(--text-sub)" }}>
-                  Roll:
-                </span>
-                <button
-                  type="button"
-                  className={`pos-cat-pill ${paperSize === "80mm" ? "active" : ""}`}
-                  style={{ padding: "4px 10px", fontSize: "0.78rem" }}
-                  onClick={() => setPaperSize("80mm")}
-                >
-                  80mm (3")
-                </button>
-                <button
-                  type="button"
-                  className={`pos-cat-pill ${paperSize === "58mm" ? "active" : ""}`}
-                  style={{ padding: "4px 10px", fontSize: "0.78rem" }}
-                  onClick={() => setPaperSize("58mm")}
-                >
-                  58mm (2")
-                </button>
-              </div>
-            </div>
-
-            {/* Search Input */}
-            <div className="pos-search-wrapper">
-              <Search className="pos-search-icon" size={18} />
-              <input
-                type="text"
-                placeholder="Search menu dishes, starters, drinks... (press '/' to focus)"
-                className="pos-search-input"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery("")}
-                  style={{
-                    position: "absolute",
-                    right: "12px",
-                    background: "none",
-                    border: "none",
-                    cursor: "pointer",
-                    color: "var(--text-sub)",
-                  }}
-                >
-                  <X size={16} />
-                </button>
-              )}
-            </div>
-
-            {/* Category Filter Pills */}
-            <div className="pos-cat-scroll">
+          {/* Category Chips Bar */}
+          <div className="bar" style={{ margin: 0 }}>
+            <div className="ch" style={{ flexWrap: "wrap" }}>
               <button
                 type="button"
-                className={`pos-cat-pill ${selectedCategoryId === "ALL" ? "active" : ""}`}
+                className="chip"
+                aria-pressed={selectedCategoryId === "ALL"}
                 onClick={() => setSelectedCategoryId("ALL")}
               >
-                All Items ({menuItems.length})
+                All ({menuItems.length})
               </button>
               {categories.map((cat: MenuCategory) => {
                 const count = menuItems.filter((i) => i.category_id === cat.id).length;
@@ -474,7 +479,8 @@ export default function QuickBillingPage() {
                   <button
                     key={cat.id}
                     type="button"
-                    className={`pos-cat-pill ${selectedCategoryId === cat.id ? "active" : ""}`}
+                    className="chip"
+                    aria-pressed={selectedCategoryId === cat.id}
                     onClick={() => setSelectedCategoryId(cat.id)}
                   >
                     {cat.name} ({count})
@@ -484,92 +490,143 @@ export default function QuickBillingPage() {
             </div>
           </div>
 
-          {/* Items Scrollable Grid */}
-          <div className="pos-items-scroll">
-            {isMenuLoading || isCatLoading ? (
-              <div style={{ textAlign: "center", padding: "40px", color: "var(--text-sub)" }}>
-                Loading menu catalog...
-              </div>
-            ) : filteredItems.length === 0 ? (
-              <div style={{ textAlign: "center", padding: "40px", color: "var(--text-sub)" }}>
-                No menu items match your search.
-              </div>
-            ) : (
-              <div className="pos-grid">
-                {filteredItems.map((item: MenuItem) => {
-                  const priceMinor = item.price?.amount_minor_units || 0;
-                  const hasVariants = item.variants && item.variants.length > 0;
-                  const inCartCount = cart
-                    .filter((c) => c.menuItemId === item.id)
-                    .reduce((sum, c) => sum + c.quantity, 0);
+          {/* Dish Cards Grid */}
+          {isMenuLoading || isCatLoading ? (
+            <div className="em">
+              <b>Loading dishes…</b>
+              Fetching latest menu prices and portion options.
+            </div>
+          ) : filteredItems.length === 0 ? (
+            <div className="em">
+              <b>No dishes found</b>
+              Try adjusting your search query or select another category.
+            </div>
+          ) : (
+            <div className="pos-dish-grid">
+              {filteredItems.map((item: MenuItem) => {
+                const portions = getDishPortions(item);
+                const hasMultiplePortions = portions.length > 1;
+                const inCartTotalCount = cart
+                  .filter((c) => c.menuItemId === item.id)
+                  .reduce((sum, c) => sum + c.quantity, 0);
 
-                  return (
-                    <div
-                      key={item.id}
-                      className="pos-item-card"
-                      onClick={() => handleItemClick(item)}
-                    >
-                      <div>
-                        <div className="pos-item-name">{item.name}</div>
-                        <div className="pos-item-cat">
-                          {hasVariants ? "Multiple Sizes" : formatMoney(priceMinor)}
-                        </div>
+                return (
+                  <div
+                    key={item.id}
+                    className="pos-dish-card"
+                    onClick={() => handleCardClick(item)}
+                  >
+                    <div>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                        <div className="pos-dish-name">{item.name}</div>
+                        {inCartTotalCount > 0 && (
+                          <span
+                            className="pill c-b"
+                            style={{
+                              marginLeft: "6px",
+                              padding: "2px 7px",
+                              fontSize: "0.75rem",
+                              fontWeight: "900",
+                            }}
+                          >
+                            {inCartTotalCount}
+                          </span>
+                        )}
                       </div>
-
-                      <div className="pos-item-footer">
-                        <div className="pos-item-price">
-                          {hasVariants ? `From ${formatMoney(priceMinor)}` : formatMoney(priceMinor)}
-                        </div>
-                        <div className="pos-item-add-badge">
-                          {inCartCount > 0 ? inCartCount : <Plus size={16} />}
-                        </div>
+                      <div className="pos-dish-cat">
+                        {item.category_name || (categories.find((c) => c.id === item.category_id)?.name) || "General"}
                       </div>
                     </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
+
+                    {/* Portions Available Right On Card (No Modal Popup!) */}
+                    {hasMultiplePortions ? (
+                      <div className="pos-portion-list">
+                        {portions.map((p) => {
+                          const portionCartCount = cart
+                            .filter((c) => c.menuItemId === item.id && (c.variantId === p.id || (p.id.startsWith("base") && !c.variantId)))
+                            .reduce((sum, c) => sum + c.quantity, 0);
+
+                          return (
+                            <button
+                              key={p.id}
+                              type="button"
+                              className="pos-portion-btn"
+                              onClick={(e) => handleAddPortion(item, p, e)}
+                              title={`Add ${p.name} ${item.name}`}
+                            >
+                              <span>{p.name}</span>
+                              <em>{formatMoney(p.priceMinor)}</em>
+                              {portionCartCount > 0 && (
+                                <b style={{ color: "var(--admin-ink)", marginLeft: "2px" }}>
+                                  ({portionCartCount})
+                                </b>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        className="pos-single-add-btn"
+                        onClick={(e) => handleAddPortion(item, portions[0], e)}
+                      >
+                        <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                          <Plus size={15} /> Add
+                        </span>
+                        <span className="price-tag">
+                          {formatMoney(portions[0]?.priceMinor || 0)}
+                        </span>
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
-        {/* Right Cart & Bill Pane */}
-        <div className="pos-cart-pane">
-          {/* Cart Header */}
-          <div className="pos-cart-header">
-            {/* Mode Switcher */}
-            <div className="pos-mode-toggle">
+        {/* Right Cart & Bill Panel */}
+        <div className="pos-cart-box">
+          {/* Order Type Toggle using TableOS chips */}
+          <div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px", marginBottom: "12px" }}>
               <button
                 type="button"
-                className={`pos-mode-btn ${orderType === "TAKEAWAY" ? "active" : ""}`}
+                className="chip"
+                aria-pressed={orderType === "TAKEAWAY"}
                 onClick={() => setOrderType("TAKEAWAY")}
+                style={{ height: "42px", justifyContent: "center" }}
               >
                 <ShoppingBag size={16} />
-                Takeaway / Counter
+                Takeaway
               </button>
               <button
                 type="button"
-                className={`pos-mode-btn ${orderType === "DINE_IN" ? "active" : ""}`}
+                className="chip"
+                aria-pressed={orderType === "DINE_IN"}
                 onClick={() => setOrderType("DINE_IN")}
+                style={{ height: "42px", justifyContent: "center" }}
               >
                 <Utensils size={16} />
-                Dine-In Table
+                Dine-In
               </button>
             </div>
 
-            {/* Dine-In Table Picker */}
+            {/* Table Selector if Dine-In */}
             {orderType === "DINE_IN" && (
-              <div>
-                <label style={{ display: "block", fontSize: "0.8rem", fontWeight: "700", color: "var(--text-sub)", marginBottom: "4px" }}>
-                  Select Table:
+              <div style={{ marginBottom: "12px" }}>
+                <label style={{ display: "block", fontSize: "0.78rem", fontWeight: "800", color: "var(--admin-mute)", marginBottom: "4px" }}>
+                  Assigned Table:
                 </label>
                 <select
-                  className="pos-table-select"
                   value={selectedTableId}
                   onChange={(e) => setSelectedTableId(e.target.value)}
+                  style={{ width: "100%", height: "44px" }}
                 >
                   {tables.map((t) => (
                     <option key={t.id} value={t.id}>
-                      Table {t.table_number || t.tableNumber} (Seats {t.capacity})
+                      Table {t.table_number || t.tableNumber} (Capacity: {t.capacity || 4})
                     </option>
                   ))}
                 </select>
@@ -577,86 +634,66 @@ export default function QuickBillingPage() {
             )}
 
             {/* Customer Inputs (Optional) */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px" }}>
               <input
                 type="text"
                 placeholder="Guest Name (opt)"
                 value={customerName}
                 onChange={(e) => setCustomerName(e.target.value)}
-                style={{
-                  padding: "6px 10px",
-                  borderRadius: "7px",
-                  border: "1px solid var(--border)",
-                  background: "var(--bg)",
-                  fontSize: "0.82rem",
-                  color: "var(--text)",
-                  outline: "none",
-                }}
+                style={{ height: "40px", fontSize: "0.82rem", padding: "0 10px" }}
               />
               <input
                 type="tel"
                 placeholder="Phone (opt)"
                 value={customerPhone}
                 onChange={(e) => setCustomerPhone(e.target.value)}
-                style={{
-                  padding: "6px 10px",
-                  borderRadius: "7px",
-                  border: "1px solid var(--border)",
-                  background: "var(--bg)",
-                  fontSize: "0.82rem",
-                  color: "var(--text)",
-                  outline: "none",
-                }}
+                style={{ height: "40px", fontSize: "0.82rem", padding: "0 10px" }}
               />
             </div>
           </div>
 
-          {/* Cart Item Rows */}
-          <div className="pos-cart-items">
+          {/* Cart Items List */}
+          <div className="pos-cart-rows">
             {cart.length === 0 ? (
               <div
                 style={{
-                  flex: 1,
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  color: "var(--text-sub)",
-                  gap: "10px",
+                  padding: "36px 12px",
                   textAlign: "center",
-                  padding: "40px 20px",
+                  color: "var(--admin-mute)",
                 }}
               >
-                <ShoppingBag size={40} style={{ opacity: 0.35 }} />
-                <div style={{ fontSize: "0.95rem", fontWeight: "700" }}>Cart is Empty</div>
-                <div style={{ fontSize: "0.82rem" }}>
-                  Tap menu dishes on the left to start generating a quick bill.
+                <ShoppingBag size={36} style={{ opacity: 0.35, margin: "0 auto 8px" }} />
+                <div style={{ fontWeight: "800", color: "var(--admin-ink)" }}>Bill is Empty</div>
+                <div style={{ fontSize: "0.82rem", marginTop: "2px" }}>
+                  Tap dishes or portion sizes on the left to add items.
                 </div>
               </div>
             ) : (
               cart.map((line, idx) => (
-                <div key={idx} className="pos-cart-row">
-                  <div className="pos-cart-info">
-                    <div className="pos-cart-title">{line.name}</div>
+                <div key={idx} className="pos-cart-line-item">
+                  <div style={{ flex: 1, paddingRight: "10px" }}>
+                    <div className="pos-cart-item-title">{line.name}</div>
                     {line.variantName && (
-                      <div className="pos-cart-variant">Size: {line.variantName}</div>
+                      <span className="pos-cart-item-portion">
+                        Size: {line.variantName}
+                      </span>
                     )}
-                    <div className="pos-cart-price-unit">
+                    <div className="pos-cart-item-price-unit">
                       {formatMoney(line.unitPriceMinor)} each
                     </div>
                   </div>
 
-                  <div className="pos-cart-ctrl">
-                    <div className="pos-cart-row-total">
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "6px" }}>
+                    <div style={{ font: "400 1.25rem/1 var(--admin-serif)", color: "var(--admin-ink)" }}>
                       {formatMoney(line.unitPriceMinor * line.quantity)}
                     </div>
-                    <div className="pos-stepper">
+                    <div className="pos-stepper-box">
                       <button
                         type="button"
                         className="pos-stepper-btn"
                         onClick={() => updateQuantity(idx, -1)}
                       >
-                        {line.quantity === 1 ? <Trash2 size={13} color="#DC2626" /> : <Minus size={13} />}
+                        {line.quantity === 1 ? <Trash2 size={13} color="var(--admin-red)" /> : <Minus size={13} />}
                       </button>
                       <span className="pos-stepper-val">{line.quantity}</span>
                       <button
@@ -673,35 +710,48 @@ export default function QuickBillingPage() {
             )}
           </div>
 
-          {/* Cart Summary & Actions */}
-          <div className="pos-cart-footer">
-            <div className="pos-bill-lines">
-              <div className="pos-bill-line">
-                <span>Subtotal ({cart.reduce((a, b) => a + b.quantity, 0)} items):</span>
-                <span>{formatMoney(subtotalMinor)}</span>
-              </div>
-              <div className="pos-bill-line">
-                <span>CGST (2.5%):</span>
-                <span>{formatMoney(cgstMinor)}</span>
-              </div>
-              <div className="pos-bill-line">
-                <span>SGST (2.5%):</span>
-                <span>{formatMoney(sgstMinor)}</span>
-              </div>
-              <div className="pos-bill-total">
-                <span>Net Total:</span>
-                <span>{formatMoney(grandTotalMinor)}</span>
-              </div>
+          {/* Financial Breakdown */}
+          <div style={{ borderTop: "1.5px dashed var(--admin-ln)", paddingTop: "14px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.86rem", color: "var(--admin-mute)", marginBottom: "4px" }}>
+              <span>Subtotal ({cart.reduce((a, b) => a + b.quantity, 0)} items):</span>
+              <span style={{ fontWeight: "700", color: "var(--admin-ink)" }}>{formatMoney(subtotalMinor)}</span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.82rem", color: "var(--admin-mute)", marginBottom: "2px" }}>
+              <span>CGST (2.5%):</span>
+              <span>{formatMoney(cgstMinor)}</span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.82rem", color: "var(--admin-mute)", marginBottom: "10px" }}>
+              <span>SGST (2.5%):</span>
+              <span>{formatMoney(sgstMinor)}</span>
+            </div>
+
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "baseline",
+                borderTop: "1.5px solid var(--admin-ln)",
+                paddingTop: "10px",
+                marginBottom: "16px",
+              }}
+            >
+              <span style={{ fontWeight: "800", fontSize: "1rem", color: "var(--admin-ink)" }}>
+                Net Payable:
+              </span>
+              <span className="pos-cart-grand-total">
+                {formatMoney(grandTotalMinor)}
+              </span>
             </div>
 
             {/* Action Buttons */}
-            <div className="pos-action-btns">
+            <div style={{ display: "flex", gap: "8px" }}>
               <button
                 type="button"
-                className="pos-btn-kot"
+                className="btn s"
                 onClick={handlePrintKOT}
                 disabled={cart.length === 0 || isMutating}
                 title="Print Kitchen Order Ticket"
+                style={{ flex: 1, padding: "0 10px" }}
               >
                 <FileText size={16} />
                 KOT
@@ -709,9 +759,10 @@ export default function QuickBillingPage() {
 
               <button
                 type="button"
-                className="pos-btn-settle"
+                className="btn"
                 onClick={() => setIsSettleModalOpen(true)}
                 disabled={cart.length === 0 || isMutating}
+                style={{ flex: 2 }}
               >
                 <Zap size={18} />
                 Settle & Print ({formatMoney(grandTotalMinor)})
@@ -721,54 +772,7 @@ export default function QuickBillingPage() {
         </div>
       </div>
 
-      {/* Variant Selection Modal */}
-      {variantItem && (
-        <div className="pos-variant-modal-overlay" onClick={() => setVariantItem(null)}>
-          <div className="pos-variant-modal" onClick={(e) => e.stopPropagation()}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <h3 style={{ fontSize: "1.1rem", fontWeight: "800", margin: 0, color: "var(--text)" }}>
-                Select Variant: {variantItem.name}
-              </h3>
-              <button
-                onClick={() => setVariantItem(null)}
-                style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-sub)" }}
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-              {variantItem.variants?.map((v) => {
-                const varPriceMinor =
-                  v.price?.amount_minor_units || variantItem.price?.amount_minor_units || 0;
-
-                return (
-                  <button
-                    key={v.id}
-                    type="button"
-                    className="btn s"
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      padding: "12px 16px",
-                      fontWeight: "700",
-                    }}
-                    onClick={() => handleAddVariant(variantItem, v)}
-                  >
-                    <span>{v.name}</span>
-                    <span style={{ color: "var(--accent)", fontWeight: "800" }}>
-                      {formatMoney(varPriceMinor)}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Settlement Tender Modal */}
+      {/* Tender & Payment Settlement Modal */}
       <QuickSettlementModal
         isOpen={isSettleModalOpen}
         onClose={() => setIsSettleModalOpen(false)}
@@ -777,10 +781,10 @@ export default function QuickBillingPage() {
         isLoading={isMutating}
       />
 
-      {/* Print Slip (Attached directly for @media print execution) */}
+      {/* Thermal Print Slip Output */}
       {activeReceipt && (
         <ThermalReceipt {...activeReceipt} />
       )}
-    </div>
+    </>
   );
 }
