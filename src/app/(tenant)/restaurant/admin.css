@@ -1302,3 +1302,561 @@ html.dark .admin-screen:before {
     font-style: italic !important;
   }
 }
+
+/* ==========================================================================
+   TableOS Quick Billing & POS Workspace Styles
+   ========================================================================== */
+
+.pos-workspace {
+  display: flex;
+  gap: 20px;
+  height: calc(100vh - 130px);
+  min-height: 600px;
+  position: relative;
+}
+
+@media (max-width: 1024px) {
+  .pos-workspace {
+    flex-direction: column;
+    height: auto;
+  }
+}
+
+/* Catalog Left Pane */
+.pos-catalog-pane {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background: var(--surface, #FFFFFF);
+  border: 1px solid var(--border, #E8E0D0);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(27, 20, 9, 0.04);
+}
+
+.pos-catalog-header {
+  padding: 16px 20px 12px;
+  border-bottom: 1px solid var(--border, #E8E0D0);
+  background: var(--surface, #FFFFFF);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.pos-search-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.pos-search-icon {
+  position: absolute;
+  left: 14px;
+  color: var(--text-sub, #7A6953);
+  pointer-events: none;
+}
+
+.pos-search-input {
+  width: 100%;
+  padding: 10px 14px 10px 42px;
+  border-radius: 10px;
+  border: 1.5px solid var(--border, #E8E0D0);
+  background: var(--bg, #FAF6ED);
+  color: var(--text, #1B1409);
+  font-size: 0.95rem;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.pos-search-input:focus {
+  border-color: var(--accent, #C25E00);
+  background: #FFFFFF;
+  box-shadow: 0 0 0 3px rgba(194, 94, 0, 0.12);
+}
+
+.pos-cat-scroll {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scrollbar-width: thin;
+}
+
+.pos-cat-pill {
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border: 1px solid var(--border, #E8E0D0);
+  background: var(--bg, #FAF6ED);
+  color: var(--text-sub, #7A6953);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.pos-cat-pill:hover {
+  border-color: var(--accent, #C25E00);
+  color: var(--text, #1B1409);
+}
+
+.pos-cat-pill.active {
+  background: var(--accent, #C25E00);
+  border-color: var(--accent, #C25E00);
+  color: #FFFFFF;
+}
+
+.pos-items-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 18px;
+}
+
+.pos-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 14px;
+}
+
+.pos-item-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  background: var(--bg, #FAF6ED);
+  border: 1.5px solid var(--border, #E8E0D0);
+  border-radius: 12px;
+  padding: 14px;
+  cursor: pointer;
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  text-align: left;
+  user-select: none;
+  position: relative;
+}
+
+.pos-item-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--accent, #C25E00);
+  box-shadow: 0 6px 16px rgba(194, 94, 0, 0.08);
+}
+
+.pos-item-card:active {
+  transform: scale(0.98);
+}
+
+.pos-item-card .pos-item-name {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text, #1B1409);
+  margin-bottom: 4px;
+  line-height: 1.25;
+}
+
+.pos-item-card .pos-item-cat {
+  font-size: 0.75rem;
+  color: var(--text-sub, #7A6953);
+  margin-bottom: 12px;
+}
+
+.pos-item-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: auto;
+}
+
+.pos-item-price {
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--accent, #C25E00);
+}
+
+.pos-item-add-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: var(--surface, #FFFFFF);
+  border: 1px solid var(--border, #E8E0D0);
+  color: var(--text, #1B1409);
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.pos-item-card:hover .pos-item-add-badge {
+  background: var(--accent, #C25E00);
+  color: #FFFFFF;
+  border-color: var(--accent, #C25E00);
+}
+
+/* Cart Right Pane */
+.pos-cart-pane {
+  width: 400px;
+  flex-shrink: 0;
+  background: var(--surface, #FFFFFF);
+  border: 1px solid var(--border, #E8E0D0);
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(27, 20, 9, 0.04);
+}
+
+@media (max-width: 1024px) {
+  .pos-cart-pane {
+    width: 100%;
+  }
+}
+
+.pos-cart-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border, #E8E0D0);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.pos-mode-toggle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  background: var(--bg, #FAF6ED);
+  padding: 4px;
+  border-radius: 10px;
+  border: 1px solid var(--border, #E8E0D0);
+}
+
+.pos-mode-btn {
+  padding: 8px;
+  border-radius: 7px;
+  border: none;
+  background: transparent;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-sub, #7A6953);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+}
+
+.pos-mode-btn.active {
+  background: var(--surface, #FFFFFF);
+  color: var(--text, #1B1409);
+  box-shadow: 0 2px 6px rgba(27, 20, 9, 0.08);
+}
+
+.pos-table-select {
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border, #E8E0D0);
+  background: var(--bg, #FAF6ED);
+  color: var(--text, #1B1409);
+  font-size: 0.88rem;
+  outline: none;
+}
+
+.pos-cart-items {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.pos-cart-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 10px 0;
+  border-bottom: 1px dashed var(--border, #E8E0D0);
+}
+
+.pos-cart-row:last-child {
+  border-bottom: none;
+}
+
+.pos-cart-info {
+  flex: 1;
+  padding-right: 12px;
+}
+
+.pos-cart-title {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--text, #1B1409);
+  line-height: 1.25;
+}
+
+.pos-cart-variant {
+  font-size: 0.78rem;
+  color: var(--text-sub, #7A6953);
+  margin-top: 2px;
+}
+
+.pos-cart-price-unit {
+  font-size: 0.78rem;
+  color: var(--text-sub, #7A6953);
+  margin-top: 4px;
+}
+
+.pos-cart-ctrl {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.pos-stepper {
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--border, #E8E0D0);
+  border-radius: 8px;
+  background: var(--bg, #FAF6ED);
+  overflow: hidden;
+}
+
+.pos-stepper-btn {
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  color: var(--text, #1B1409);
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pos-stepper-btn:hover {
+  background: var(--border, #E8E0D0);
+}
+
+.pos-stepper-val {
+  min-width: 28px;
+  text-align: center;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--text, #1B1409);
+}
+
+.pos-cart-row-total {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--text, #1B1409);
+}
+
+.pos-cart-footer {
+  padding: 16px 20px;
+  background: var(--bg, #FAF6ED);
+  border-top: 1px solid var(--border, #E8E0D0);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.pos-bill-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: var(--text-sub, #7A6953);
+}
+
+.pos-bill-line {
+  display: flex;
+  justify-content: space-between;
+}
+
+.pos-bill-total {
+  display: flex;
+  justify-content: space-between;
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--text, #1B1409);
+  padding-top: 8px;
+  border-top: 1px solid var(--border, #E8E0D0);
+}
+
+.pos-action-btns {
+  display: flex;
+  gap: 10px;
+}
+
+.pos-btn-kot {
+  flex: 1;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1.5px solid var(--border, #E8E0D0);
+  background: var(--surface, #FFFFFF);
+  color: var(--text, #1B1409);
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+}
+
+.pos-btn-kot:hover:not(:disabled) {
+  border-color: var(--text, #1B1409);
+}
+
+.pos-btn-settle {
+  flex: 2;
+  padding: 12px;
+  border-radius: 10px;
+  border: none;
+  background: var(--accent, #C25E00);
+  color: #FFFFFF;
+  font-weight: 800;
+  font-size: 0.95rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.15s ease;
+  box-shadow: 0 4px 12px rgba(194, 94, 0, 0.25);
+}
+
+.pos-btn-settle:hover:not(:disabled) {
+  opacity: 0.92;
+  transform: translateY(-1px);
+}
+
+.pos-btn-settle:disabled,
+.pos-btn-kot:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Variant Selector Modal */
+.pos-variant-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(27, 20, 9, 0.45);
+  backdrop-filter: blur(4px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.pos-variant-modal {
+  background: var(--surface, #FFFFFF);
+  border: 1px solid var(--border, #E8E0D0);
+  border-radius: 16px;
+  width: 100%;
+  max-width: 420px;
+  padding: 24px;
+  box-shadow: 0 16px 40px rgba(27, 20, 9, 0.16);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ==========================================================================
+   Thermal Receipt Print Layout (80mm & 58mm Standards)
+   ========================================================================== */
+
+.tableos-thermal-receipt {
+  display: none;
+}
+
+/* Preview Modal Container */
+.receipt-preview-wrap {
+  background: #EFEFEF;
+  padding: 24px;
+  border-radius: 12px;
+  max-height: 80vh;
+  overflow-y: auto;
+  display: flex;
+  justify-content: center;
+}
+
+.receipt-preview-card {
+  background: #FFFFFF;
+  color: #000000;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.15);
+  padding: 18px 14px;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 11px;
+  line-height: 1.35;
+  box-sizing: border-box;
+}
+
+.receipt-preview-card.size-80mm {
+  width: 72mm;
+  min-width: 290px;
+}
+
+.receipt-preview-card.size-58mm {
+  width: 48mm;
+  min-width: 220px;
+  font-size: 9.5px;
+}
+
+/* Pure @media print Engine for Connected Thermal Receipt Printers */
+@media print {
+  @page {
+    margin: 0 !important;
+    size: auto;
+  }
+
+  body {
+    background: #FFFFFF !important;
+    color: #000000 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* When printing thermal receipt, hide all standard admin screens and standees */
+  .admin-screen,
+  .tableos-print-standee,
+  .tableos-print-all-grid,
+  .pos-variant-modal-overlay {
+    display: none !important;
+  }
+
+  .tableos-thermal-receipt {
+    display: block !important;
+    width: 72mm !important;
+    margin: 0 auto !important;
+    padding: 2mm 1mm !important;
+    background: #FFFFFF !important;
+    color: #000000 !important;
+    font-family: 'Courier New', Courier, monospace !important;
+    font-size: 11px !important;
+    line-height: 1.3 !important;
+    page-break-inside: avoid !important;
+    box-sizing: border-box !important;
+  }
+
+  .tableos-thermal-receipt.size-58mm {
+    width: 48mm !important;
+    font-size: 9px !important;
+    line-height: 1.25 !important;
+    padding: 1mm !important;
+  }
+
+  .tableos-thermal-receipt * {
+    color: #000000 !important;
+    background: transparent !important;
+    border-color: #000000 !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+}
+
