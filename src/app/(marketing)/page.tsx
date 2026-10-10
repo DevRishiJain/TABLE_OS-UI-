@@ -124,8 +124,6 @@ export default function LandingPage() {
     setTheme?.(key);
   };
 
-  const activeTheme = THEMES.find((t) => t.key === currentTheme) || THEMES[0];
-
   // ── Refs for each chapter section ──
   const chap0 = useRef<HTMLDivElement>(null);
   const chap1 = useRef<HTMLDivElement>(null);
@@ -285,33 +283,6 @@ export default function LandingPage() {
           <div>
             <div className="hero-pill">
               <b>2 months free</b>No setup cost, no platform fee
-            </div>
-          </div>
-
-          <div className="hero-theme-row">
-            <div className="hero-theme-pill" role="toolbar" aria-label="Brand color palette switcher">
-              <span className="hero-theme-label">
-                <span style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--b)", display: "inline-block" }} />
-                Palette
-              </span>
-              <div className="hero-theme-dots">
-                {THEMES.map((t) => {
-                  const isPressed = currentTheme === t.key || (!currentTheme && t.key === "");
-                  return (
-                    <button
-                      key={t.key}
-                      type="button"
-                      className="hero-theme-dot"
-                      style={{ background: t.color }}
-                      aria-label={`${t.label} brand theme`}
-                      aria-pressed={isPressed}
-                      title={t.label}
-                      onClick={() => handleThemeChange(t.key)}
-                    />
-                  );
-                })}
-              </div>
-              <span className="hero-theme-name">{activeTheme.label}</span>
             </div>
           </div>
 

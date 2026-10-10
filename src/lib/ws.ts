@@ -18,6 +18,8 @@ class TableOSWebSocketClient {
   private wildcardListeners: Set<WSEventHandler> = new Set();
   private statusListeners: Set<WSStatusHandler> = new Set();
   private isExplicitClose = false;
+  private rejectedStaffToken: string | null = null;
+  private rejectedSessionToken: string | null = null;
 
   constructor() {
     if (typeof window !== "undefined") {
@@ -208,6 +210,10 @@ class TableOSWebSocketClient {
       return null;
     }
 
+    // Skip if the stored credentials were already rejected and haven't changed
+    if (staffToken && staffToken === this.rejectedStaffToken) return null;
+    if (!staffToken && sessionToken === this.rejectedSessionToken) return null;
+
     // In browser, use same-origin relative URL ("") to route through Next.js proxy without CORS preflight
     const baseUrl =
       typeof window !== "undefined"
@@ -230,10 +236,20 @@ class TableOSWebSocketClient {
     });
 
     if (res.status === 401 || res.status === 403) {
-      // Credentials invalid or expired; log once and do NOT trigger a reconnect loop
+      // Credentials invalid or expired; remember them and do NOT retry until a fresh login changes the stored token
+      this.rejectedStaffToken = staffToken;
+      this.rejectedSessionToken = sessionToken;
+      if (staffToken) {
+        localStorage.removeItem("tableos_staff_token");
+      } else if (sessionToken) {
+        localStorage.removeItem("tableos_session_token");
+      }
       console.warn("[WS] Ticket acquisition unauthorized (token invalid or expired). Awaiting fresh login.");
       return null;
     }
+
+    this.rejectedStaffToken = null;
+    this.rejectedSessionToken = null;
 
     if (!res.ok) {
       throw new Error(`Ticket acquisition failed with HTTP ${res.status}`);

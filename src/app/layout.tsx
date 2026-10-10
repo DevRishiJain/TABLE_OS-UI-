@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { ReduxProvider } from "@/components/providers/ReduxProvider";
 import { RestaurantThemeProvider } from "@/components/providers/RestaurantThemeProvider";
+import TableOSAssistant from "@/components/assistant/TableOSAssistant";
 
 export const metadata: Metadata = {
   title: "TableOS | Next-Gen Restaurant Dining & Operations Operating System",
@@ -43,7 +44,10 @@ export default function RootLayout({
       </head>
       <body className="min-h-screen bg-background antialiased selection:bg-primary/30 selection:text-primary">
         <ReduxProvider>
-          <RestaurantThemeProvider>{children}</RestaurantThemeProvider>
+          <RestaurantThemeProvider>
+            {children}
+            <TableOSAssistant />
+          </RestaurantThemeProvider>
         </ReduxProvider>
       </body>
     </html>
