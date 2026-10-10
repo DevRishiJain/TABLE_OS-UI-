@@ -12,7 +12,6 @@ import {
   useReactivateRestaurantMutation,
   useOverrideCommissionRateMutation,
 } from "@/store/api/adminApi";
-import { formatMoney } from "@/lib/money";
 import { Copy, Check, KeyRound } from "lucide-react";
 
 const card = "bg-[#121418] border border-[#2A303C] rounded-2xl p-5";
@@ -369,8 +368,9 @@ export default function SpAdminRestaurantDetailPage() {
                     {t.assigned_waiter_name && (
                       <div className="text-[10px] text-amber-300">Waiter: {t.assigned_waiter_name}</div>
                     )}
-                    <div className="font-mono text-amber-300 font-bold">
-                      {formatMoney(t.running_total_minor)}
+                    <div className="text-[10px] font-mono text-gray-500">
+                      {t.guest_count ?? 1} guests
+                      {t.opened_at ? ` · since ${new Date(t.opened_at).toLocaleTimeString("en-IN")}` : ""}
                     </div>
                   </div>
                 ) : (
@@ -397,7 +397,6 @@ export default function SpAdminRestaurantDetailPage() {
                 <th className="pb-2 pr-3">Customer</th>
                 <th className="pb-2 pr-3">Status</th>
                 <th className="pb-2 pr-3">Accepted by</th>
-                <th className="pb-2 pr-3 text-right">Total</th>
                 <th className="pb-2 text-right">Placed</th>
               </tr>
             </thead>
@@ -413,9 +412,6 @@ export default function SpAdminRestaurantDetailPage() {
                     </span>
                   </td>
                   <td className="py-2 pr-3">{o.accepted_by_name || "—"}</td>
-                  <td className="py-2 pr-3 text-right font-mono text-amber-300">
-                    {formatMoney(o.total?.amount_minor_units)}
-                  </td>
                   <td className="py-2 text-right font-mono text-[10px] text-gray-500">
                     {o.placed_at ? new Date(o.placed_at).toLocaleString("en-IN") : ""}
                   </td>
@@ -423,7 +419,7 @@ export default function SpAdminRestaurantDetailPage() {
               ))}
               {(data?.recent_orders || []).length === 0 && (
                 <tr>
-                  <td colSpan={7} className="py-4 text-center text-xs text-gray-500">
+                  <td colSpan={6} className="py-4 text-center text-xs text-gray-500">
                     No orders yet.
                   </td>
                 </tr>

@@ -3,7 +3,6 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useGetAdminRestaurantsQuery } from "@/store/api/adminApi";
-import { formatMoney } from "@/lib/money";
 
 type TypeTab = "ALL" | "FRANCHISE" | "SINGLE";
 
@@ -85,7 +84,6 @@ export default function SpAdminRestaurantsPage() {
               <th className={`${th} text-right`}>Tables</th>
               <th className={`${th} text-right`}>Live</th>
               <th className={`${th} text-right`}>Orders Today</th>
-              <th className={`${th} text-right`}>Revenue Today</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-[#2A303C]">
@@ -152,9 +150,6 @@ export default function SpAdminRestaurantsPage() {
                 <td className={`${td} text-right font-mono`}>{r.table_count ?? "—"}</td>
                 <td className={`${td} text-right font-mono`}>{r.active_sessions ?? 0}</td>
                 <td className={`${td} text-right font-mono`}>{r.orders_today ?? 0}</td>
-                <td className={`${td} text-right font-mono text-amber-300`}>
-                  {formatMoney(r.revenue_today_minor)}
-                </td>
               </tr>
             ))}
           </tbody>

@@ -31,7 +31,7 @@ import { logoutStaff } from "@/store/slices/authSlice";
 import { translateBackendError } from "@/lib/errors";
 import { generateUUID } from "@/lib/idempotency";
 import { PaymentMethod } from "@/types/enums";
-import "../floor.css";
+//import "../floor.css";
 
 // SVG path dictionary matching TableOS – Floor Final specification
 const P: Record<string, string> = {

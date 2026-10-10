@@ -3,7 +3,6 @@
 import React from "react";
 import Link from "next/link";
 import { useGetAdminActivityFeedQuery } from "@/store/api/adminApi";
-import { formatMoney } from "@/lib/money";
 
 export default function SpAdminActivityPage() {
   const { data: feed, isLoading } = useGetAdminActivityFeedQuery(
@@ -39,9 +38,6 @@ export default function SpAdminActivityPage() {
             <div className="flex items-center gap-4 shrink-0">
               <span className="px-2 py-0.5 rounded-md bg-white/5 border border-[#2A303C] font-mono text-[10px] text-gray-300">
                 {f.status}
-              </span>
-              <span className="font-mono text-amber-300 font-bold">
-                {formatMoney(f.total)}
               </span>
               <span className="text-gray-500 font-mono text-[10px] w-20 text-right">
                 {f.placed_at ? new Date(f.placed_at).toLocaleTimeString("en-IN") : ""}

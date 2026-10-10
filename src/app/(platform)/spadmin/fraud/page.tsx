@@ -3,7 +3,6 @@
 import React from "react";
 import Link from "next/link";
 import { useGetFraudReviewQueueQuery } from "@/store/api/adminApi";
-import { formatMoney } from "@/lib/money";
 import { ShieldAlert } from "lucide-react";
 
 export default function SpAdminFraudPage() {
@@ -55,11 +54,6 @@ export default function SpAdminFraudPage() {
               </p>
             </div>
             <div className="text-right shrink-0">
-              {f.amount_minor !== undefined && (
-                <div className="font-mono text-amber-300 font-bold">
-                  {formatMoney(f.amount_minor)}
-                </div>
-              )}
               {f.created_at && (
                 <div className="text-[10px] font-mono text-gray-500 mt-1">
                   {new Date(f.created_at).toLocaleString("en-IN")}

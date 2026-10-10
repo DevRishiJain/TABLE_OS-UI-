@@ -3,7 +3,6 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useGetAdminFranchisesQuery } from "@/store/api/adminApi";
-import { formatMoney } from "@/lib/money";
 import { ChevronDown, ChevronRight, Store } from "lucide-react";
 
 export default function SpAdminFranchisesPage() {
@@ -81,8 +80,8 @@ export default function SpAdminFranchisesPage() {
                       >
                         {o.is_active ? "ACTIVE" : "SUSPENDED"}
                       </span>
-                      <span className="text-amber-300">
-                        {formatMoney(o.revenue_today_minor)}
+                      <span className="text-gray-400 font-mono">
+                        {o.orders_today ?? 0} orders today · {o.active_sessions ?? 0} live
                       </span>
                     </div>
                   </Link>
